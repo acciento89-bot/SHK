@@ -18,7 +18,7 @@ import Testing
     #expect(velocity > 2.31 && velocity < 2.32)
 
     let equivalent = VentilationCalculator.equivalentRoundDiameterMM(widthMM: 300, heightMM: 200)
-    #expect(equivalent > 270 && equivalent < 275)
+    #expect(equivalent > 266 && equivalent < 267)
 }
 
 @Test func roomAirExchange() {
