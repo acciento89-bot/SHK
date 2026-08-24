@@ -1,0 +1,70 @@
+name: KamilunavoSHK
+options:
+  bundleIdPrefix: de.kamilunavo
+  deploymentTarget:
+    iOS: '17.0'
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    MARKETING_VERSION: '1.0'
+    CURRENT_PROJECT_VERSION: '1'
+    CODE_SIGN_STYLE: Automatic
+
+targetTemplates:
+  SHKApp:
+    type: application
+    platform: iOS
+    sources:
+      - SharedUI
+      - Sources/SHKCore
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        TARGETED_DEVICE_FAMILY: '1,2'
+        SUPPORTS_MACCATALYST: NO
+
+schemes: {}
+
+targets:
+  KalteCalc:
+    templates: [SHKApp]
+    sources: [Apps/KalteCalc]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunav.kaltecalc
+        PRODUCT_NAME: KälteCalc
+        INFOPLIST_KEY_CFBundleDisplayName: KälteCalc
+  LueftungsCalc:
+    templates: [SHKApp]
+    sources: [Apps/LueftungsCalc]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.luftungscalc
+        PRODUCT_NAME: LüftungsCalc
+        INFOPLIST_KEY_CFBundleDisplayName: LüftungsCalc
+  HeizkoerperCalc:
+    templates: [SHKApp]
+    sources: [Apps/HeizkoerperCalc]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.heizkorpercalc
+        PRODUCT_NAME: HeizkörperCalc
+        INFOPLIST_KEY_CFBundleDisplayName: HeizkörperCalc
+  RohrCalc:
+    templates: [SHKApp]
+    sources: [Apps/RohrCalc]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.rohrcalc
+        PRODUCT_NAME: RohrCalc
+        INFOPLIST_KEY_CFBundleDisplayName: RohrCalc
+  AnlagenCheck:
+    templates: [SHKApp]
+    sources: [Apps/AnlagenCheck]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunav.anlagencheck
+        PRODUCT_NAME: AnlagenCheck
+        INFOPLIST_KEY_CFBundleDisplayName: AnlagenCheck
