@@ -6,6 +6,7 @@
     {
       "key": "kaltecalc",
       "scheme": "KalteCalc",
+      "product_name": "KalteCalc",
       "display_name": "KälteCalc",
       "bundle_id": "de.kamilunav.kaltecalc",
       "source_dir": "Apps/KalteCalc"
@@ -13,6 +14,7 @@
     {
       "key": "lueftungscalc",
       "scheme": "LueftungsCalc",
+      "product_name": "LueftungsCalc",
       "display_name": "LüftungsCalc",
       "bundle_id": "de.kamilunavo.luftungscalc",
       "source_dir": "Apps/LueftungsCalc"
@@ -20,6 +22,7 @@
     {
       "key": "heizkoerpercalc",
       "scheme": "HeizkoerperCalc",
+      "product_name": "HeizkoerperCalc",
       "display_name": "HeizkörperCalc",
       "bundle_id": "de.kamilunavo.heizkorpercalc",
       "source_dir": "Apps/HeizkoerperCalc"
@@ -27,6 +30,7 @@
     {
       "key": "rohrcalc",
       "scheme": "RohrCalc",
+      "product_name": "RohrCalc",
       "display_name": "RohrCalc",
       "bundle_id": "de.kamilunavo.rohrcalc",
       "source_dir": "Apps/RohrCalc"
@@ -34,6 +38,7 @@
     {
       "key": "anlagencheck",
       "scheme": "AnlagenCheck",
+      "product_name": "AnlagenCheck",
       "display_name": "AnlagenCheck",
       "bundle_id": "de.kamilunavo.servicecheck",
       "source_dir": "Apps/AnlagenCheck"
