@@ -4,6 +4,31 @@ import Testing
 @Test func refrigerationBasics() {
     #expect(RefrigerationCalculator.superheat(suctionGasC: 11, evaporationC: 4) == 7)
     #expect(RefrigerationCalculator.subcooling(condensationC: 42, liquidLineC: 36) == 6)
+
+    // Negative values are intentionally preserved as diagnostic information.
+    #expect(RefrigerationCalculator.superheat(suctionGasC: 2, evaporationC: 4) == -2)
+    #expect(RefrigerationCalculator.subcooling(condensationC: 35, liquidLineC: 37) == -2)
+}
+
+@Test func refrigerationPressureRatio() {
+    let ratio = RefrigerationCalculator.compressorPressureRatio(suctionGaugeBar: 7.5, dischargeGaugeBar: 24)
+    #expect(ratio > 2.9 && ratio < 3.0)
+}
+
+@Test func refrigerationConversions() {
+    #expect(abs(RefrigerationCalculator.celsiusToFahrenheit(0) - 32) < 0.0001)
+    #expect(abs(RefrigerationCalculator.fahrenheitToCelsius(212) - 100) < 0.0001)
+    #expect(abs(RefrigerationCalculator.barToPSI(1) - 14.5037738) < 0.0001)
+    #expect(abs(RefrigerationCalculator.psiToBar(14.5037738) - 1) < 0.0001)
+    #expect(abs(RefrigerationCalculator.barToKPa(10) - 1000) < 0.0001)
+    #expect(abs(RefrigerationCalculator.mbarToPascal(1) - 100) < 0.0001)
+    #expect(RefrigerationCalculator.mbarToMicron(1) > 750 && RefrigerationCalculator.mbarToMicron(1) < 751)
+    #expect(abs(RefrigerationCalculator.micronToMbar(RefrigerationCalculator.mbarToMicron(1)) - 1) < 0.0001)
+}
+
+@Test func refrigerationAirCapacity() {
+    let capacity = RefrigerationCalculator.airSideCapacityKW(volumeFlowM3H: 800, enteringAirC: 27, leavingAirC: 19)
+    #expect(capacity > 2.14 && capacity < 2.15)
 }
 
 @Test func ventilationRoundDuct() {
