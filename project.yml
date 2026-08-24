@@ -65,6 +65,6 @@ targets:
     sources: [Apps/AnlagenCheck]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunav.anlagencheck
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.servicecheck
         PRODUCT_NAME: AnlagenCheck
         INFOPLIST_KEY_CFBundleDisplayName: AnlagenCheck
