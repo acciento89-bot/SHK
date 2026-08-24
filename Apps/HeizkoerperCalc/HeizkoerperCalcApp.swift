@@ -2,5 +2,11 @@ import SwiftUI
 
 @main
 struct HeizkoerperCalcApp: App {
-    var body: some Scene { WindowGroup { HeizkoerperCalcView().preferredColorScheme(.dark) } }
+    var body: some Scene {
+        WindowGroup {
+            HeizkoerperCalcView()
+                .preferredColorScheme(.dark)
+                .shkKeyboardDismissal()
+        }
+    }
 }
