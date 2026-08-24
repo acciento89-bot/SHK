@@ -1,0 +1,109 @@
+{
+  "version": "1.0",
+  "build": "2",
+  "copyright": "2026 Kamilunavo",
+  "primary_category": "UTILITIES",
+  "secondary_category": "PRODUCTIVITY",
+  "privacy_url": "https://kamilunavo.com/shk/privacy",
+  "support_url": "https://kamilunavo.com/support",
+  "marketing_url": "https://kamilunavo.com",
+  "standard_eula_url": "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/",
+  "release_type": "AFTER_APPROVAL",
+  "apps": [
+    {
+      "key": "kaltecalc",
+      "name": "KälteCalc",
+      "bundle_id": "de.kamilunav.kaltecalc",
+      "price_eur": "6.99",
+      "de": {
+        "subtitle": "Kälte-Service schnell rechnen",
+        "description": "KälteCalc bündelt typische Rechenhilfen für den Kälte- und Klimaservice in einer schnellen, offline nutzbaren App. Berechne Überhitzung und Unterkühlung aus gemessenen Temperaturen, ermittle das Verdichter-Druckverhältnis, schätze die luftseitige sensible Leistung und konvertiere wichtige Temperatur-, Druck- und Vakuumeinheiten.\n\nMesswerte lassen sich zu einem kompakten Servicebericht zusammenfassen und teilen. Negative Überhitzungs- oder Unterkühlungswerte werden bewusst nicht ausgeblendet, damit auffällige Messsituationen sichtbar bleiben.\n\nKälteCalc stellt keine erfundenen P/T-Sättigungswerte bereit. Herstellerdaten, Kältemitteldatenbanken, geltende Vorschriften und fachgerechte Messverfahren haben Vorrang.",
+        "keywords": "kälte,klima,überhitzung,unterkühlung,druck,vakuum,service,kältemittel",
+        "promotional_text": "Überhitzung, Unterkühlung, Druckverhältnis und wichtige Service-Einheiten schnell offline berechnen."
+      },
+      "en": {
+        "subtitle": "Refrigeration service tools",
+        "description": "KälteCalc combines practical offline calculation tools for refrigeration and air-conditioning service. Calculate superheat and subcooling from measured temperatures, determine compressor pressure ratio, estimate sensible air-side capacity and convert common temperature, pressure and vacuum units.\n\nMeasurements can be summarized in a compact service report and shared. Negative superheat or subcooling values are intentionally preserved so unusual measurement conditions remain visible.\n\nKälteCalc does not invent refrigerant saturation data. Manufacturer information, verified refrigerant data, applicable regulations and professional measurement procedures always take precedence.",
+        "keywords": "refrigeration,hvac,superheat,subcooling,pressure,vacuum,service,cooling",
+        "promotional_text": "Offline tools for superheat, subcooling, pressure ratio and common refrigeration service unit conversions."
+      },
+      "review_notes": "KälteCalc requires no sign-in, account or network connection. Core calculations work offline. Reviewers can edit the clearly outlined input fields for superheat/subcooling, pressure ratio, air-side capacity and unit conversions. Results can be shared through the standard iOS share sheet. There are no ads, subscriptions, in-app purchases, external payment methods or server-backed user content."
+    },
+    {
+      "key": "lueftungscalc",
+      "name": "LüftungsCalc",
+      "bundle_id": "de.kamilunavo.luftungscalc",
+      "price_eur": "4.99",
+      "de": {
+        "subtitle": "Luftmengen & Kanäle rechnen",
+        "description": "LüftungsCalc ist eine kompakte Rechenhilfe für Lüftung, Klima und SHK-Service. Dimensioniere Rundkanäle über Volumenstrom und Zielgeschwindigkeit, prüfe die reale Luftgeschwindigkeit vorhandener Durchmesser und berechne Rechteckkanäle inklusive erforderlicher Höhe und äquivalentem Runddurchmesser.\n\nFür Räume stehen Raumvolumen, Luftwechsel und erforderlicher Volumenstrom zur Verfügung. Zusätzlich können m³/h, l/s und CFM schnell ineinander umgerechnet werden. Ergebnisse lassen sich als übersichtliche Berechnung teilen.\n\nDie App ist eine Rechen- und Dokumentationshilfe. Projektvorgaben, Herstellerdaten, Schallschutz, Druckverlustberechnung und geltende technische Regeln müssen bei der Auslegung separat berücksichtigt werden.",
+        "keywords": "lüftung,luftmenge,kanal,volumenstrom,luftwechsel,klima,shk,dimensionierung",
+        "promotional_text": "Luftmengen, Luftwechsel sowie Rund- und Rechteckkanäle schnell und übersichtlich berechnen."
+      },
+      "en": {
+        "subtitle": "Airflow & duct calculator",
+        "description": "LüftungsCalc is a compact calculation tool for ventilation, HVAC and service work. Size round ducts from airflow and target velocity, check actual velocity for existing diameters and calculate rectangular ducts including required height and equivalent round diameter.\n\nRoom tools cover room volume, air changes per hour and required airflow. m³/h, l/s and CFM can also be converted quickly. Results can be shared as a clear calculation summary.\n\nThe app is a calculation and documentation aid. Project requirements, manufacturer data, acoustics, pressure loss and applicable technical rules must be considered separately.",
+        "keywords": "ventilation,airflow,duct,velocity,airchange,hvac,service,sizing",
+        "promotional_text": "Calculate airflow, air changes and round or rectangular duct dimensions quickly and clearly."
+      },
+      "review_notes": "LüftungsCalc requires no sign-in, account or network connection. Core calculations work offline. Reviewers can edit room dimensions, air-change values, airflow and duct parameters in clearly outlined fields. Results can be shared through the standard iOS share sheet. There are no ads, subscriptions, in-app purchases, external payment methods or server-backed user content."
+    },
+    {
+      "key": "heizkoerpercalc",
+      "name": "HeizkörperCalc",
+      "bundle_id": "de.kamilunavo.heizkorpercalc",
+      "price_eur": "4.99",
+      "de": {
+        "subtitle": "Heizkörper richtig umrechnen",
+        "description": "HeizkörperCalc hilft bei der schnellen Beurteilung und Auslegung von Heizkörpern für unterschiedliche Systemtemperaturen. Rechne eine ΔT50-Nennleistung auf reale Vorlauf-, Rücklauf- und Raumtemperaturen um und berücksichtige dabei den Hersteller-Exponent n.\n\nDie App kann je nach Temperaturverhältnis arithmetische oder logarithmische Übertemperatur verwenden, die benötigte ΔT50-Nennleistung aus einer gewünschten Raumleistung zurückrechnen, die notwendige Heizkörperanzahl bestimmen und den erforderlichen Wasservolumenstrom anzeigen.\n\nEin Vergleich typischer Temperaturniveaus zeigt schnell, wie stark die verfügbare Heizkörperleistung bei niedrigeren Systemtemperaturen sinkt. Herstellerkennwerte und objektspezifische Heizlast bleiben maßgebend.",
+        "keywords": "heizkörper,leistung,heizung,delta t,volumenstrom,wärmepumpe,shk,auslegung",
+        "promotional_text": "Heizkörperleistung für reale Systemtemperaturen umrechnen und benötigte Nennleistung sowie Volumenstrom bestimmen."
+      },
+      "en": {
+        "subtitle": "Radiator performance calculator",
+        "description": "HeizkörperCalc helps evaluate and size radiators for different heating system temperatures. Convert a ΔT50 nominal output to actual supply, return and room temperatures while using the radiator manufacturer's exponent n.\n\nDepending on the temperature relationship, the app can use arithmetic or logarithmic mean excess temperature, calculate the required ΔT50 nominal output from a target room load, determine radiator quantity and show the required water flow.\n\nA comparison of common temperature regimes makes it easy to see how radiator output changes at lower system temperatures. Manufacturer ratings and the actual room heat load remain decisive.",
+        "keywords": "radiator,heating,output,delta t,flowrate,heatpump,hvac,sizing",
+        "promotional_text": "Convert radiator output for real system temperatures and calculate required nominal output and water flow."
+      },
+      "review_notes": "HeizkörperCalc requires no sign-in, account or network connection. Core calculations work offline. Reviewers can edit ΔT50 nominal output, supply, return and room temperatures, manufacturer exponent and sizing values in clearly outlined fields. There are no ads, subscriptions, in-app purchases, external payment methods or server-backed user content."
+    },
+    {
+      "key": "rohrcalc",
+      "name": "RohrCalc",
+      "bundle_id": "de.kamilunavo.rohrcalc",
+      "price_eur": "4.99",
+      "de": {
+        "subtitle": "Rohrhydraulik für den Service",
+        "description": "RohrCalc ist eine kompakte Hydraulik-Rechenhilfe für Heizungs- und SHK-Anlagen. Berechne Strömungsgeschwindigkeit, Reynolds-Zahl, Strömungsart und Rohrreibungsverlust nach Darcy-Weisbach aus Volumenstrom, freiem Innendurchmesser, Rohrlänge und Rauheit.\n\nZusätzliche Einzelwiderstände können über eine ζ-Summe berücksichtigt werden. Die App zeigt Leitungs- und Gesamtverlust, Förderhöhe und Rohrinhalt. Für die Dimensionierung kann der benötigte Innendurchmesser aus einer Zielgeschwindigkeit oder der maximale Volumenstrom für einen vorhandenen Innendurchmesser bestimmt werden.\n\nDie verwendeten Wasserwerte sind eine transparente Standardnäherung. Für Sondermedien, stark abweichende Temperaturen oder eine vollständige Netzberechnung sind projektspezifische Stoffwerte und Fachplanung erforderlich.",
+        "keywords": "rohr,hydraulik,druckverlust,volumenstrom,reynolds,heizung,shk,dimensionierung",
+        "promotional_text": "Rohrhydraulik, Druckverlust, Geschwindigkeit, Reynolds-Zahl und Dimensionierung kompakt berechnen."
+      },
+      "en": {
+        "subtitle": "Pipe hydraulics calculator",
+        "description": "RohrCalc is a compact hydraulic calculation tool for heating and HVAC systems. Calculate flow velocity, Reynolds number, flow regime and Darcy-Weisbach pipe friction from volume flow, free internal diameter, pipe length and roughness.\n\nAdditional local resistances can be included using a summed zeta value. The app shows line loss, total pressure loss, head and pipe volume. For sizing, determine the required internal diameter from a target velocity or the maximum flow for an existing diameter.\n\nWater properties use a transparent standard approximation. Special fluids, significantly different temperatures or complete network calculations require project-specific fluid properties and engineering.",
+        "keywords": "pipe,hydraulics,pressureloss,flowrate,reynolds,heating,hvac,sizing",
+        "promotional_text": "Calculate pipe hydraulics, pressure loss, velocity, Reynolds number and sizing in one compact tool."
+      },
+      "review_notes": "RohrCalc requires no sign-in, account or network connection. Core calculations work offline. Reviewers can edit flow, inner diameter, pipe length, roughness, zeta values and target velocity in clearly outlined fields. There are no ads, subscriptions, in-app purchases, external payment methods or server-backed user content."
+    },
+    {
+      "key": "anlagencheck",
+      "name": "AnlagenCheck",
+      "bundle_id": "de.kamilunavo.servicecheck",
+      "price_eur": "7.99",
+      "de": {
+        "subtitle": "Heizungswerte dokumentieren",
+        "description": "AnlagenCheck unterstützt beim strukturierten Erfassen und Plausibilisieren typischer Messwerte einer Heizungsanlage. Hinterlege Vorlauf und Rücklauf, Kalt- und Warmdruck, statische Anlagenhöhe, Sicherheitsventil-Ansprechdruck und eigene Prüfgrenzen.\n\nDie App bewertet die eingegebenen Werte ausschließlich gegen die von dir festgelegten Vorgaben und zeigt Hinweise zu Temperaturspreizung, Mindestdruck, Druckanstieg und Reserve zum Sicherheitsventil. Eine Service-Checkliste, Objektbezeichnung, freie Notizen und ein teilbarer Bericht erleichtern die Dokumentation vor Ort.\n\nAnlagenCheck erteilt keine Sicherheitsfreigabe und ersetzt weder Herstellerangaben noch Normen, Messgeräte oder die fachliche Beurteilung durch qualifiziertes Personal.",
+        "keywords": "heizung,anlagencheck,service,druck,vorlauf,rücklauf,wartung,shk,dokumentation",
+        "promotional_text": "Messwerte strukturiert erfassen, gegen eigene Grenzwerte plausibilisieren und als Servicebericht teilen."
+      },
+      "en": {
+        "subtitle": "Heating service documentation",
+        "description": "AnlagenCheck helps structure and document typical heating-system measurements. Enter supply and return temperatures, cold and hot pressure, static system height, safety-valve set pressure and your own checking limits.\n\nThe app evaluates entered values only against the limits you define and highlights temperature spread, minimum pressure, pressure rise and safety-valve margin. A service checklist, site name, free notes and a shareable report make on-site documentation easier.\n\nAnlagenCheck does not provide a safety approval and does not replace manufacturer instructions, standards, measuring equipment or professional judgement by qualified personnel.",
+        "keywords": "heating,service,pressure,supply,return,maintenance,hvac,checklist,report",
+        "promotional_text": "Capture heating-system measurements, compare them with your own limits and share a clear service report."
+      },
+      "review_notes": "AnlagenCheck requires no sign-in, account or network connection. Core checks work offline. Reviewers can edit supply/return temperature, cold/hot pressure, static height, safety-valve set pressure and custom limits in clearly outlined fields, use the service checklist and share the generated report through the standard iOS share sheet. The app does not provide a safety approval. There are no ads, subscriptions, in-app purchases, external payment methods or server-backed user content."
+    }
+  ]
+}
