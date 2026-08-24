@@ -1,16 +1,90 @@
 import Foundation
 
 public enum RefrigerationCalculator {
+    public static let standardAtmosphericPressureBar = 1.01325
+    public static let psiPerBar = 14.5037738
+    public static let micronsPerMbar = 750.061683
+    public static let pascalPerMicron = 0.133322368
+
+    /// Überhitzung = Sauggastemperatur - Sättigungstemperatur Verdampfung.
+    /// Negative Werte werden bewusst nicht gekappt, weil sie im Servicefall ein wichtiger Prüfhinweis sind.
     public static func superheat(suctionGasC: Double, evaporationC: Double) -> Double {
-        max(0, suctionGasC - evaporationC)
+        suctionGasC - evaporationC
     }
 
+    /// Unterkühlung = Sättigungstemperatur Kondensation - Flüssigkeitsleitung.
+    /// Negative Werte werden bewusst nicht gekappt.
     public static func subcooling(condensationC: Double, liquidLineC: Double) -> Double {
-        max(0, condensationC - liquidLineC)
+        condensationC - liquidLineC
     }
 
+    /// Luftseitige sensible Leistung mit ρ·cp/3600 ≈ 0,335 Wh/(m³·K).
     public static func airSideCapacityKW(volumeFlowM3H: Double, deltaTK: Double) -> Double {
-        max(0, volumeFlowM3H) * max(0, deltaTK) * 0.000335
+        max(0, volumeFlowM3H) * abs(deltaTK) * 0.000335
+    }
+
+    public static func airSideCapacityKW(volumeFlowM3H: Double, enteringAirC: Double, leavingAirC: Double) -> Double {
+        airSideCapacityKW(volumeFlowM3H: volumeFlowM3H, deltaTK: enteringAirC - leavingAirC)
+    }
+
+    /// Druckverhältnis aus Manometerdrücken. Für das Verhältnis werden beide Drücke in Absolutdruck umgerechnet.
+    public static func compressorPressureRatio(
+        suctionGaugeBar: Double,
+        dischargeGaugeBar: Double,
+        atmosphericBar: Double = standardAtmosphericPressureBar
+    ) -> Double {
+        let suctionAbsolute = suctionGaugeBar + atmosphericBar
+        let dischargeAbsolute = dischargeGaugeBar + atmosphericBar
+        guard suctionAbsolute > 0, dischargeAbsolute > 0 else { return 0 }
+        return dischargeAbsolute / suctionAbsolute
+    }
+
+    public static func celsiusToFahrenheit(_ celsius: Double) -> Double {
+        celsius * 9 / 5 + 32
+    }
+
+    public static func fahrenheitToCelsius(_ fahrenheit: Double) -> Double {
+        (fahrenheit - 32) * 5 / 9
+    }
+
+    public static func barToPSI(_ bar: Double) -> Double {
+        bar * psiPerBar
+    }
+
+    public static func psiToBar(_ psi: Double) -> Double {
+        psi / psiPerBar
+    }
+
+    public static func barToKPa(_ bar: Double) -> Double {
+        bar * 100
+    }
+
+    public static func kPaToBar(_ kPa: Double) -> Double {
+        kPa / 100
+    }
+
+    public static func mbarToMicron(_ mbar: Double) -> Double {
+        mbar * micronsPerMbar
+    }
+
+    public static func micronToMbar(_ micron: Double) -> Double {
+        micron / micronsPerMbar
+    }
+
+    public static func micronToPascal(_ micron: Double) -> Double {
+        micron * pascalPerMicron
+    }
+
+    public static func pascalToMicron(_ pascal: Double) -> Double {
+        pascal / pascalPerMicron
+    }
+
+    public static func mbarToPascal(_ mbar: Double) -> Double {
+        mbar * 100
+    }
+
+    public static func pascalToMbar(_ pascal: Double) -> Double {
+        pascal / 100
     }
 }
 
