@@ -1,0 +1,42 @@
+{
+  "repository": "acciento89-bot/SHK",
+  "project": "KamilunavoSHK.xcodeproj",
+  "team_id": "TKG684N5GL",
+  "apps": [
+    {
+      "key": "kaltecalc",
+      "scheme": "KalteCalc",
+      "display_name": "KälteCalc",
+      "bundle_id": "de.kamilunav.kaltecalc",
+      "source_dir": "Apps/KalteCalc"
+    },
+    {
+      "key": "lueftungscalc",
+      "scheme": "LueftungsCalc",
+      "display_name": "LüftungsCalc",
+      "bundle_id": "de.kamilunavo.luftungscalc",
+      "source_dir": "Apps/LueftungsCalc"
+    },
+    {
+      "key": "heizkoerpercalc",
+      "scheme": "HeizkoerperCalc",
+      "display_name": "HeizkörperCalc",
+      "bundle_id": "de.kamilunavo.heizkorpercalc",
+      "source_dir": "Apps/HeizkoerperCalc"
+    },
+    {
+      "key": "rohrcalc",
+      "scheme": "RohrCalc",
+      "display_name": "RohrCalc",
+      "bundle_id": "de.kamilunavo.rohrcalc",
+      "source_dir": "Apps/RohrCalc"
+    },
+    {
+      "key": "anlagencheck",
+      "scheme": "AnlagenCheck",
+      "display_name": "AnlagenCheck",
+      "bundle_id": "de.kamilunavo.servicecheck",
+      "source_dir": "Apps/AnlagenCheck"
+    }
+  ]
+}
