@@ -36,7 +36,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.kamilunav.kaltecalc
-        PRODUCT_NAME: KälteCalc
+        PRODUCT_NAME: KalteCalc
         INFOPLIST_KEY_CFBundleDisplayName: KälteCalc
   LueftungsCalc:
     templates: [SHKApp]
@@ -44,7 +44,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.luftungscalc
-        PRODUCT_NAME: LüftungsCalc
+        PRODUCT_NAME: LueftungsCalc
         INFOPLIST_KEY_CFBundleDisplayName: LüftungsCalc
   HeizkoerperCalc:
     templates: [SHKApp]
@@ -52,7 +52,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.heizkorpercalc
-        PRODUCT_NAME: HeizkörperCalc
+        PRODUCT_NAME: HeizkoerperCalc
         INFOPLIST_KEY_CFBundleDisplayName: HeizkörperCalc
   RohrCalc:
     templates: [SHKApp]
