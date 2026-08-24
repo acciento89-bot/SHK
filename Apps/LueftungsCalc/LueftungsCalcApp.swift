@@ -2,5 +2,11 @@ import SwiftUI
 
 @main
 struct LueftungsCalcApp: App {
-    var body: some Scene { WindowGroup { LueftungsCalcView().preferredColorScheme(.dark) } }
+    var body: some Scene {
+        WindowGroup {
+            LueftungsCalcView()
+                .preferredColorScheme(.dark)
+                .shkKeyboardDismissal()
+        }
+    }
 }
