@@ -6,11 +6,11 @@ Stand: 2026-08-24
 
 | App | iOS Bundle-ID | Status |
 | --- | --- | --- |
-| KälteCalc | `de.kamilunav.kaltecalc` | v1-Funktionsstand auf `main`, CI grün |
-| LüftungsCalc | `de.kamilunavo.luftungscalc` | v1-Funktionsstand auf `main`, CI grün |
-| HeizkörperCalc | `de.kamilunavo.heizkorpercalc` | v1-Funktionsstand auf `main`, CI grün |
-| RohrCalc | `de.kamilunavo.rohrcalc` | v1-Funktionsstand auf `main`, CI grün |
-| AnlagenCheck | `de.kamilunavo.servicecheck` | App-Store-Name AnlagenCheck; v1-Funktionspass in Validierung |
+| KälteCalc | `de.kamilunav.kaltecalc` | v1-Funktionsstand fertig, CI grün |
+| LüftungsCalc | `de.kamilunavo.luftungscalc` | v1-Funktionsstand fertig, CI grün |
+| HeizkörperCalc | `de.kamilunavo.heizkorpercalc` | v1-Funktionsstand fertig, CI grün |
+| RohrCalc | `de.kamilunavo.rohrcalc` | v1-Funktionsstand fertig, CI grün |
+| AnlagenCheck | `de.kamilunavo.servicecheck` | App-Store-Name AnlagenCheck; v1-Funktionsstand fertig, CI grün |
 
 Die Bundle-IDs werden exakt wie in App Store Connect angelegt verwendet. Sie werden nicht automatisch vereinheitlicht. Bei AnlagenCheck wurde im App-Store-Eintrag die bereits vorhandene Bundle-ID `de.kamilunavo.servicecheck` ausgewählt; der sichtbare App-Name bleibt AnlagenCheck.
 
@@ -66,7 +66,7 @@ Die Bundle-IDs werden exakt wie in App Store Connect angelegt verwendet. Sie wer
 
 ## Nächste Gates
 
-1. AnlagenCheck v1 vollständig grün mergen.
-2. App-Icons und Store-Metadaten je App finalisieren.
-3. Release-/Signing-Workflow für die fünf Targets aufbauen.
-4. TestFlight nacheinander pro App.
+1. App-Icons und Store-Metadaten je App finalisieren.
+2. Release-/Signing-Workflow für die fünf Targets aufbauen.
+3. TestFlight nacheinander pro App.
+4. Store-Review erst nach TestFlight-Prüfung und manueller Freigabe.
