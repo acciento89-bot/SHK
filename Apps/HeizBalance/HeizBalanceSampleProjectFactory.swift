@@ -2,7 +2,7 @@ import Foundation
 
 enum HeizBalanceSampleProjectFactory {
     static func makeTechnicalDemoProject() -> HeizBalanceProject {
-        let sharedFlowLPH = 159.0
+        let sharedFlowLPH = 155.0
 
         let livingSurface = makeRadiator(
             name: "HK Wohnzimmer",
