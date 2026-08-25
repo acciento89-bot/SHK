@@ -39,6 +39,50 @@ metrics:
 
 Der Core stellt dafür `HeizBalanceReferenceCaseValidator` bereit. Er vergleicht benannte Ist-Werte mit erwarteten Werten und absoluten Toleranzen.
 
+## Technischer Regressionfall – Niedertemperatur
+Dieser Fall ist ausdrücklich **kein Norm-Referenzfall**. Er dient ausschließlich dazu, die eigenständig implementierte technische Heizflächen-/Niedertemperatur-Logik stabil zu halten und die End-to-End-Demo in der App zu prüfen.
+
+Rahmenbedingungen:
+- konstante Wasserspreizung: 10 K
+- Vergleichssystem: 45/35 °C
+- Heizflächenkennwerte sind fiktive, produktunabhängige Testdaten
+
+Erwartete Werte:
+
+```text
+caseID: technical-low-temp-demo-001
+Wohnzimmer:
+  Qn,ΔT50 = 2500 W
+  n = 1.3
+  Qrequired = 700 W
+  Raum = 20 °C
+  minimum VL/RL = 43.7805 / 33.7805 °C
+  45/35 °C = ausreichend
+
+Schlafzimmer:
+  Qn,ΔT50 = 1800 W
+  n = 1.3
+  Qrequired = 500 W
+  Raum = 19 °C
+  minimum VL/RL = 42.6657 / 32.6657 °C
+  45/35 °C = ausreichend
+
+Bad:
+  Qn,ΔT50 = 2200 W
+  n = 1.3
+  Qrequired = 600 W
+  Raum = 24 °C
+  minimum VL/RL = 47.4041 / 37.4041 °C
+  45/35 °C = nicht ausreichend
+
+System:
+  begrenzende Heizfläche = Bad
+  minimum VL/RL = 47.4041 / 37.4041 °C
+  45/35 °C = nicht ausreichend
+```
+
+Der Fall ist als Unit-Test in `HeizBalanceLowTemperatureCheckTests` hinterlegt. Er darf nicht als fachliche oder normative Validierung der DIN-Heizlast interpretiert werden.
+
 ## Freigabekette
 `developmentOnly` → `specificationVerified` → `referenceValidated` → `released`
 
