@@ -79,10 +79,24 @@ extension HeizBalanceHeatingSurface {
                   let roughnessMM = section.roughnessMM else {
                 return nil
             }
+
+            let sectionVolumeFlowLPH: Double
+            switch section.effectiveRole {
+            case .heatingSurfaceBranch:
+                sectionVolumeFlowLPH = hydronic.targetVolumeFlowLPH
+            case .sharedDistribution:
+                guard let explicitFlow = section.explicitDesignVolumeFlowLPH,
+                      explicitFlow > 0 else {
+                    return nil
+                }
+                sectionVolumeFlowLPH = explicitFlow
+            }
+
             inputs.append(
                 .init(
                     id: section.id.uuidString,
                     name: section.name,
+                    volumeFlowLPH: sectionVolumeFlowLPH,
                     innerDiameterMM: innerDiameterMM,
                     lengthM: lengthM,
                     roughnessMM: roughnessMM,
@@ -228,8 +242,29 @@ struct HeizBalanceHeatingSurfaceEditor: View {
             if section.innerDiameterMM == nil { items.append("\(section.name): Innendurchmesser fehlt") }
             if section.lengthM == nil { items.append("\(section.name): Länge fehlt") }
             if section.roughnessMM == nil { items.append("\(section.name): Rauheit fehlt") }
+            if section.effectiveRole == .sharedDistribution,
+               section.explicitDesignVolumeFlowLPH == nil {
+                items.append("\(section.name): Volumenstrom der gemeinsamen Verteilung fehlt")
+            }
         }
         return items
+    }
+
+    private func valveSizing(for component: HeizBalanceHydraulicLossComponent) -> HeizBalanceValveSizingPreparationCalculator.Result? {
+        guard component.kind == .thermostaticValve || component.kind == .returnValve,
+              let targetFlow = hydronicPreparation?.targetVolumeFlowLPH,
+              let pressureLoss = component.pressureLossKPa,
+              let density = hydraulicFluidDensityKGPerM3 else {
+            return nil
+        }
+
+        return HeizBalanceValveSizingPreparationCalculator.calculate(
+            .init(
+                targetVolumeFlowLPH: targetFlow,
+                valvePressureDropKPa: pressureLoss,
+                densityKGPerM3: density
+            )
+        )
     }
 
     var body: some View {
@@ -370,12 +405,19 @@ struct HeizBalanceHeatingSurfaceEditor: View {
                     } label: {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(section.name)
+                            Text(section.effectiveRole.title)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             HStack(spacing: 10) {
                                 if let diameter = section.innerDiameterMM {
                                     Text("ID \(diameter.formatted(.number.precision(.fractionLength(0...2)))) mm")
                                 }
                                 if let length = section.lengthM {
                                     Text("\(length.formatted(.number.precision(.fractionLength(0...2)))) m")
+                                }
+                                if section.effectiveRole == .sharedDistribution,
+                                   let flow = section.explicitDesignVolumeFlowLPH {
+                                    Text("Q \(flow.formatted(.number.precision(.fractionLength(0)))) l/h")
                                 }
                             }
                             .font(.caption)
@@ -399,12 +441,12 @@ struct HeizBalanceHeatingSurfaceEditor: View {
             } header: {
                 Text("Rohrweg")
             } footer: {
-                Text("Erfasst wird der hydraulisch wirksame Rohrweg dieser Heizfläche. Innendurchmesser, Länge und Rauheit sind echte Eingaben; DN oder Außendurchmesser werden nicht automatisch in ein Innenmaß umgedeutet.")
+                Text("Heizflächen-Anbindungen werden mit dem Ziel-Volumenstrom dieser Heizfläche gerechnet. Gemeinsame Verteilrohre benötigen ihren eigenen summierten Abschnitts-Volumenstrom.")
             }
 
             Section {
                 if let pipeCircuit {
-                    LabeledContent("Ziel-Volumenstrom") {
+                    LabeledContent("Ziel-Volumenstrom Heizfläche") {
                         Text(pipeCircuit.targetVolumeFlowLPH.formatted(.number.precision(.fractionLength(0))) + " l/h")
                     }
                     LabeledContent("Rohrreibung") {
@@ -438,7 +480,7 @@ struct HeizBalanceHeatingSurfaceEditor: View {
                             Text(section.name)
                                 .font(.caption.weight(.semibold))
                             Text(
-                                "v \(section.velocityMS.formatted(.number.precision(.fractionLength(2)))) m/s · \(section.pressureDropPaPerM.formatted(.number.precision(.fractionLength(0)))) Pa/m · Re \(section.reynoldsNumber.formatted(.number.precision(.fractionLength(0))))"
+                                "Q \(section.volumeFlowLPH.formatted(.number.precision(.fractionLength(0)))) l/h · v \(section.velocityMS.formatted(.number.precision(.fractionLength(2)))) m/s · \(section.pressureDropPaPerM.formatted(.number.precision(.fractionLength(0)))) Pa/m · Re \(section.reynoldsNumber.formatted(.number.precision(.fractionLength(0))))"
                             )
                             .font(.caption2)
                             .foregroundStyle(.secondary)
@@ -454,7 +496,7 @@ struct HeizBalanceHeatingSurfaceEditor: View {
             } header: {
                 Text("Rohrnetz-Vorbereitung")
             } footer: {
-                Text("Hier werden ausschließlich Rohrreibung und explizit erfasste ζ-Einzelwiderstände betrachtet.")
+                Text("Jeder Rohrabschnitt wird mit seinem tatsächlich vorgesehenen Abschnitts-Volumenstrom berechnet. Gemeinsame Leitungen werden dadurch nicht fälschlich nur mit dem Einzel-Heizflächenstrom angesetzt.")
             }
 
             Section {
@@ -467,12 +509,17 @@ struct HeizBalanceHeatingSurfaceEditor: View {
                     NavigationLink {
                         HeizBalanceHydraulicLossComponentEditor(component: $component)
                     } label: {
-                        HStack {
+                        HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(component.name)
                                 Text(component.kind.title)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                if let sizing = valveSizing(for: component) {
+                                    Text("erforderlicher kv ≈ \(sizing.requiredKvM3H.formatted(.number.precision(.fractionLength(3)))) m³/h")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             Spacer()
                             if let loss = component.pressureLossKPa {
@@ -507,7 +554,7 @@ struct HeizBalanceHeatingSurfaceEditor: View {
             } header: {
                 Text("Weitere Druckverluste")
             } footer: {
-                Text("Ventile, Rücklaufverschraubungen, Heizflächen, Verteiler und andere Bauteile werden nur mit explizitem Δp und dokumentierter Quelle erfasst. Die Vollständigkeit muss bewusst bestätigt werden; sie wird nie automatisch unterstellt.")
+                Text("Ventile, Rücklaufverschraubungen, Heizflächen, Verteiler und andere Bauteile werden nur mit explizitem Δp und dokumentierter Quelle erfasst. Bei Ventilen wird daraus ein technischer kv-Rechenwert angezeigt; eine konkrete Voreinstellung erfordert weiterhin die Kennlinie des tatsächlichen Ventils.")
             }
 
             Section {
@@ -576,10 +623,38 @@ struct HeizBalanceHeatingSurfaceEditor: View {
 struct HeizBalancePipeSectionEditor: View {
     @Binding var section: HeizBalancePipeSection
 
+    private var roleBinding: Binding<HeizBalancePipeSection.Role> {
+        Binding(
+            get: { section.effectiveRole },
+            set: { newRole in
+                section.role = newRole
+                if newRole == .heatingSurfaceBranch {
+                    section.explicitDesignVolumeFlowLPH = nil
+                    section.volumeFlowSource = nil
+                }
+            }
+        )
+    }
+
     var body: some View {
         Form {
             Section("Rohrabschnitt") {
                 TextField("Bezeichnung", text: $section.name)
+                Picker("Rolle", selection: roleBinding) {
+                    ForEach(HeizBalancePipeSection.Role.allCases) { role in
+                        Text(role.title).tag(role)
+                    }
+                }
+
+                if section.effectiveRole == .sharedDistribution {
+                    OptionalDecimalField(
+                        title: "Abschnitts-Volumenstrom",
+                        value: $section.explicitDesignVolumeFlowLPH,
+                        unit: "l/h"
+                    )
+                    InputSourcePicker(title: "Quelle Volumenstrom", selection: $section.volumeFlowSource)
+                }
+
                 OptionalDecimalField(title: "Innendurchmesser", value: $section.innerDiameterMM, unit: "mm")
                 OptionalDecimalField(title: "Hydraulische Länge", value: $section.lengthM, unit: "m")
                 OptionalDecimalField(title: "Absolute Rauheit", value: $section.roughnessMM, unit: "mm")
@@ -594,7 +669,9 @@ struct HeizBalancePipeSectionEditor: View {
         .navigationTitle(section.name)
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
-            Text("ζ leer = Einzelwiderstände noch nicht vollständig erfasst. ζ = 0 bedeutet ausdrücklich: diesem Abschnitt wurden keine Einzelwiderstände zugeordnet.")
+            Text(section.effectiveRole == .heatingSurfaceBranch
+                 ? "Anbindung: gerechnet wird mit dem Ziel-Volumenstrom dieser Heizfläche. ζ leer bedeutet: Einzelwiderstände noch nicht vollständig erfasst."
+                 : "Gemeinsame Verteilung: hier muss der tatsächliche summierte Abschnitts-Volumenstrom erfasst werden. ζ leer bedeutet: Einzelwiderstände noch nicht vollständig erfasst.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
