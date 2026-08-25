@@ -1,5 +1,25 @@
 import Foundation
 
+enum HeizBalanceInputSource: String, Codable, CaseIterable, Identifiable {
+    case plan
+    case manufacturer
+    case expertValue
+    case measured
+    case estimated
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .plan: "Plan / Baubeschreibung"
+        case .manufacturer: "Herstellerangabe"
+        case .expertValue: "Fachlich ermittelter Wert"
+        case .measured: "Messung / Nachweis"
+        case .estimated: "Geschätzt"
+        }
+    }
+}
+
 struct HeizBalanceProject: Identifiable, Codable, Hashable {
     var id: UUID
     var name: String
@@ -8,6 +28,8 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
     var postalCode: String
     var city: String
     var buildingYear: String
+    var designOutdoorTemperatureC: Double?
+    var designOutdoorTemperatureSource: HeizBalanceInputSource?
     var notes: String
     var floors: [HeizBalanceFloor]
     var createdAt: Date
@@ -21,6 +43,8 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         postalCode: String = "",
         city: String = "",
         buildingYear: String = "",
+        designOutdoorTemperatureC: Double? = nil,
+        designOutdoorTemperatureSource: HeizBalanceInputSource? = nil,
         notes: String = "",
         floors: [HeizBalanceFloor] = [],
         createdAt: Date = Date(),
@@ -33,6 +57,8 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         self.postalCode = postalCode
         self.city = city
         self.buildingYear = buildingYear
+        self.designOutdoorTemperatureC = designOutdoorTemperatureC
+        self.designOutdoorTemperatureSource = designOutdoorTemperatureSource
         self.notes = notes
         self.floors = floors
         self.createdAt = createdAt
@@ -73,6 +99,8 @@ struct HeizBalanceRoom: Identifiable, Codable, Hashable {
     var width: Double
     var height: Double
     var targetTemperature: Double
+    var airChangeRatePerHour: Double?
+    var airChangeSource: HeizBalanceInputSource?
     var components: [HeizBalanceComponent]
 
     init(
@@ -83,6 +111,8 @@ struct HeizBalanceRoom: Identifiable, Codable, Hashable {
         width: Double = 0,
         height: Double = 2.50,
         targetTemperature: Double = 20,
+        airChangeRatePerHour: Double? = nil,
+        airChangeSource: HeizBalanceInputSource? = nil,
         components: [HeizBalanceComponent] = []
     ) {
         self.id = id
@@ -92,6 +122,8 @@ struct HeizBalanceRoom: Identifiable, Codable, Hashable {
         self.width = width
         self.height = height
         self.targetTemperature = targetTemperature
+        self.airChangeRatePerHour = airChangeRatePerHour
+        self.airChangeSource = airChangeSource
         self.components = components
     }
 
@@ -110,7 +142,9 @@ struct HeizBalanceComponent: Identifiable, Codable, Hashable {
     var name: String
     var area: Double
     var uValue: Double?
-    var uValueSource: ValueSource?
+    var uValueSource: HeizBalanceInputSource?
+    var thermalBoundary: ThermalBoundary?
+    var customBoundaryTemperatureC: Double?
     var note: String
 
     init(
@@ -119,7 +153,9 @@ struct HeizBalanceComponent: Identifiable, Codable, Hashable {
         name: String = "",
         area: Double = 0,
         uValue: Double? = nil,
-        uValueSource: ValueSource? = nil,
+        uValueSource: HeizBalanceInputSource? = nil,
+        thermalBoundary: ThermalBoundary? = nil,
+        customBoundaryTemperatureC: Double? = nil,
         note: String = ""
     ) {
         self.id = id
@@ -128,7 +164,27 @@ struct HeizBalanceComponent: Identifiable, Codable, Hashable {
         self.area = area
         self.uValue = uValue
         self.uValueSource = uValueSource
+        self.thermalBoundary = thermalBoundary ?? kind.defaultThermalBoundary
+        self.customBoundaryTemperatureC = customBoundaryTemperatureC
         self.note = note
+    }
+
+    var effectiveThermalBoundary: ThermalBoundary {
+        thermalBoundary ?? kind.defaultThermalBoundary
+    }
+
+    enum ThermalBoundary: String, Codable, CaseIterable, Identifiable {
+        case outsideAir
+        case customTemperature
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .outsideAir: "Außenluft"
+            case .customTemperature: "Andere Temperatur"
+            }
+        }
     }
 
     enum Kind: String, Codable, CaseIterable, Identifiable {
@@ -154,6 +210,15 @@ struct HeizBalanceComponent: Identifiable, Codable, Hashable {
             }
         }
 
+        var defaultThermalBoundary: ThermalBoundary {
+            switch self {
+            case .exteriorWall, .window, .exteriorDoor, .roof:
+                .outsideAir
+            case .ceiling, .floor, .interiorBoundary:
+                .customTemperature
+            }
+        }
+
         var systemImage: String {
             switch self {
             case .exteriorWall: "rectangle.split.3x1"
@@ -163,26 +228,6 @@ struct HeizBalanceComponent: Identifiable, Codable, Hashable {
             case .ceiling: "rectangle.topthird.inset.filled"
             case .floor: "rectangle.bottomthird.inset.filled"
             case .interiorBoundary: "square.split.2x1"
-            }
-        }
-    }
-
-    enum ValueSource: String, Codable, CaseIterable, Identifiable {
-        case plan
-        case manufacturer
-        case expertValue
-        case measured
-        case estimated
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .plan: "Plan / Baubeschreibung"
-            case .manufacturer: "Herstellerangabe"
-            case .expertValue: "Fachlich ermittelter Wert"
-            case .measured: "Messung / Nachweis"
-            case .estimated: "Geschätzt"
             }
         }
     }

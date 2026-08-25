@@ -130,6 +130,19 @@ struct HeizBalanceProjectEditor: View {
             }
 
             Section {
+                OptionalDecimalField(
+                    title: "Auslegungs-Außentemperatur",
+                    value: $draft.designOutdoorTemperatureC,
+                    unit: "°C"
+                )
+                InputSourcePicker(title: "Quelle", selection: $draft.designOutdoorTemperatureSource)
+            } header: {
+                Text("Auslegungsbedingungen")
+            } footer: {
+                Text("Der Wert wird projektspezifisch dokumentiert. Eine normative Ortsdatenbank ist noch nicht Bestandteil dieses Entwicklungsstands.")
+            }
+
+            Section {
                 if draft.floors.isEmpty {
                     Text("Noch keine Geschosse angelegt")
                         .foregroundStyle(.secondary)
@@ -137,7 +150,10 @@ struct HeizBalanceProjectEditor: View {
 
                 ForEach($draft.floors) { $floor in
                     NavigationLink {
-                        HeizBalanceFloorEditor(floor: $floor)
+                        HeizBalanceFloorEditor(
+                            floor: $floor,
+                            designOutdoorTemperatureC: draft.designOutdoorTemperatureC
+                        )
                     } label: {
                         HStack {
                             Label(floor.name, systemImage: "square.stack.3d.up")
@@ -159,7 +175,7 @@ struct HeizBalanceProjectEditor: View {
             } header: {
                 Text("Gebäude")
             } footer: {
-                Text("Die Reihenfolge kann später an die tatsächliche Gebäudeaufnahme angepasst werden.")
+                Text("Räume, Bauteile und thermische Randbedingungen werden geschossweise aufgenommen.")
             }
 
             Section("Notizen") {
@@ -168,12 +184,16 @@ struct HeizBalanceProjectEditor: View {
             }
 
             Section("Berechnungsstatus") {
-                LabeledContent("Heizlast") {
-                    Text("Noch nicht berechnet")
+                LabeledContent("Technische Vorberechnung") {
+                    Text("Aktiv")
+                        .foregroundStyle(.orange)
+                }
+                LabeledContent("Norm-Heizlast") {
+                    Text("Noch nicht freigegeben")
                         .foregroundStyle(.secondary)
                 }
                 LabeledContent("Hydraulischer Abgleich") {
-                    Text("Noch nicht berechnet")
+                    Text("Noch nicht implementiert")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -213,6 +233,7 @@ struct HeizBalanceProjectEditor: View {
 
 struct HeizBalanceFloorEditor: View {
     @Binding var floor: HeizBalanceFloor
+    let designOutdoorTemperatureC: Double?
 
     var body: some View {
         Form {
@@ -228,7 +249,10 @@ struct HeizBalanceFloorEditor: View {
 
                 ForEach($floor.rooms) { $room in
                     NavigationLink {
-                        HeizBalanceRoomEditor(room: $room)
+                        HeizBalanceRoomEditor(
+                            room: $room,
+                            designOutdoorTemperatureC: designOutdoorTemperatureC
+                        )
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(room.name)
@@ -266,6 +290,11 @@ struct HeizBalanceFloorEditor: View {
 
 struct HeizBalanceRoomEditor: View {
     @Binding var room: HeizBalanceRoom
+    let designOutdoorTemperatureC: Double?
+
+    private var preview: HeizBalanceRoomPreviewState {
+        room.heatLossPreview(designOutdoorTemperatureC: designOutdoorTemperatureC)
+    }
 
     var body: some View {
         Form {
@@ -287,8 +316,14 @@ struct HeizBalanceRoomEditor: View {
                 }
             }
 
-            Section("Auslegung") {
+            Section {
                 DecimalField(title: "Raumtemperatur", value: $room.targetTemperature, unit: "°C")
+                OptionalDecimalField(title: "Luftwechsel", value: $room.airChangeRatePerHour, unit: "1/h")
+                InputSourcePicker(title: "Quelle Luftwechsel", selection: $room.airChangeSource)
+            } header: {
+                Text("Auslegung")
+            } footer: {
+                Text("Der Luftwechsel wird aktuell als expliziter Projekteingabewert verwendet. Automatische normative Ermittlung folgt erst mit der validierten Heizlast-Engine.")
             }
 
             Section {
@@ -327,7 +362,11 @@ struct HeizBalanceRoomEditor: View {
             } header: {
                 Text("Bauteile")
             } footer: {
-                Text("U-Werte können als Projektwert eingetragen werden. Normative Tabellenwerte werden nicht ungeprüft in der App hinterlegt.")
+                Text("Normative Tabellenwerte werden nicht ungeprüft in der App hinterlegt. U-Wert und Randbedingung bleiben nachvollziehbare Projekteingaben.")
+            }
+
+            Section("Technische Vorberechnung") {
+                HeizBalanceHeatLossPreviewView(preview: preview, floorAreaM2: room.floorArea)
             }
         }
         .navigationTitle(room.name)
@@ -337,6 +376,18 @@ struct HeizBalanceRoomEditor: View {
 
 struct HeizBalanceComponentEditor: View {
     @Binding var component: HeizBalanceComponent
+
+    private var boundaryBinding: Binding<HeizBalanceComponent.ThermalBoundary> {
+        Binding(
+            get: { component.effectiveThermalBoundary },
+            set: { newValue in
+                component.thermalBoundary = newValue
+                if newValue == .outsideAir {
+                    component.customBoundaryTemperatureC = nil
+                }
+            }
+        )
+    }
 
     var body: some View {
         Form {
@@ -352,6 +403,27 @@ struct HeizBalanceComponentEditor: View {
             Section("Abmessungen & Kennwert") {
                 DecimalField(title: "Fläche", value: $component.area, unit: "m²")
                 OptionalDecimalField(title: "U-Wert", value: $component.uValue, unit: "W/(m²·K)")
+                InputSourcePicker(title: "Quelle U-Wert", selection: $component.uValueSource)
+            }
+
+            Section {
+                Picker("Randbedingung", selection: boundaryBinding) {
+                    ForEach(HeizBalanceComponent.ThermalBoundary.allCases) { boundary in
+                        Text(boundary.title).tag(boundary)
+                    }
+                }
+
+                if component.effectiveThermalBoundary == .customTemperature {
+                    OptionalDecimalField(
+                        title: "Temperatur Gegenseite",
+                        value: $component.customBoundaryTemperatureC,
+                        unit: "°C"
+                    )
+                }
+            } header: {
+                Text("Thermische Randbedingung")
+            } footer: {
+                Text("Für Boden, Decken und angrenzende unbeheizte Bereiche wird derzeit keine pauschale Korrektur angenommen. Die Gegenseitentemperatur muss explizit erfasst werden.")
             }
 
             Section("Notiz") {
@@ -361,6 +433,63 @@ struct HeizBalanceComponentEditor: View {
         }
         .navigationTitle(component.kind.title)
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: component.kind) { _, newKind in
+            component.thermalBoundary = newKind.defaultThermalBoundary
+            component.customBoundaryTemperatureC = nil
+        }
+    }
+}
+
+private struct HeizBalanceHeatLossPreviewView: View {
+    let preview: HeizBalanceRoomPreviewState
+    let floorAreaM2: Double
+
+    var body: some View {
+        if let result = preview.result {
+            LabeledContent("Transmission") {
+                Text(result.transmissionHeatLossW.formatted(.number.precision(.fractionLength(0))) + " W")
+            }
+            LabeledContent("Lüftung") {
+                Text(result.ventilationHeatLossW.formatted(.number.precision(.fractionLength(0))) + " W")
+            }
+            LabeledContent("Summe") {
+                Text(result.totalHeatLossW.formatted(.number.precision(.fractionLength(0))) + " W")
+                    .fontWeight(.semibold)
+            }
+
+            if floorAreaM2 > 0 {
+                LabeledContent("Spezifisch") {
+                    Text((result.totalHeatLossW / floorAreaM2).formatted(.number.precision(.fractionLength(1))) + " W/m²")
+                }
+            }
+
+            Label(
+                "Vorberechnung aus expliziten Eingaben – noch keine freigegebene Norm-Heizlast.",
+                systemImage: "exclamationmark.triangle"
+            )
+            .font(.caption)
+            .foregroundStyle(.orange)
+        } else {
+            ForEach(preview.missingInputs, id: \.self) { item in
+                Label(item, systemImage: "circle.dashed")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+private struct InputSourcePicker: View {
+    let title: String
+    @Binding var selection: HeizBalanceInputSource?
+
+    var body: some View {
+        Picker(title, selection: $selection) {
+            Text("Nicht angegeben").tag(nil as HeizBalanceInputSource?)
+            ForEach(HeizBalanceInputSource.allCases) { source in
+                Text(source.title).tag(Optional(source))
+            }
+        }
     }
 }
 
