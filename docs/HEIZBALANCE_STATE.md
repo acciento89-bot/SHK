@@ -185,7 +185,7 @@ Zusätzlich steht `technical-adjustment-list-v1` als bewusst eigenständiger Bau
 - Pumpenkennlinien-Interpolation mit harter No-Extrapolation-Regel,
 - Pumpen-Leistungskennzahlen,
 - Aufnahme-Invarianten für Geschoss-/Raum-/Heizflächenkopien und Bauteilfavoriten,
-- neue Hydraulikvorlagen-/Kreiskopier-Invarianten,
+- Hydraulikvorlagen-/Kreiskopier-Invarianten,
 - explizite Ventileinstellungs-/Stale-Regeln,
 - Baustellen-Einstelllisten-Regeln.
 
@@ -233,4 +233,4 @@ Zusätzlich steht `technical-adjustment-list-v1` als bewusst eigenständiger Bau
 
 ## Batch-Verifikation
 - Der maßgebliche Code-Head `a618b2630b057f9bc6e85ec1b143a480a1a7670e` wurde in CI #250 vollständig erfolgreich validiert.
-- Der nachgelagerte Dokumentations-Head ändert keine Rechen- oder App-Logik und wird zusätzlich durch dieselbe PR-CI geprüft.
+- Der finale Dokumentations-Head enthält ausschließlich Handoff-/Referenzdokumentation und wird zusätzlich durch dieselbe PR-CI geprüft.
