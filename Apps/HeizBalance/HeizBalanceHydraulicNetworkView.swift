@@ -8,6 +8,10 @@ struct HeizBalanceHydraulicNetworkView: View {
         project.hydraulicNetworkState()
     }
 
+    private var pathState: HeizBalanceHydraulicNetworkPathProjectState {
+        project.hydraulicNetworkPathState()
+    }
+
     private var segments: [HeizBalanceHydraulicNetwork.Segment] {
         project.hydraulicNetwork?.segments ?? []
     }
@@ -70,7 +74,7 @@ struct HeizBalanceHydraulicNetworkView: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                 } else if !state.linkedPipes.isEmpty {
-                    Label("Alle verknüpften Rohrabschnitte entsprechen dem aktuellen Netzbaum.", systemImage: "checkmark.circle.fill")
+                    Label("Alle verknüpften Rohrabschnitte entsprechen dem aktuellen Netzbaum-Q.", systemImage: "checkmark.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.green)
                 }
@@ -78,6 +82,36 @@ struct HeizBalanceHydraulicNetworkView: View {
                 Text("Netzstatus")
             } footer: {
                 Text("Ein Verbraucher wird genau einem tiefsten Netzsegment zugeordnet. Übergeordnete Segmente erhalten automatisch die Summe aller nachgelagerten Verbraucher und Teilstränge. Unvollständige Verbraucher-Q blockieren den vollständigen Segment-Q.")
+            }
+
+            Section {
+                LabeledContent("Pfadprofil", value: HeizBalanceHydraulicNetworkPathCalculator.profileVersion)
+                LabeledContent("Zentral verknüpfte Shared-Rohre", value: "\(pathState.centralLinkedPipeCount)")
+                LabeledContent("Legacy/manuell", value: "\(pathState.unlinkedLegacySharedPipeCount)")
+
+                if pathState.centralPipeModeActive {
+                    if pathState.result != nil {
+                        Label("Zentraler Pfadmodus aktiv", systemImage: "point.3.connected.trianglepath.dotted")
+                            .foregroundStyle(.green)
+                    } else {
+                        Label("Zentraler Pfadmodus aktiv, aber noch unvollständig", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                    }
+
+                    NavigationLink {
+                        HeizBalanceHydraulicNetworkPathView(project: project)
+                    } label: {
+                        Label("Netzpfade & Druckverluste", systemImage: "arrow.triangle.branch")
+                    }
+                } else {
+                    Text("Noch kein gemeinsamer Rohrabschnitt ist zentral mit einem Netzsegment verknüpft. Bis dahin gilt die bisherige Legacy-/Manuellogik.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Zentrale Shared-Edge-Hydraulik")
+            } footer: {
+                Text("Sobald mindestens ein gemeinsamer Rohrabschnitt einem Netzsegment zugeordnet ist, werden alle verknüpften Shared-Rohre je Segment genau einmal gerechnet. Verbraucherpfade erhalten automatisch die Verluste ihrer übergeordneten Netzsegmente plus terminale Heizflächen-Anbindung.")
             }
 
             Section {
@@ -103,7 +137,7 @@ struct HeizBalanceHydraulicNetworkView: View {
             } header: {
                 Text("Netzbaum")
             } footer: {
-                Text("Beispiel: Hauptstrang → EG / OG → einzelne Heizflächen. Die Struktur beschreibt nur die Verteilung der Verbraucherströme; Rohrgeometrie und Druckverlust bleiben weiterhin an den realen Rohrabschnitten des jeweiligen Heizflächenpfads.")
+                Text("Beispiel: Hauptstrang → EG / OG → einzelne Heizflächen. Ein zentral verknüpfter gemeinsamer Rohrabschnitt gilt als physischer Netz-Edge und wird nicht mehr pro Verbraucher dupliziert.")
             }
 
             Section {
@@ -121,7 +155,7 @@ struct HeizBalanceHydraulicNetworkView: View {
                             .foregroundStyle(.secondary)
 
                         Picker("Netzsegment", selection: networkSegmentBinding(pipeID: pipe.id)) {
-                            Text("Manueller Q").tag(UUID?.none)
+                            Text("Legacy / manueller Q").tag(UUID?.none)
                             ForEach(segments) { segment in
                                 Text(segment.name).tag(Optional(segment.id))
                             }
@@ -130,14 +164,17 @@ struct HeizBalanceHydraulicNetworkView: View {
                         if let segmentID = networkSegmentBinding(pipeID: pipe.id).wrappedValue {
                             let calculated = state.designFlow(segmentID: segmentID)
                             HStack {
-                                Text("Netz-Q")
+                                Text("Zentraler Netz-Q")
                                 Spacer()
                                 Text(calculated.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen")
                                     .foregroundStyle(calculated == nil ? Color.orange : Color.secondary)
                             }
                             .font(.caption)
+                            Text("Dieser Abschnitt wird als zentraler Edge des gewählten Netzsegments genau einmal gerechnet.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         } else if let flow = pipe.storedFlowLPH {
-                            Text("Manuell: " + flow.formatted(.number.precision(.fractionLength(0...1))) + " l/h")
+                            Text("Legacy/manuell: " + flow.formatted(.number.precision(.fractionLength(0...1))) + " l/h")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -147,7 +184,7 @@ struct HeizBalanceHydraulicNetworkView: View {
             } header: {
                 Text("Gemeinsame Rohrabschnitte")
             } footer: {
-                Text("Beim Verknüpfen wird ein bereits vollständig berechenbarer Netz-Q sofort auf den Rohrabschnitt übernommen. Ohne Verknüpfung bleibt der bisherige manuell erfasste Summenstrom gültig.")
+                Text("Verknüpfte Abschnitte werden zentral gezählt. Nicht verknüpfte gemeinsame Rohre bleiben aus Kompatibilitätsgründen erhalten, werden im zentralen Pfadmodus aber nicht zusätzlich in Verbraucherpfade eingerechnet.")
             }
 
             Section {
@@ -166,7 +203,7 @@ struct HeizBalanceHydraulicNetworkView: View {
             } header: {
                 Text("Synchronisieren")
             } footer: {
-                Text("Baum- und Verbraucheränderungen synchronisieren vollständige Netz-Q automatisch. Der manuelle Knopf bleibt für den Fall, dass sich Heizflächen-Zielströme außerhalb dieser Ansicht geändert haben. Veraltete Werte blockieren bis dahin den vollständigen Pumpen-Betriebspunkt.")
+                Text("Der aktuelle zentrale Pfad-Rechenkern verwendet direkt den berechneten Netz-Q. Die gespeicherten Abschnitts-Q werden zusätzlich synchronisiert, damit ältere Ansichten und gespeicherte Projekte nachvollziehbar bleiben.")
             }
         }
         .navigationTitle("Hydraulischer Netzbaum")
