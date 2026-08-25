@@ -117,7 +117,7 @@ struct HeizBalancePumpSelection: Identifiable, Codable, Hashable {
     }
 
     private func approximatelyEqual(_ lhs: Double, _ rhs: Double) -> Bool {
-        let scale = max(1, abs(lhs), abs(rhs))
+        let scale = max(1, max(abs(lhs), abs(rhs)))
         return abs(lhs - rhs) <= scale * 1e-9
     }
 }
