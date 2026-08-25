@@ -100,7 +100,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Pro Szenario: auswertbare Heizflächen, ausreichende Heizflächen, Systemstatus und thermisch schlechteste Heizfläche.
 - Detailansicht zeigt jede Heizfläche einzeln.
 - Keine konkrete Ersatzheizfläche oder Herstellerdimension wird erfunden; bei Unterdeckung wird stattdessen die mindestens benötigte ΔT50-Nennleistung und der Faktor ausgegeben.
-- Das Projekt-Dashboard zeigt das gespeicherte Sanierungsziel jetzt als fachlichen Sofortstatus: `Ziel erreichbar`, `Upgradebedarf`, `Daten unvollständig` oder noch keine Heizflächen.
+- Das Projekt-Dashboard zeigt das gespeicherte Sanierungsziel als fachlichen Sofortstatus: `Ziel erreichbar`, `Upgradebedarf`, `Daten unvollständig` oder noch keine Heizflächen.
 - Bei Upgradebedarf werden direkt die begrenzende Heizfläche, die mindestens erforderliche ΔT50-Nennleistung und der Größenfaktor angezeigt.
 - Die dokumentierte Quelle des Zieltemperaturniveaus ist auch im Dashboard sichtbar.
 - Der erwartete Dashboardzustand des technischen 45/35-Musterfalls ist in `docs/HEIZBALANCE_REFERENCE_CASES.md` festgehalten.
