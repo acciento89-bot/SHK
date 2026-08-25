@@ -54,8 +54,8 @@ struct HeizBalanceTemperatureScenarioSummary: Identifiable {
         entries
             .filter { $0.result != nil }
             .min {
-                ($0.result?.capacityRatio ?? .infinity)
-                    < ($1.result?.capacityRatio ?? .infinity)
+                ($0.result?.capacityRatio ?? Double.infinity)
+                    < ($1.result?.capacityRatio ?? Double.infinity)
             }
     }
 }
@@ -250,16 +250,16 @@ struct HeizBalanceTemperatureScenarioView: View {
                             .multilineTextAlignment(.trailing)
                     }
                     LabeledContent("Deckungsgrad") {
-                        Text((result.capacityRatio * 100).formatted(.number.precision(.fractionLength(0))) + " %")
+                        Text(scenarioPercentText(result.capacityRatio))
                     }
 
                     if !result.sufficient {
                         LabeledContent("Benötigte ΔT50-Nennleistung") {
-                            Text(result.requiredNominalPowerDeltaT50W.formatted(.number.precision(.fractionLength(0))) + " W")
+                            Text(scenarioWattText(result.requiredNominalPowerDeltaT50W))
                                 .fontWeight(.semibold)
                         }
                         LabeledContent("Nennleistungsfaktor") {
-                            Text("×" + result.nominalPowerFactor.formatted(.number.precision(.fractionLength(2))))
+                            Text(scenarioFactorText(result.nominalPowerFactor))
                                 .fontWeight(.semibold)
                         }
                     }
@@ -298,12 +298,12 @@ struct HeizBalanceTemperatureScenarioDetailView: View {
 
                         if let result = entry.result {
                             LabeledContent("Verfügbar") {
-                                Text(result.availablePowerW.formatted(.number.precision(.fractionLength(0))) + " W")
+                                Text(scenarioWattText(result.availablePowerW))
                             }
                             .font(.caption)
 
                             LabeledContent("Deckungsgrad") {
-                                Text((result.capacityRatio * 100).formatted(.number.precision(.fractionLength(0))) + " %")
+                                Text(scenarioPercentText(result.capacityRatio))
                                     .foregroundStyle(result.sufficient ? .secondary : .orange)
                             }
                             .font(.caption)
@@ -314,13 +314,13 @@ struct HeizBalanceTemperatureScenarioDetailView: View {
                                     .foregroundStyle(.green)
                             } else {
                                 LabeledContent("Erforderlich bei ΔT50") {
-                                    Text(result.requiredNominalPowerDeltaT50W.formatted(.number.precision(.fractionLength(0))) + " W")
+                                    Text(scenarioWattText(result.requiredNominalPowerDeltaT50W))
                                         .fontWeight(.semibold)
                                 }
                                 .font(.caption)
 
                                 LabeledContent("Faktor zur aktuellen Nennleistung") {
-                                    Text("×" + result.nominalPowerFactor.formatted(.number.precision(.fractionLength(2))))
+                                    Text(scenarioFactorText(result.nominalPowerFactor))
                                         .fontWeight(.semibold)
                                 }
                                 .font(.caption)
@@ -340,4 +340,17 @@ struct HeizBalanceTemperatureScenarioDetailView: View {
         .navigationTitle(summary.scenario.title)
         .navigationBarTitleDisplayMode(.inline)
     }
+}
+
+private func scenarioPercentText(_ ratio: Double) -> String {
+    let percent = ratio * 100
+    return percent.formatted(.number.precision(.fractionLength(0))) + " %"
+}
+
+private func scenarioWattText(_ powerW: Double) -> String {
+    powerW.formatted(.number.precision(.fractionLength(0))) + " W"
+}
+
+private func scenarioFactorText(_ factor: Double) -> String {
+    "×" + factor.formatted(.number.precision(.fractionLength(2)))
 }
