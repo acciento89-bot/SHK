@@ -4,6 +4,7 @@ enum HeizBalanceHydronicCircuitCalculator {
     struct PipeSectionInput: Sendable, Equatable {
         var id: String
         var name: String
+        var volumeFlowLPH: Double
         var innerDiameterMM: Double
         var lengthM: Double
         var roughnessMM: Double
@@ -20,6 +21,7 @@ enum HeizBalanceHydronicCircuitCalculator {
     struct SectionResult: Sendable, Equatable {
         var id: String
         var name: String
+        var volumeFlowLPH: Double
         var velocityMS: Double
         var reynoldsNumber: Double
         var pressureDropPaPerM: Double
@@ -53,7 +55,9 @@ enum HeizBalanceHydronicCircuitCalculator {
         var localCoverageComplete = true
 
         for section in input.sections {
-            guard section.innerDiameterMM > 0,
+            guard section.volumeFlowLPH.isFinite,
+                  section.volumeFlowLPH > 0,
+                  section.innerDiameterMM > 0,
                   section.lengthM >= 0,
                   section.roughnessMM >= 0 else {
                 return nil
@@ -63,7 +67,7 @@ enum HeizBalanceHydronicCircuitCalculator {
             }
 
             let hydraulics = PipeCalculator.calculateExtended(
-                volumeFlowLPH: input.targetVolumeFlowLPH,
+                volumeFlowLPH: section.volumeFlowLPH,
                 innerDiameterMM: section.innerDiameterMM,
                 lengthM: section.lengthM,
                 roughnessMM: section.roughnessMM,
@@ -89,6 +93,7 @@ enum HeizBalanceHydronicCircuitCalculator {
                 SectionResult(
                     id: section.id,
                     name: section.name,
+                    volumeFlowLPH: section.volumeFlowLPH,
                     velocityMS: hydraulics.base.velocityMS,
                     reynoldsNumber: hydraulics.reynoldsNumber,
                     pressureDropPaPerM: hydraulics.base.pressureDropPaPerM,
