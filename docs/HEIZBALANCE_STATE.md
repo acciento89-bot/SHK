@@ -52,29 +52,27 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung und hydra
 6. Keine GEG-/BEG-Konformitätsaussage ohne fachliche Prüfung des vollständigen Verfahrens.
 7. Nicht normative Vorberechnungen werden in UI und Code eindeutig als solche gekennzeichnet.
 
-## Aktueller Stand – Foundation Pass 2
+## Aktueller Stand – Foundation Pass 3
 - Branch `feature/heizbalance-foundation` und Draft-PR #12 aktiv.
 - XcodeGen-Target `HeizBalance` mit Bundle-ID `de.kamilunavo.heizbalance` eingebunden.
-- App-Entry-Point und lokaler Projekt-Store über Swift Observation verdrahtet.
-- Persistente lokale Projektspeicherung über Codable vorhanden.
-- Projektaufnahme: Projektname, Kunde, Adresse, Baujahr und Notizen.
-- Gebäudeaufnahme: Geschosse und Räume.
-- Raumaufnahme: Länge, Breite, Höhe, Raumtemperatur, Grundfläche und Volumen.
-- Bauteilaufnahme: Art, Fläche, U-Wert, Quelle und Notiz.
-- Auslegungs-Außentemperatur als expliziter Projektwert inklusive Quellenkennzeichnung ergänzt.
-- Luftwechsel je Raum als expliziter Eingabewert inklusive Quellenkennzeichnung ergänzt.
-- Thermische Randbedingung je Bauteil ergänzt: Außenluft oder explizite Gegenseitentemperatur.
-- Boden, Decken und angrenzende unbeheizte Bereiche erhalten bewusst keine erfundene Pauschalkorrektur.
-- `HeizBalanceHeatLossPreviewCalculator` im SHKCore ergänzt.
-- Technische Vorberechnung liefert getrennt Transmission, Lüftung, Summe und W/m², sobald alle erforderlichen Eingaben vorhanden sind.
-- UI kennzeichnet dieses Ergebnis ausdrücklich als Vorberechnung und nicht als freigegebene Norm-Heizlast.
-- Core-Geometrie und Wärmeverlust-Vorbereitung sind mit automatisierten Tests abgesichert.
-- HeizBalance ist Bestandteil der iOS-CI-Matrix.
-- CI Run #42 für Commit `69497766de248d4a9b20dd1bd3900669ba650ae8` vollständig grün: Core-Tests und HeizBalance-iOS-Build erfolgreich.
+- Persistente lokale Projektstruktur Projekt → Geschoss → Raum → Bauteil vorhanden.
+- Projektaufnahme: Kunde, Adresse, Baujahr, Auslegungs-Außentemperatur, Quellenangaben und Notizen.
+- Raumaufnahme: Geometrie, Solltemperatur, Luftwechsel und Quellenangabe.
+- Bauteilaufnahme: Art, Fläche, U-Wert, U-Wert-Quelle und thermische Randbedingung.
+- Randbedingungen unterstützen Außenluft oder explizite Gegenseitentemperatur; für Boden/Decke/unbeheizte Bereiche werden keine erfundenen Pauschalwerte eingesetzt.
+- `HeizBalanceHeatLossPreviewCalculator` liegt getrennt im SHKCore und berechnet technische Transmission und Lüftung aus expliziten Eingaben.
+- Vorberechnung je Raum zeigt Transmission, Lüftung, Summe und W/m².
+- Gebäude-Dashboard ergänzt: vollständig erfasste Räume, fehlende Eingaben je Raum, Zwischenwerte und Gebäudesumme.
+- Eine Gebäudesumme wird nur ausgegeben, wenn alle Räume vollständig sind; bei Lücken wird lediglich die Zwischensumme vollständig erfasster Räume gekennzeichnet.
+- Große SwiftUI-Datei in Projektliste, Projekteditor, Gebäudeeditoren und Formularfelder aufgeteilt.
+- UI kennzeichnet alle Ergebnisse ausdrücklich als technische Vorberechnung und nicht als Norm-Heizlast.
+- Geometrie- und Wärmeverlust-Grundlagen besitzen automatisierte Core-Tests.
+- CI Run #42 für die thermische Engine vollständig grün.
+- CI Run #44 für Gebäude-Dashboard und View-Refactor vollständig grün, inklusive HeizBalance-iOS-Build und Core-Tests.
 
 ## Nächster Entwicklungsschritt
-1. Projekt-/Gebäudeübersicht mit Vollständigkeitsstatus und aufsummierten Vorberechnungswerten ergänzen.
-2. Datenmodell für normative Transmissionsfälle, Lüftung/Infiltration und zusätzliche Aufheizleistung getrennt vorbereiten.
-3. Öffentliche/verifizierbare Spezifikation und Referenzfälle für DIN EN 12831-1 / DIN/TS 12831-1 zusammentragen, ohne geschützte Norminhalte zu kopieren.
-4. Normative Engine erst nach verifizierter Spezifikation implementieren und gegen Referenzfälle testen.
+1. Datenmodell für die spätere normative Engine sauber von der technischen Vorberechnung trennen und versionieren.
+2. Öffentliche/verifizierbare Spezifikation und Referenzfälle für DIN EN 12831-1 / DIN/TS 12831-1 zusammentragen, ohne geschützte Norminhalte zu kopieren.
+3. Transmissionsfälle, Lüftung/Infiltration und zusätzliche Aufheizleistung als einzeln testbare normative Komponenten vorbereiten.
+4. Normative Engine erst nach verifizierter Spezifikation implementieren und gegen Referenzfälle/Fachsoftware testen.
 5. Danach Heizflächenmodul als Brücke zum hydraulischen Abgleich beginnen.
