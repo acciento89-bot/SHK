@@ -57,3 +57,28 @@ Wenn 45 / 35 °C im Musterprojekt als Sanierungsziel gespeichert wird, muss ders
 - Bei unvollständigen Heizflächendaten muss statt einer positiven/negativen Zielaussage `Daten unvollständig` erscheinen.
 
 Auch diese Prüfung ist eine technische Regression und keine normative Aussage.
+
+## Technischer Pumpenkennlinien-Referenzfall
+Der Pumpenvergleich verwendet das Rechenprofil `linear-documented-pump-curve-v1`.
+
+Dokumentierte Kennlinienpunkte:
+- Punkt P1: 1,0 m³/h → 4,0 m Förderhöhe → 28 W elektrische Aufnahme
+- Punkt P2: 2,0 m³/h → 2,0 m Förderhöhe → 40 W elektrische Aufnahme
+
+Projekt-Betriebspunkt:
+- Volumenstrom: 1,5 m³/h
+- erforderliche Förderhöhe: 3,2 m
+
+Erwartete technische Zwischenwerte:
+- Kennlinien-Förderhöhe bei 1,5 m³/h: 3,0 m
+- elektrische Aufnahme bei 1,5 m³/h: 34 W
+- Förderhöhenreserve: −0,2 m
+- Ergebnis: hydraulisch nicht ausreichend
+- verwendete Begrenzungspunkte: P1 und P2
+- der Wert ist ein linearer technischer Zwischenwert, keine Herstellerfreigabe
+
+Zusätzliche harte Regeln:
+- Ein exakt dokumentierter Volumenstrompunkt wird unverändert verwendet.
+- Unterhalb des kleinsten oder oberhalb des größten dokumentierten Volumenstroms wird kein Ergebnis erzeugt; HeizBalance extrapoliert Pumpenkennlinien nicht.
+- Die elektrische Aufnahme wird nur interpoliert, wenn beide begrenzenden Punkte einen dokumentierten Leistungswert enthalten.
+- Aus dem Vergleich folgt keine automatische Pumpenauswahl, Regelartwahl oder Effizienzfreigabe.
