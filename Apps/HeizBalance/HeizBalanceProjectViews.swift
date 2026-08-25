@@ -39,10 +39,20 @@ struct HeizBalanceProjectListView: View {
         .navigationTitle("HeizBalance")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                NavigationLink {
-                    HeizBalanceRadiatorDatasetManager()
+                Menu {
+                    NavigationLink {
+                        HeizBalanceRadiatorDatasetManager()
+                    } label: {
+                        Label("Heizkörperdaten", systemImage: "radiator")
+                    }
+
+                    NavigationLink {
+                        HeizBalanceValveDatasetManager()
+                    } label: {
+                        Label("Ventildaten", systemImage: "slider.horizontal.3")
+                    }
                 } label: {
-                    Label("Heizkörperdaten", systemImage: "shippingbox")
+                    Label("Produktdaten", systemImage: "shippingbox")
                 }
             }
 
