@@ -37,3 +37,6 @@ jobs:
           grep -Eq '^[[:space:]]*CURRENT_PROJECT_VERSION = 2$' <<<"$SETTINGS"
       - name: Build ${{ matrix.scheme }}
         run: xcodebuild -project KamilunavoSHK.xcodeproj -scheme "${{ matrix.scheme }}" -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
+      - name: Build HeizBalance Release
+        if: matrix.scheme == 'HeizBalance'
+        run: xcodebuild -project KamilunavoSHK.xcodeproj -scheme HeizBalance -sdk iphonesimulator -configuration Release CODE_SIGNING_ALLOWED=NO build
