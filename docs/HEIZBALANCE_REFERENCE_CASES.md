@@ -255,4 +255,5 @@ Projektweit kann zusätzlich die ausdrücklich festgehaltene Pumpen-/Kennliniene
 ## Verifikationsstand Batch 26–29
 - CI #249 hat einen reinen Swift-Syntaxfehler im failable Initializer der neuen Ventilauswahl erkannt; die fachliche Logik war nicht betroffen.
 - Der Fehler wurde zu `init?(...)` korrigiert.
-- **CI #250 hat den vollständigen Code-Head anschließend grün validiert: Core-Tests, komplette iOS-Debug-Matrix, HeizBalance Debug und echter HeizBalance-Release-Simulator-Build.**
+- **CI #250 hat den vollständigen Code-Head `a618b2630b057f9bc6e85ec1b143a480a1a7670e` anschließend grün validiert: Core-Tests, komplette iOS-Debug-Matrix, HeizBalance Debug und echter HeizBalance-Release-Simulator-Build.**
+- Nachgelagerte Commits ändern nur diese Handoff-/Referenzdokumentation und werden separat durch dieselbe PR-CI geprüft.
