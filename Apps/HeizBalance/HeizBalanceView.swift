@@ -11,5 +11,6 @@ struct HeizBalanceView: View {
 #Preview {
     HeizBalanceView()
         .environment(HeizBalanceProjectStore())
+        .environment(HeizBalanceRadiatorDatasetStore())
         .preferredColorScheme(.dark)
 }
