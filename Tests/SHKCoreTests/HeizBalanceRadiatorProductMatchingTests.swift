@@ -12,9 +12,9 @@ struct HeizBalanceRadiatorProductMatchingTests {
                     flowTemperatureC: 45,
                     returnTemperatureC: 35,
                     candidates: [
-                        .init(id: "small", nominalPowerDeltaT50W: 2200, exponent: 1.3),
-                        .init(id: "fit", nominalPowerDeltaT50W: 2700, exponent: 1.3),
-                        .init(id: "large", nominalPowerDeltaT50W: 3200, exponent: 1.3)
+                        .init(id: "small", nominalPowerDeltaT50W: 1800, exponent: 1.3),
+                        .init(id: "fit", nominalPowerDeltaT50W: 2200, exponent: 1.3),
+                        .init(id: "large", nominalPowerDeltaT50W: 2700, exponent: 1.3)
                     ]
                 )
             )
