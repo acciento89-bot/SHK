@@ -251,6 +251,12 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 NavigationLink {
+                    HeizBalanceProductionReportView(project: draft)
+                } label: {
+                    Label("Produktionsbericht & Übergabe", systemImage: "doc.text.image")
+                }
+
+                NavigationLink {
                     HeizBalanceTechnicalReportExportView(project: draft)
                 } label: {
                     Label("Technischer Bericht & PDF", systemImage: "doc.richtext")
