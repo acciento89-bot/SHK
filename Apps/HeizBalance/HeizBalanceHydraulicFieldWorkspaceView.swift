@@ -225,6 +225,20 @@ struct HeizBalanceHydraulicCircuitWorkspaceView: View {
         )
     }
 
+    private var componentAssessmentBinding: Binding<Bool> {
+        Binding(
+            get: { surface.isHydraulicComponentAssessmentComplete },
+            set: { surface.hydraulicComponentAssessmentComplete = $0 }
+        )
+    }
+
+    private var componentValuesComplete: Bool {
+        (surface.hydraulicLossComponents ?? []).allSatisfy { component in
+            guard let pressureLoss = component.pressureLossKPa else { return false }
+            return pressureLoss.isFinite && pressureLoss >= 0
+        }
+    }
+
     private var valveIndices: [Int] {
         (surface.hydraulicLossComponents ?? []).indices.filter { index in
             surface.hydraulicLossComponents?[index].supportsValveProductData == true
@@ -271,6 +285,7 @@ struct HeizBalanceHydraulicCircuitWorkspaceView: View {
                     Menu {
                         ForEach(templateStore.templates) { template in
                             Button(template.title) {
+                                removeSelectionsForCurrentComponents()
                                 var updated = surface
                                 template.apply(to: &updated)
                                 surface = updated
@@ -282,6 +297,7 @@ struct HeizBalanceHydraulicCircuitWorkspaceView: View {
                 }
 
                 Button(role: .destructive) {
+                    removeSelectionsForCurrentComponents()
                     surface.pipeSections = []
                     surface.hydraulicLossComponents = []
                     surface.hydraulicComponentAssessmentComplete = false
@@ -305,6 +321,14 @@ struct HeizBalanceHydraulicCircuitWorkspaceView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            duplicatePipeSection(section)
+                        } label: {
+                            Label("Duplizieren", systemImage: "plus.square.on.square")
+                        }
+                        .tint(.blue)
                     }
                 }
                 .onDelete { offsets in
@@ -343,9 +367,21 @@ struct HeizBalanceHydraulicCircuitWorkspaceView: View {
                             }
                         }
                     }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            duplicateHydraulicComponent(component)
+                        } label: {
+                            Label("Duplizieren", systemImage: "plus.square.on.square")
+                        }
+                        .tint(.blue)
+                    }
                 }
                 .onDelete { offsets in
                     var values = componentBinding.wrappedValue
+                    let removedIDs = Set(offsets.compactMap { index in
+                        values.indices.contains(index) ? values[index].id : nil
+                    })
+                    valveSelectionStore.delete(projectID: projectID, componentIDs: removedIDs)
                     values.remove(atOffsets: offsets)
                     componentBinding.wrappedValue = values
                 }
@@ -361,8 +397,13 @@ struct HeizBalanceHydraulicCircuitWorkspaceView: View {
                 } label: {
                     Label("Hydraulisches Bauteil hinzufügen", systemImage: "plus.circle")
                 }
+
+                Toggle("Bauteilaufnahme vollständig", isOn: componentAssessmentBinding)
+                    .disabled(!componentValuesComplete)
             } header: {
                 Text("Bauteile")
+            } footer: {
+                Text("Änderungen an Bauteilen setzen die Vollständigkeitsbestätigung zurück. Erst wenn alle erfassten Bauteile einen gültigen Δp-Wert haben, kann die Aufnahme wieder als vollständig bestätigt werden.")
             }
 
             valveSettingSection
@@ -468,6 +509,33 @@ struct HeizBalanceHydraulicCircuitWorkspaceView: View {
                 densityKGPerM3: density
             )
         )?.requiredKvM3H
+    }
+
+    private func duplicatePipeSection(_ section: HeizBalancePipeSection) {
+        guard let copy = HeizBalanceHydraulicCaptureTemplate.safePipeStructure(from: [section]).first else { return }
+        var values = pipeBinding.wrappedValue
+        if let index = values.firstIndex(where: { $0.id == section.id }) {
+            values.insert(copy, at: index + 1)
+        } else {
+            values.append(copy)
+        }
+        pipeBinding.wrappedValue = values
+    }
+
+    private func duplicateHydraulicComponent(_ component: HeizBalanceHydraulicLossComponent) {
+        guard let copy = HeizBalanceHydraulicCaptureTemplate.safeComponentStructure(from: [component]).first else { return }
+        var values = componentBinding.wrappedValue
+        if let index = values.firstIndex(where: { $0.id == component.id }) {
+            values.insert(copy, at: index + 1)
+        } else {
+            values.append(copy)
+        }
+        componentBinding.wrappedValue = values
+    }
+
+    private func removeSelectionsForCurrentComponents() {
+        let ids = Set((surface.hydraulicLossComponents ?? []).map(\.id))
+        valveSelectionStore.delete(projectID: projectID, componentIDs: ids)
     }
 
     private var errorBinding: Binding<Bool> {
