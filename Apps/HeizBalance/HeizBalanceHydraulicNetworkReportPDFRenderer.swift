@@ -35,7 +35,7 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
             }
 
             func footer() {
-                let text = "HeizBalance · hydraulischer Netzbaum · technische Vorbereitung · Seite \(pageNumber)"
+                let text = "HeizBalance · hydraulischer Netzbaum / Pfade · technische Vorbereitung · Seite \(pageNumber)"
                 (text as NSString).draw(
                     in: CGRect(x: margin, y: page.height - 27, width: width, height: 12),
                     withAttributes: [.font: UIFont.systemFont(ofSize: 7), .foregroundColor: UIColor.darkGray]
@@ -54,8 +54,17 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
             beginPage()
             draw(snapshot.notice, font: .systemFont(ofSize: 8), color: .darkGray, spacing: 8)
             draw("Status", font: .boldSystemFont(ofSize: 11), spacing: 4)
-            draw("Profil: \(snapshot.profileVersion)", font: .systemFont(ofSize: 8))
-            draw("Netz gültig: \(snapshot.networkValid ? "Ja" : "Nein") · Verbraucher zugeordnet: \(snapshot.assignedConsumerCount)/\(snapshot.consumerCount) · veraltete Rohrverknüpfungen: \(snapshot.staleLinkedPipeCount)", font: .systemFont(ofSize: 8), spacing: 8)
+            draw("Q-Profil: \(snapshot.profileVersion)", font: .systemFont(ofSize: 8))
+            draw("Netz gültig: \(snapshot.networkValid ? "Ja" : "Nein") · Verbraucher zugeordnet: \(snapshot.assignedConsumerCount)/\(snapshot.consumerCount) · veraltete Rohrverknüpfungen: \(snapshot.staleLinkedPipeCount)", font: .systemFont(ofSize: 8), spacing: 3)
+
+            if snapshot.centralPathModeActive == true {
+                let profile = snapshot.pathProfileVersion ?? "—"
+                let linked = snapshot.centralLinkedPipeCount ?? 0
+                let legacy = snapshot.unlinkedLegacySharedPipeCount ?? 0
+                draw("Pfadprofil: \(profile) · zentrale Shared-Rohre: \(linked) · Legacy/unverknüpft: \(legacy)", font: .systemFont(ofSize: 8), color: legacy > 0 ? .systemOrange : .black, spacing: 8)
+            } else {
+                draw("Zentraler Shared-Edge-/Pfadmodus: nicht aktiv – Legacy-/Manuellogik", font: .systemFont(ofSize: 8), color: .darkGray, spacing: 8)
+            }
 
             draw("Segmente", font: .boldSystemFont(ofSize: 11), spacing: 5)
             if snapshot.segments.isEmpty {
@@ -72,6 +81,17 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
                 draw("direkt \(segment.directConsumers.count) · nachgelagert \(segment.downstreamConsumerCount)\(parent)", font: .systemFont(ofSize: 7.5), color: .darkGray, indent: indent + 8, spacing: 1)
                 let flow = segment.designVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen (bekannt: " + segment.knownVolumeFlowLPH.formatted(.number.precision(.fractionLength(0...1))) + " l/h)"
                 draw("Segment-Q: \(flow)", font: .systemFont(ofSize: 8), color: segment.designVolumeFlowLPH == nil ? .systemOrange : .black, indent: indent + 8, spacing: 1)
+
+                if snapshot.centralPathModeActive == true {
+                    let pipeCount = segment.centralPipeSectionCount ?? 0
+                    if let complete = segment.completePressureLossKPa {
+                        draw("Zentrale Rohrabschnitte: \(pipeCount) · Segment-Δp: \(complete.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 8), indent: indent + 8, spacing: 1)
+                    } else {
+                        let known = segment.knownPressureLossKPa ?? 0
+                        draw("Zentrale Rohrabschnitte: \(pipeCount) · Segment-Δp unvollständig · bekannt: \(known.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 8), color: .systemOrange, indent: indent + 8, spacing: 1)
+                    }
+                }
+
                 if !segment.directConsumers.isEmpty {
                     draw("Direkte Verbraucher: " + segment.directConsumers.joined(separator: " · "), font: .systemFont(ofSize: 7.5), indent: indent + 8, spacing: 1)
                 }
@@ -85,6 +105,27 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
                 }
             }
 
+            if snapshot.centralPathModeActive == true {
+                draw("Verbraucherpfade", font: .boldSystemFont(ofSize: 11), spacing: 5)
+                let paths = snapshot.consumerPaths ?? []
+                if paths.isEmpty {
+                    draw("Keine vollständige Pfadauswertung verfügbar.", font: .systemFont(ofSize: 8), color: .systemOrange, spacing: 6)
+                }
+                for path in paths {
+                    draw(path.displayName, font: .boldSystemFont(ofSize: 8.5), spacing: 1)
+                    let chain = path.pathSegmentNames.isEmpty ? "keinem Segment zugeordnet" : path.pathSegmentNames.joined(separator: " → ")
+                    draw("Pfad: \(chain)", font: .systemFont(ofSize: 7.5), color: path.pathSegmentNames.isEmpty ? .systemOrange : .darkGray, indent: 8, spacing: 1)
+                    let shared = path.knownSharedPressureLossKPa.formatted(.number.precision(.fractionLength(0...3)))
+                    let terminal = path.terminalKnownPressureLossKPa.formatted(.number.precision(.fractionLength(0...3)))
+                    let known = path.knownPathPressureLossKPa.formatted(.number.precision(.fractionLength(0...3)))
+                    if let complete = path.completePathPressureLossKPa {
+                        draw("Shared \(shared) kPa + terminal \(terminal) kPa = Kreis \(complete.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 7.5), indent: 8, spacing: 4)
+                    } else {
+                        draw("Shared bekannt \(shared) kPa + terminal bekannt \(terminal) kPa = bekannt \(known) kPa · vollständiger Kreis-Δp offen", font: .systemFont(ofSize: 7.5), color: .systemOrange, indent: 8, spacing: 4)
+                    }
+                }
+            }
+
             draw("Verknüpfte gemeinsame Rohrabschnitte", font: .boldSystemFont(ofSize: 11), spacing: 5)
             if snapshot.linkedPipes.isEmpty {
                 draw("Keine Rohrabschnitte mit Netzsegment verknüpft.", font: .systemFont(ofSize: 8), color: .darkGray)
@@ -93,7 +134,14 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
                 draw("\(pipe.floorName) · \(pipe.roomName) · \(pipe.surfaceName) · \(pipe.pipeName)", font: .boldSystemFont(ofSize: 8), spacing: 1)
                 let stored = pipe.storedVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen"
                 let calculated = pipe.calculatedVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen"
-                draw("Segment \(pipe.segmentName) · gespeichert \(stored) · aktuell berechnet \(calculated) · \(pipe.current ? "aktuell" : "neu synchronisieren")", font: .systemFont(ofSize: 7.5), color: pipe.current ? .black : .systemOrange, indent: 8, spacing: 4)
+                let roleText = snapshot.centralPathModeActive == true ? "zentraler Edge" : "verknüpfter Shared-Abschnitt"
+                draw("Segment \(pipe.segmentName) · \(roleText) · gespeichert \(stored) · aktuell berechnet \(calculated) · \(pipe.current ? "aktuell" : "neu synchronisieren")", font: .systemFont(ofSize: 7.5), color: pipe.current ? .black : .systemOrange, indent: 8, spacing: 4)
+            }
+
+            if let legacy = snapshot.unlinkedLegacySharedPipeCount,
+               snapshot.centralPathModeActive == true,
+               legacy > 0 {
+                draw("Hinweis: \(legacy) unverknüpfte Legacy-Shared-Rohrabschnitt(e) bleiben im Projekt erhalten, werden im zentralen Pfadmodus aber nicht zusätzlich gezählt.", font: .systemFont(ofSize: 8), color: .systemOrange, spacing: 5)
             }
 
             footer()
