@@ -75,6 +75,13 @@ struct HeizBalanceRetrofitTargetDashboardView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
+
+                NavigationLink {
+                    HeizBalanceRadiatorUpgradeMatchView(project: project)
+                } label: {
+                    Label("Heizkörperdaten & Upgrade prüfen", systemImage: "shippingbox.and.arrow.backward")
+                        .font(.caption.weight(.semibold))
+                }
             }
             .padding(.vertical, 3)
         }
