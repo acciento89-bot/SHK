@@ -28,7 +28,7 @@ struct HeizBalanceValveSettingSelection: Identifiable, Codable, Hashable {
     var rightsNote: String?
     var createdAt: Date
 
-    init(
+    init?(
         projectID: UUID,
         surfaceID: UUID,
         component: HeizBalanceHydraulicLossComponent,
@@ -37,7 +37,7 @@ struct HeizBalanceValveSettingSelection: Identifiable, Codable, Hashable {
         targetVolumeFlowLPH: Double,
         densityKGPerM3: Double,
         createdAt: Date = Date()
-    )? {
+    ) {
         guard component.supportsValveProductData,
               let pressureLoss = component.pressureLossKPa,
               let kv = point.kvM3H,
