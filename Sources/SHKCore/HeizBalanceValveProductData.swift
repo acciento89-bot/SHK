@@ -6,19 +6,37 @@ struct HeizBalanceValveProductData: Codable, Hashable {
     var dataSetVersion: String
     var sourceReference: String
     var presetPoints: [HeizBalanceValvePresetPoint]
+    var datasetID: String?
+    var productID: String?
+    var articleNumber: String?
+    var sourceURL: String?
+    var usageBasis: String?
+    var rightsNote: String?
 
     init(
         manufacturer: String = "",
         productName: String = "",
         dataSetVersion: String = "",
         sourceReference: String = "",
-        presetPoints: [HeizBalanceValvePresetPoint] = []
+        presetPoints: [HeizBalanceValvePresetPoint] = [],
+        datasetID: String? = nil,
+        productID: String? = nil,
+        articleNumber: String? = nil,
+        sourceURL: String? = nil,
+        usageBasis: String? = nil,
+        rightsNote: String? = nil
     ) {
         self.manufacturer = manufacturer
         self.productName = productName
         self.dataSetVersion = dataSetVersion
         self.sourceReference = sourceReference
         self.presetPoints = presetPoints
+        self.datasetID = datasetID
+        self.productID = productID
+        self.articleNumber = articleNumber
+        self.sourceURL = sourceURL
+        self.usageBasis = usageBasis
+        self.rightsNote = rightsNote
     }
 }
 
