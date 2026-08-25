@@ -3,6 +3,8 @@ import SwiftUI
 struct HeizBalanceFloorEditor: View {
     @Binding var floor: HeizBalanceFloor
     let designOutdoorTemperatureC: Double?
+    let designFlowTemperatureC: Double?
+    let designReturnTemperatureC: Double?
 
     var body: some View {
         Form {
@@ -20,7 +22,9 @@ struct HeizBalanceFloorEditor: View {
                     NavigationLink {
                         HeizBalanceRoomEditor(
                             room: $room,
-                            designOutdoorTemperatureC: designOutdoorTemperatureC
+                            designOutdoorTemperatureC: designOutdoorTemperatureC,
+                            designFlowTemperatureC: designFlowTemperatureC,
+                            designReturnTemperatureC: designReturnTemperatureC
                         )
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
@@ -60,9 +64,18 @@ struct HeizBalanceFloorEditor: View {
 struct HeizBalanceRoomEditor: View {
     @Binding var room: HeizBalanceRoom
     let designOutdoorTemperatureC: Double?
+    let designFlowTemperatureC: Double?
+    let designReturnTemperatureC: Double?
 
     private var preview: HeizBalanceRoomPreviewState {
         room.heatLossPreview(designOutdoorTemperatureC: designOutdoorTemperatureC)
+    }
+
+    private var heatingSurfacesBinding: Binding<[HeizBalanceHeatingSurface]> {
+        Binding(
+            get: { room.heatingSurfaces ?? [] },
+            set: { room.heatingSurfaces = $0 }
+        )
     }
 
     var body: some View {
@@ -132,6 +145,66 @@ struct HeizBalanceRoomEditor: View {
                 Text("Bauteile")
             } footer: {
                 Text("Normative Tabellenwerte werden nicht ungeprüft in der App hinterlegt. U-Wert und Randbedingung bleiben nachvollziehbare Projekteingaben.")
+            }
+
+            Section {
+                if heatingSurfacesBinding.wrappedValue.isEmpty {
+                    Text("Noch keine Heizflächen erfasst")
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(heatingSurfacesBinding) { $surface in
+                    NavigationLink {
+                        HeizBalanceHeatingSurfaceEditor(
+                            surface: $surface,
+                            designFlowTemperatureC: designFlowTemperatureC,
+                            designReturnTemperatureC: designReturnTemperatureC,
+                            roomTemperatureC: room.targetTemperature
+                        )
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Label(surface.name, systemImage: surface.kind.systemImage)
+                                Spacer()
+                                if let nominalPower = surface.nominalPowerDeltaT50W {
+                                    Text(nominalPower.formatted(.number.precision(.fractionLength(0))) + " W ΔT50")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            let product = [surface.manufacturer, surface.model]
+                                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                                .joined(separator: " · ")
+                            if !product.isEmpty {
+                                Text(product)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                .onDelete { offsets in
+                    var items = heatingSurfacesBinding.wrappedValue
+                    items.remove(atOffsets: offsets)
+                    heatingSurfacesBinding.wrappedValue = items
+                }
+
+                Menu {
+                    ForEach(HeizBalanceHeatingSurface.Kind.allCases) { kind in
+                        Button(kind.title) {
+                            var items = heatingSurfacesBinding.wrappedValue
+                            items.append(HeizBalanceHeatingSurface(kind: kind))
+                            heatingSurfacesBinding.wrappedValue = items
+                        }
+                    }
+                } label: {
+                    Label("Heizfläche hinzufügen", systemImage: "plus.circle")
+                }
+            } header: {
+                Text("Heizflächen")
+            } footer: {
+                Text("Leistung und Exponent werden je Heizfläche als dokumentierte Hersteller- oder Projektwerte erfasst. Herstellerkennlinien und Ventilvoreinstellungen folgen erst mit geprüften Datensätzen.")
             }
 
             Section("Technische Vorberechnung") {

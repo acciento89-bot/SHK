@@ -30,6 +30,9 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
     var buildingYear: String
     var designOutdoorTemperatureC: Double?
     var designOutdoorTemperatureSource: HeizBalanceInputSource?
+    var designFlowTemperatureC: Double?
+    var designReturnTemperatureC: Double?
+    var systemTemperatureSource: HeizBalanceInputSource?
     var notes: String
     var floors: [HeizBalanceFloor]
     var createdAt: Date
@@ -45,6 +48,9 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         buildingYear: String = "",
         designOutdoorTemperatureC: Double? = nil,
         designOutdoorTemperatureSource: HeizBalanceInputSource? = nil,
+        designFlowTemperatureC: Double? = nil,
+        designReturnTemperatureC: Double? = nil,
+        systemTemperatureSource: HeizBalanceInputSource? = nil,
         notes: String = "",
         floors: [HeizBalanceFloor] = [],
         createdAt: Date = Date(),
@@ -59,6 +65,9 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         self.buildingYear = buildingYear
         self.designOutdoorTemperatureC = designOutdoorTemperatureC
         self.designOutdoorTemperatureSource = designOutdoorTemperatureSource
+        self.designFlowTemperatureC = designFlowTemperatureC
+        self.designReturnTemperatureC = designReturnTemperatureC
+        self.systemTemperatureSource = systemTemperatureSource
         self.notes = notes
         self.floors = floors
         self.createdAt = createdAt
@@ -102,6 +111,7 @@ struct HeizBalanceRoom: Identifiable, Codable, Hashable {
     var airChangeRatePerHour: Double?
     var airChangeSource: HeizBalanceInputSource?
     var components: [HeizBalanceComponent]
+    var heatingSurfaces: [HeizBalanceHeatingSurface]?
 
     init(
         id: UUID = UUID(),
@@ -113,7 +123,8 @@ struct HeizBalanceRoom: Identifiable, Codable, Hashable {
         targetTemperature: Double = 20,
         airChangeRatePerHour: Double? = nil,
         airChangeSource: HeizBalanceInputSource? = nil,
-        components: [HeizBalanceComponent] = []
+        components: [HeizBalanceComponent] = [],
+        heatingSurfaces: [HeizBalanceHeatingSurface]? = nil
     ) {
         self.id = id
         self.name = name
@@ -125,6 +136,7 @@ struct HeizBalanceRoom: Identifiable, Codable, Hashable {
         self.airChangeRatePerHour = airChangeRatePerHour
         self.airChangeSource = airChangeSource
         self.components = components
+        self.heatingSurfaces = heatingSurfaces
     }
 
     var floorArea: Double {
@@ -133,6 +145,67 @@ struct HeizBalanceRoom: Identifiable, Codable, Hashable {
 
     var volume: Double {
         HeizBalanceGeometry.roomVolume(lengthM: length, widthM: width, heightM: height)
+    }
+
+    var heatingSurfaceItems: [HeizBalanceHeatingSurface] {
+        get { heatingSurfaces ?? [] }
+        set { heatingSurfaces = newValue }
+    }
+}
+
+struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
+    var id: UUID
+    var kind: Kind
+    var name: String
+    var manufacturer: String
+    var model: String
+    var nominalPowerDeltaT50W: Double?
+    var exponent: Double?
+    var powerSource: HeizBalanceInputSource?
+    var note: String
+
+    init(
+        id: UUID = UUID(),
+        kind: Kind = .panelRadiator,
+        name: String = "",
+        manufacturer: String = "",
+        model: String = "",
+        nominalPowerDeltaT50W: Double? = nil,
+        exponent: Double? = nil,
+        powerSource: HeizBalanceInputSource? = nil,
+        note: String = ""
+    ) {
+        self.id = id
+        self.kind = kind
+        self.name = name.isEmpty ? kind.title : name
+        self.manufacturer = manufacturer
+        self.model = model
+        self.nominalPowerDeltaT50W = nominalPowerDeltaT50W
+        self.exponent = exponent
+        self.powerSource = powerSource
+        self.note = note
+    }
+
+    enum Kind: String, Codable, CaseIterable, Identifiable {
+        case panelRadiator
+        case sectionalRadiator
+        case towelRadiator
+        case convector
+        case other
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .panelRadiator: "Plattenheizkörper"
+            case .sectionalRadiator: "Gliederheizkörper"
+            case .towelRadiator: "Badheizkörper"
+            case .convector: "Konvektor"
+            case .other: "Andere Heizfläche"
+            }
+        }
+
+        var systemImage: String { "radiator" }
     }
 }
 

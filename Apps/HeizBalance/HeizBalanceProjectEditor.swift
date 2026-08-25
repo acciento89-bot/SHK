@@ -16,6 +16,14 @@ struct HeizBalanceProjectEditor: View {
         draft.heatLossPreviewSummary()
     }
 
+    private var systemTemperatureInvalid: Bool {
+        guard let flow = draft.designFlowTemperatureC,
+              let returnTemperature = draft.designReturnTemperatureC else {
+            return false
+        }
+        return flow <= returnTemperature
+    }
+
     var body: some View {
         Form {
             Section("Projekt") {
@@ -46,6 +54,33 @@ struct HeizBalanceProjectEditor: View {
             }
 
             Section {
+                OptionalDecimalField(
+                    title: "Vorlauftemperatur",
+                    value: $draft.designFlowTemperatureC,
+                    unit: "°C"
+                )
+                OptionalDecimalField(
+                    title: "Rücklauftemperatur",
+                    value: $draft.designReturnTemperatureC,
+                    unit: "°C"
+                )
+                InputSourcePicker(
+                    title: "Quelle Systemtemperaturen",
+                    selection: $draft.systemTemperatureSource
+                )
+
+                if systemTemperatureInvalid {
+                    Label("Die Vorlauftemperatur muss über der Rücklauftemperatur liegen.", systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Heizsystem")
+            } footer: {
+                Text("Die Systemtemperaturen werden für die technische Heizflächenprüfung verwendet. Sie stellen noch keine freigegebene Auslegung oder Abgleichbestätigung dar.")
+            }
+
+            Section {
                 if draft.floors.isEmpty {
                     Text("Noch keine Geschosse angelegt")
                         .foregroundStyle(.secondary)
@@ -55,7 +90,9 @@ struct HeizBalanceProjectEditor: View {
                     NavigationLink {
                         HeizBalanceFloorEditor(
                             floor: $floor,
-                            designOutdoorTemperatureC: draft.designOutdoorTemperatureC
+                            designOutdoorTemperatureC: draft.designOutdoorTemperatureC,
+                            designFlowTemperatureC: draft.designFlowTemperatureC,
+                            designReturnTemperatureC: draft.designReturnTemperatureC
                         )
                     } label: {
                         HStack {
@@ -78,7 +115,7 @@ struct HeizBalanceProjectEditor: View {
             } header: {
                 Text("Gebäude")
             } footer: {
-                Text("Räume, Bauteile und thermische Randbedingungen werden geschossweise aufgenommen.")
+                Text("Räume, Bauteile, Heizflächen und thermische Randbedingungen werden geschossweise aufgenommen.")
             }
 
             Section("Notizen") {
@@ -125,13 +162,13 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 LabeledContent("Hydraulischer Abgleich") {
-                    Text("Noch nicht implementiert")
+                    Text("Heizflächenaufnahme gestartet")
                         .foregroundStyle(.secondary)
                 }
             } header: {
                 Text("Berechnungsstatus")
             } footer: {
-                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Die aktuelle Vorberechnung ist keine freigegebene Norm-Heizlast.")
+                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Die aktuelle Wärme- und Heizflächenberechnung bleibt eine technische Vorberechnung.")
             }
         }
         .navigationTitle(isNewProject ? "Neues Projekt" : draft.name)
