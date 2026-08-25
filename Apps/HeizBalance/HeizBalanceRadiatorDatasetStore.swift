@@ -27,16 +27,13 @@ final class HeizBalanceRadiatorDatasetStore {
 
     @discardableResult
     func importDataset(data: Data) throws -> HeizBalanceRadiatorProductDataset {
-        let decoder = JSONDecoder()
-        let dataset = try decoder.decode(HeizBalanceRadiatorProductDataset.self, from: data)
+        try importDatasetWithReceipt(data: data).dataset
+    }
 
-        guard dataset.isValid else {
-            let message = dataset.validationIssues
-                .map(\.description)
-                .joined(separator: "; ")
-            throw ImportError.validationFailed(message)
-        }
-
+    @discardableResult
+    func importDatasetWithReceipt(data: Data) throws -> HeizBalanceRadiatorDatasetImportDecoder.Receipt {
+        let receipt = try HeizBalanceRadiatorDatasetImportDecoder.decode(data: data)
+        let dataset = receipt.dataset
         let previousDatasets = datasets
 
         if let index = datasets.firstIndex(where: { $0.id == dataset.id }) {
@@ -50,7 +47,7 @@ final class HeizBalanceRadiatorDatasetStore {
         do {
             try persistThrowing()
             persistenceError = nil
-            return dataset
+            return receipt
         } catch {
             datasets = previousDatasets
             persistenceError = "Heizkörper-Datensatz konnte nicht gespeichert werden: \(error.localizedDescription)"
@@ -116,16 +113,5 @@ final class HeizBalanceRadiatorDatasetStore {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(datasets)
         try data.write(to: fileURL, options: .atomic)
-    }
-
-    enum ImportError: LocalizedError {
-        case validationFailed(String)
-
-        var errorDescription: String? {
-            switch self {
-            case .validationFailed(let message):
-                "Datensatz ist nicht gültig: \(message)"
-            }
-        }
     }
 }
