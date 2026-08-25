@@ -38,6 +38,18 @@ struct HeizBalanceProjectListView: View {
         }
         .navigationTitle("HeizBalance")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Menu {
+                    Button {
+                        store.save(HeizBalanceSampleProjectFactory.makeTechnicalDemoProject())
+                    } label: {
+                        Label("Musterprojekt hinzufügen", systemImage: "testtube.2")
+                    }
+                } label: {
+                    Label("Entwicklung", systemImage: "ellipsis.circle")
+                }
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showingNewProject = true
