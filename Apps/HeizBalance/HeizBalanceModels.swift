@@ -247,6 +247,9 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
 struct HeizBalancePipeSection: Identifiable, Codable, Hashable {
     var id: UUID
     var name: String
+    var role: Role?
+    var explicitDesignVolumeFlowLPH: Double?
+    var volumeFlowSource: HeizBalanceInputSource?
     var innerDiameterMM: Double?
     var lengthM: Double?
     var roughnessMM: Double?
@@ -256,6 +259,9 @@ struct HeizBalancePipeSection: Identifiable, Codable, Hashable {
     init(
         id: UUID = UUID(),
         name: String = "Rohrabschnitt",
+        role: Role? = nil,
+        explicitDesignVolumeFlowLPH: Double? = nil,
+        volumeFlowSource: HeizBalanceInputSource? = nil,
         innerDiameterMM: Double? = nil,
         lengthM: Double? = nil,
         roughnessMM: Double? = nil,
@@ -264,11 +270,32 @@ struct HeizBalancePipeSection: Identifiable, Codable, Hashable {
     ) {
         self.id = id
         self.name = name
+        self.role = role
+        self.explicitDesignVolumeFlowLPH = explicitDesignVolumeFlowLPH
+        self.volumeFlowSource = volumeFlowSource
         self.innerDiameterMM = innerDiameterMM
         self.lengthM = lengthM
         self.roughnessMM = roughnessMM
         self.zetaTotal = zetaTotal
         self.note = note
+    }
+
+    var effectiveRole: Role {
+        role ?? .heatingSurfaceBranch
+    }
+
+    enum Role: String, Codable, CaseIterable, Identifiable {
+        case heatingSurfaceBranch
+        case sharedDistribution
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .heatingSurfaceBranch: "Heizflächen-Anbindung"
+            case .sharedDistribution: "Gemeinsame Verteilung"
+            }
+        }
     }
 }
 
