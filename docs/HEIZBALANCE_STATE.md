@@ -1,7 +1,7 @@
 # HeizBalance – Projektstand
 
 ## Ziel
-Mobile SHK-Fachanwendung für raumweise Wärmeverlust-/Heizlastvorbereitung, Heizflächenprüfung, Niedertemperaturbewertung, hydraulische Vorbereitung und nachvollziehbare Baustellendokumentation.
+Mobile SHK-Fachanwendung für raumweise Wärmeverlust-/Heizlastvorbereitung, Heizflächenprüfung, Niedertemperaturbewertung, hydraulische Vorbereitung, Vor-Ort-Aufnahme und nachvollziehbare Baustellen-/Übergabedokumentation.
 
 ## Produkt
 - App Store: `HeizBalance`
@@ -19,197 +19,168 @@ Mobile SHK-Fachanwendung für raumweise Wärmeverlust-/Heizlastvorbereitung, Hei
 - Das reservierte Profil `de-room-heat-load-2017-2020` bleibt technisch gesperrt, bis Spezifikation und Referenzfälle vollständig fachlich verifiziert sind.
 - Regelwerks-/Quellenstand: `docs/HEIZBALANCE_NORM_RESEARCH.md`.
 - Referenz-/Regressionstrategie: `docs/HEIZBALANCE_REFERENCE_CASES.md`.
-- Produktdatenadapter verarbeiten nur dokumentierte, rechtmäßig nutzbare Datenquellen; geschützte Roh-Datensatzbeschreibungen werden nicht nachgebaut.
+- Hydraulik-/Produktdatenrecherche: `docs/HEIZBALANCE_HYDRAULIC_RESEARCH.md`.
+- Produktionsbericht-Vertrag: `docs/HEIZBALANCE_PRODUCTION_REPORT.md`.
 
-## Qualitäts-Gates
+## Harte Qualitäts-Gates
 1. Keine proprietären Norminhalte im Repository.
-2. Rechenfunktionen mit Unit-/Regressionstests absichern.
-3. Normative Module benötigen verifizierte Spezifikation und Referenzabdeckung.
-4. Spätere normative Ergebnisse gegen etablierte Fachsoftware bzw. fachlich geprüfte Referenzrechnungen gegenprüfen.
-5. Eingabeherkunft, Rechenprofil, Annahmen und Ergebnisse im Bericht nachvollziehbar halten.
-6. Keine GEG-/BEG-Konformitätsaussage ohne vollständige fachliche Prüfung.
-7. Normative Ausgabe bleibt bis zur echten Freigabe technisch gesperrt.
-8. Hersteller-Voreinstellungen nur aus dokumentierten, rechtmäßig nutzbaren Produktdaten.
-9. Pumpen-Betriebspunkt nur bei vollständigen Verbraucherströmen und Kreis-Druckverlusten.
-10. System-Minimaltemperatur nur bei vollständig auswertbaren Heizflächen.
-11. Szenarioausgaben liefern benötigte Leistung/Faktor, erfinden aber kein Ersatzmodell.
-12. Externe Produktdaten werden nur über versionierte, validierte Importschemata übernommen; Quelle, Datenstand und Nutzungsgrundlage bleiben erhalten.
-13. Pumpenkennlinien werden außerhalb ihres dokumentierten Volumenstrombereichs nicht extrapoliert.
-14. Ein technisch ausreichender Pumpenkennlinienvergleich ist keine automatische Pumpenauswahl oder Herstellerfreigabe.
-15. Eine Pumpe/Kennlinie darf nur nach ausdrücklicher Benutzeraktion und nur bei technisch ausreichender Abdeckung des aktuellen Betriebspunkts festgehalten werden.
-16. Eine festgehaltene Pumpenauswahl wird eingefroren und bei geändertem/unvollständigem Betriebspunkt als neu zu bewerten markiert.
-17. Hydraulische Pumpen-Leistungskennzahlen sind technische Rechengrößen; insbesondere `Pₕ,erf/P₁` ist kein EEI-/ErP-/Hersteller-Wirkungsgradnachweis.
-18. Eine katalogübergreifende Sortierung technisch ausreichender Kennlinien darf nicht als Produktempfehlungs-Ranking ausgegeben werden.
-19. Aufnahme-Schnellvorlagen dürfen keine versteckten normativen U-Werte, Luftwechselwerte oder thermischen Randtemperaturen einführen.
-20. Beim Duplizieren werden neue IDs erzeugt; hydraulische Entscheidungen, Lastzuordnungen und Ersatzprodukt-Auswahlen werden nicht still mitkopiert.
-21. Eigene Bauteilvorlagen speichern keine Fläche und keine raumspezifische Gegenseitentemperatur.
-22. Hydraulikvorlagen dürfen Rohrgeometrie, Rauheit, ζ-Werte, Bauteilarten und dokumentierte Ventilprodukt-Identität übernehmen; flow-/druckabhängige Werte, deren Quellen und Vollständigkeitsfreigaben werden zurückgesetzt.
-23. Eine konkrete Thermostat-/Rücklaufeinstellung darf ausschließlich durch ausdrückliche Benutzeraktion aus einem dokumentierten Produktdatenpunkt festgehalten werden; der mathematisch nächste kv-Punkt wird nie automatisch zur Einstellung.
-24. Ändern sich Zielvolumenstrom, Ventil-Δp, Fluiddichte oder Ventilproduktdaten, wird eine festgehaltene Ventileinstellung als `neu bewerten` behandelt und nicht still aktualisiert.
-25. Die Baustellen-Einstellliste ist ein technischer Arbeitsnachweis und ausdrücklich kein nachgebautes VdZ-/Verfahren-B-Formular.
+2. Keine GEG-/BEG-/Verfahren-B-/Norm-Konformitätsaussage ohne vollständige fachliche Prüfung.
+3. Normative Ausgabe bleibt technisch gesperrt, solange Spezifikation/Referenzfälle nicht vollständig verifiziert sind.
+4. Hersteller-Voreinstellungen nur aus dokumentierten, rechtmäßig nutzbaren Produktdaten und nur durch ausdrückliche Benutzerentscheidung.
+5. Keine versteckten Fluid-, Rohr-, U-Wert-, Luftwechsel-, Pumpenreserve- oder Herstellerannahmen.
+6. Vollständiger Kreis-Δp nur bei vollständigem Rohrweg, vollständigen Bauteilverlusten und expliziter Vollständigkeitsbestätigung.
+7. Pumpen-Betriebspunkt nur bei vollständigen Verbraucherströmen und vollständigen Kreis-Druckverlusten.
+8. Parallelkreis-Druckverluste werden nicht addiert; maßgebend ist der hydraulisch ungünstigste vollständige Kreis.
+9. Pumpenkennlinien werden außerhalb ihres dokumentierten Q-Bereichs nicht extrapoliert.
+10. Festgehaltene Pumpen-/Ventilentscheidungen werden eingefroren und bei relevanten Änderungen als `neu bewerten` markiert, niemals still ersetzt.
+11. Schnellvorlagen/Kopien dürfen keine alten Last-, Flow-, Δp-, Vollständigkeits- oder Produktentscheidungen unbemerkt weitertragen.
+12. Berichtsexporte ersetzen fehlende oder veraltete technische Werte nicht durch Annahmen.
+13. Projektstatus, Übergabe und Unterschrift sind Dokumentation des Arbeitsstands und keine automatische Norm-/Förder-/Herstellerfreigabe.
+14. HeizBalance erzeugt im Produktionsbericht freie handschriftliche Unterschriftszeilen, keine digitale/kryptografische Signatur oder automatische Abnahme.
+15. Alle Teil-Snapshots eines Produktions-PDFs werden mit exakt demselben Exportzeitpunkt erzeugt.
 
-## Aktueller Stand – Foundation Batch 21–29
+## Aktueller Stand – Foundation Batch 21–30
 
-### 1. Projekt- und Gebäudeaufnahme
+### Projekt-/Gebäudeaufnahme
 - Persistente lokale Struktur Projekt → Geschoss → Raum → Bauteil → Heizfläche.
-- Projektfelder: Kunde, Adresse, Baujahr, Auslegungs-Außentemperatur, System-VL/RL, Quellen, Hydraulik-Fluidwerte, Sanierungsziel und Notizen.
+- Projekt: Kunde, Adresse, Baujahr, Auslegungs-Außentemperatur, System-VL/RL, Quellen, Hydraulik-Fluidwerte, Sanierungsziel, Notizen.
 - Raum: Geometrie, Solltemperatur, Luftwechsel, Quelle, thermische Bauteile und Heizflächen.
-- Bauteile: Art, Fläche, U-Wert, Quelle und thermische Randbedingung.
+- Bauteile: Art, Fläche, U-Wert, Quelle, thermische Randbedingung.
 - Außenluft oder explizite Gegenseitentemperatur; keine versteckten Pauschalwerte für angrenzende Bereiche.
 
-### 2. Technische Wärmeverlust-Vorbereitung
-- `HeizBalanceHeatLossPreviewCalculator` berechnet Transmission und Lüftung ausschließlich aus expliziten Eingaben.
-- Raumübersicht zeigt Transmission, Lüftung, Summe und W/m².
+### Technische Wärmeverlust-/Heizflächenvorbereitung
+- `HeizBalanceHeatLossPreviewCalculator`: Transmission + Lüftung aus expliziten Eingaben.
 - Gebäudesumme nur bei vollständig erfassten Räumen.
-- Profil `technical-preview-v1` bleibt ausdrücklich nicht normativ.
+- `technical-preview-v1` ausdrücklich nicht normativ.
+- Heizflächen: Art, Hersteller/Modell, ΔT50-Nennleistung, Exponent, Quelle, zugeordnete erforderliche Leistung.
+- Verfügbare Leistung und erforderliche Leistung bleiben getrennt.
+- Ziel-Volumenstrom aus zugeordneter Leistung und expliziter Wasserspreizung.
+- Niedertemperatur-Minimum und Temperatur-Szenario-Matrix; Sanierungsziel mit `Ziel erreichbar / Upgradebedarf / Daten unvollständig`.
 
-### 3. Heizflächen / Niedertemperatur / Sanierungsziel
-- Heizflächen enthalten Art, Bezeichnung, Hersteller/Modell optional, Nennleistung ΔT50, Exponent, Quelle, zugeordnete erforderliche Leistung und Notiz.
-- Verfügbare Heizflächenleistung und erforderliche Leistung sind getrennt.
-- Ziel-Volumenstrom aus zugeordneter erforderlicher Leistung und expliziter Wasserspreizung.
-- `HeizBalanceLowTemperatureCheckCalculator` bestimmt bei fester Spreizung die minimal technisch ausreichende VL/RL-Kombination.
-- System-Minimaltemperatur nur, wenn alle Heizflächen auswertbar sind.
-- Persistentes Sanierungsziel und Szenario-Matrix u. a. 50/40, 45/35, 45/40 und 40/35 °C.
-- Dashboard unterscheidet `Ziel erreichbar`, `Upgradebedarf` und `Daten unvollständig`.
+### Produktdatenfundament
+- Heizkörper: `radiator-product-dataset-v1`, explizite `radiator-replacement-selection-v1`, VDI-Mapping `vdi-3805-part6-mapped-v1`.
+- Ventile: `valve-product-dataset-v1` mit diskreten `Voreinstellung → kv`-Punkten, VDI-Mapping `vdi-3805-part2-mapped-v1`.
+- Pumpen: `pump-product-dataset-v1` mit dokumentierten Q/H-/optional-P₁-Kennlinien, VDI-Mapping `vdi-3805-part4-mapped-v1`.
+- Alle Importe erhalten Hersteller, Datenstand, Quelle, Nutzungsgrundlage und Rechtehinweise.
+- Mappingprofile verarbeiten autorisiert erzeugte normalisierte Eingaben; kein Rohparser geschützter VDI-Satzstrukturen.
 
-### 4. Produktdatenfundament – Pass 15–18
-- Heizkörper: `radiator-product-dataset-v1`, technisches Matching und ausdrückliche `radiator-replacement-selection-v1`.
-- Heizkörper-VDI-Mapping: `vdi-3805-part6-mapped-v1`.
-- Ventile: `valve-product-dataset-v1` mit diskreten `Voreinstellung → kv`-Punkten und VDI-Mapping `vdi-3805-part2-mapped-v1`.
-- Pumpen: `pump-product-dataset-v1` mit dokumentierten Q/H-/optional-P₁-Kennlinien und VDI-Mapping `vdi-3805-part4-mapped-v1`.
-- Alle Importe erhalten Hersteller, Datensatzstand, Quelle, Nutzungsgrundlage und Rechtehinweise.
-- Mappingprofile sind autorisiert erzeugte normalisierte Eingaben, keine Rohparser geschützter VDI-Satzstrukturen.
+### Hydraulische Berechnungsvorbereitung
+- Explizite Fluiddichte und kinematische Viskosität.
+- Rohrabschnitte: Rolle, Innendurchmesser, hydraulische Länge, Rauheit, ζ-Summe, ggf. expliziter Abschnittsvolumenstrom.
+- Heizflächen-Anbindung nutzt terminalen Ziel-Q; gemeinsame Verteilung benötigt realen summierten Abschnitts-Q samt Quelle.
+- Geschwindigkeit, Reynolds-Zahl, Rohrreibung, gerade/lokale Druckverluste.
+- Hydraulische Bauteile: Thermostatventil, Rücklaufverschraubung, Heizfläche, Verteiler/Sammler, Armatur/Sonstiges.
+- Projektaggregation: Verbraucher-Gesamt-Q + hydraulisch ungünstigster Parallelkreis.
+- Pumpen-Betriebspunkt nur bei kompletter Q-/Δp-Abdeckung.
 
-### 5. Hydraulische Berechnungsvorbereitung
-- Explizite Fluiddichte und kinematische Viskosität; keine versteckten Wasser-/Glykolwerte.
-- Rohrabschnitte mit Rolle, Innendurchmesser, hydraulischer Länge, Rauheit, ζ-Summe und ggf. explizitem Abschnittsvolumenstrom.
-- Heizflächen-Anbindung nutzt den terminalen Zielvolumenstrom; gemeinsame Verteilung benötigt ihren realen summierten Abschnittsvolumenstrom samt Quelle.
-- Berechnung von Geschwindigkeit, Reynolds-Zahl, Rohrreibung sowie geradem/lokalem Druckverlust.
-- Hydraulische Bauteile getrennt erfassbar: Thermostatventil, Rücklaufverschraubung, Heizfläche, Verteiler/Sammler, Armatur/Sonstiges.
-- Vollständiger Kreis-Δp nur bei vollständigem Rohrweg, Bauteilverlusten und expliziter Vollständigkeitsbestätigung.
-- Projektaggregation: Verbraucher-Gesamtvolumenstrom + hydraulisch ungünstigster Parallelkreis; parallele Kreisverluste werden nicht addiert.
-- Pumpen-Betriebspunkt nur bei vollständiger hydraulischer Abdeckung.
+### Ventil-kv und explizite Einstellungen
+- `HeizBalanceValveSizingPreparationCalculator`: erforderlicher technischer kv aus Q, Ventil-Δp und Dichte.
+- Mathematisch nächster diskreter Datenpunkt ist nur Vergleich, keine automatische Voreinstellung.
+- `valve-setting-selection-v1`: Benutzer kann einen tatsächlich dokumentierten Produktdatenpunkt ausdrücklich festhalten.
+- Eingefroren: Projekt/Kreis/Bauteil, Einstellung/kv, damaliger Soll-kv, Q, Δp, Dichte und Produkt-/Quellen-/Rechteprovenienz.
+- `matchesCurrent` prüft Soll-kv, Q, Δp, Dichte und Produkt-/Datensatzidentität; Abweichung → `neu bewerten`.
 
-### 6. Ventil-kv-Vorbereitung
-- `HeizBalanceValveSizingPreparationCalculator` berechnet erforderlichen technischen kv aus Zielvolumenstrom, Ventil-Δp und Dichte.
-- Ventilproduktdaten können einem konkreten Thermostat-/Rücklaufventil zugeordnet werden.
-- Der nächstliegende diskrete Datenpunkt wird ausschließlich als technischer Vergleich angezeigt und ist keine automatische Voreinstellung.
+### Pumpenkennlinie / Betriebspunkt
+- `linear-documented-pump-curve-v1`: exakte Punkte + lineare Interpolation zwischen dokumentierten Punkten; keine Extrapolation.
+- `pump-curve-selection-v1`: nur ausdrücklicher Tap kann eine technisch ausreichende Kennlinie festhalten.
+- Auswahl friert Katalog-/Quelle-/Rechte-/Produkt-/Kennlinien-/Betriebspunktdaten ein und wird bei geänderter Hydraulik veraltet.
+- Projektweiter Pumpen-Arbeitsbereich mit Statusfiltern.
+- `pump-technical-metrics-v1`: hydraulische Leistungsanforderung, verfügbare hydraulische Leistung, H-Reserve m/%, Q-Bereichsposition, optional `Pₕ,erf/P₁`.
+- `Pₕ,erf/P₁` ist kein Wirkungsgrad-, EEI-, ErP- oder Herstellernachweis.
 
-### 7. Pumpenkennlinie / Betriebspunkt – Pass 19–24
-- `linear-documented-pump-curve-v1`: exakte Herstellerpunkte bleiben unverändert; lineare Interpolation nur zwischen dokumentierten Punkten.
-- Keine Extrapolation unter/über dem dokumentierten Q-Bereich.
-- Ergebnis: verfügbare H, erforderliche H, Reserve, technisch ausreichend/nicht ausreichend, optional interpoliertes P₁ und verwendete Begrenzungspunkte.
-- `pump-curve-selection-v1`: nur ausdrücklicher Benutzer-Tap kann eine technisch ausreichende Pumpe/Kennlinie festhalten.
-- Auswahl friert Katalog-/Quellen-/Rechte-/Produkt-/Kennlinien-/Betriebspunktdaten ein und wird bei geänderter Hydraulik `neu bewerten`.
-- Projektweiter Pumpen-Arbeitsbereich vergleicht alle importierten Kennlinien; Filter `Alle / Ausreichend / Zu wenig / Außerhalb`.
-- `pump-technical-metrics-v1`: hydraulische Leistungsanforderung, verfügbare hydraulische Leistung, H-Reserve m/%, Q-Bereichsposition und optional `Pₕ,erf/P₁`.
-- `Pₕ,erf/P₁` ist ausdrücklich keine Wirkungsgrad-, EEI-, ErP- oder Herstellerfreigabe.
+### Batch 25 – schnelle Vor-Ort-Aufnahme
+- Sichere Geschoss-/Raum-/Bauteil-/Heizflächenkopien mit neuen IDs.
+- Raum-Schnellvorlagen und Bauteilsätze ohne versteckte Norm-/U-Wert-/Luftwechselannahmen.
+- `component-favorite-v1` für eigene Bauteil-/U-Wert-Favoriten; niemals Fläche oder raumspezifische Gegenseitentemperatur.
 
-### 8. Projekt-Cockpit / Projektliste – Batch 21–24
-- Projekteditor zeigt Raumstatus, Sanierungsziel, Hydraulikbetriebspunkt und Pumpenentscheidung auf einen Blick.
-- Projektliste besitzt kompakte Statuschips `Räume`, `Hydraulik`, `Pumpe`.
-- Veraltete Pumpenentscheidungen werden sichtbar orange als neu zu bewerten markiert.
+### Batch 26 – sichere Hydraulik-Wiederverwendung
+- `hydraulic-capture-template-v1` für wiederverwendbare Rohr-/Bauteilstruktur.
+- Übernommen werden dürfen Geometrie, Rolle, Rauheit, ζ, Notizen und dokumentierte Ventilprodukt-Identität.
+- Gemeinsame Abschnitts-Q, Bauteil-Δp, deren Quellen, Vollständigkeitsstatus und konkrete Einstellentscheidungen werden bewusst zurückgesetzt.
+- Ganze Heizflächenkreise sowie einzelne Rohr-/Hydraulikbauteile können sicher kopiert werden.
 
-### 9. Schnelle Vor-Ort-Aufnahme – Batch 25
-- Geschosse und Räume können sicher dupliziert werden; alle relevanten IDs werden erneuert.
-- Raum-Schnellvorlagen: Wohnzimmer, Schlafzimmer, Bad, Küche, Flur, Arbeitszimmer.
-- Bauteilsätze legen ausschließlich Bauteilarten ohne versteckte U-Werte/Flächen/Normannahmen an.
-- Bauteile können dupliziert werden.
-- Physische Heizflächenkopien dürfen Hersteller/Modell/Nennleistung/Exponent übernehmen, setzen aber zugeordnete Last, Rohrnetz, Bauteilverluste, Vollständigkeitsstatus und Ersatzproduktentscheidung zurück.
-- Persistentes `component-favorite-v1` für eigene Bauteil-/U-Wert-Favoriten.
-- Favoriten speichern Art, Bezeichnung, U-Wert, Quelle und Notiz; niemals Fläche oder raumspezifische Gegenseitentemperatur.
-- Favoriten können als neues Bauteil eingesetzt oder auf ein bestehendes Bauteil angewendet werden.
-- Zentrale Verwaltung unter `Daten & Vorlagen → Bauteilvorlagen`.
+### Batch 27 – Hydraulik-Aufnahme-Workspace
+- Projektansicht `Hydraulik-Aufnahme & Einstellliste` zeigt alle Heizflächenkreise geschoss-/raumbezogen.
+- Q, vollständiger Kreis-Δp und Rohrabschnittszahl direkt sichtbar.
+- Rohrweg/Bauteile direkt bearbeiten, ergänzen, löschen, duplizieren oder als Vorlage speichern/anwenden.
+- Verwaiste Ventileinstellungs-Snapshots werden beim Ersetzen/Löschen der zugehörigen Struktur entfernt.
+- Vollständigkeitsbestätigung nur möglich, wenn erfasste hydraulische Bauteile gültige Δp-Werte besitzen.
 
-### 10. Sichere Hydraulik-Wiederverwendung – Batch 26
-- Neues persistentes Schema `hydraulic-capture-template-v1`.
-- Hydraulikvorlagen speichern wiederverwendbare Rohrstruktur: Bezeichnung, Rolle, Innendurchmesser, Länge, Rauheit, ζ und Notiz.
-- Gemeinsame Abschnittsvolumenströme und deren Quellen werden beim Speichern/Anwenden bewusst entfernt.
-- Hydraulische Bauteile übernehmen Art/Bezeichnung/Notiz und ggf. dokumentierte Ventilprodukt-Identität.
-- Bauteil-Δp, deren Quellen und die Vollständigkeitsbestätigung werden bewusst entfernt.
-- Ganze Heizflächenkreise lassen sich im Projekt kopieren; physische Heizflächendaten und sichere Hydraulikstruktur dürfen mitkommen, Lastzuordnung und flow-/druckabhängige Entscheidungen nicht.
-- Einzelne Rohrabschnitte und hydraulische Bauteile lassen sich ebenfalls sicher duplizieren.
-- `HeizBalanceHydraulicCaptureTemplateStore` arbeitet lokal, versioniert und transaktional.
-- Globale Verwaltung `Daten & Vorlagen → Hydraulikvorlagen`.
+### Batch 28 – explizite TV/RL-Entscheidung
+- `valve-setting-selection-v1` mit unabhängigen Thermostat-/Rücklaufentscheidungen.
+- Nur dokumentierte Produktdatenpunkte + ausdrücklicher Benutzer-Tap.
+- Relevante Änderungen führen zu `neu bewerten` statt stiller Neuberechnung.
 
-### 11. Hydraulik-Aufnahme-Workspace – Batch 27
-- Neue Projektansicht `Hydraulik-Aufnahme & Einstellliste` zeigt alle Heizflächenkreise geschoss-/raumbezogen.
-- Pro Kreis werden aktueller Zielvolumenstrom, vollständiger Kreis-Δp und Rohrabschnittszahl angezeigt.
-- Per Kreis können Rohrweg und hydraulische Bauteile direkt bearbeitet, ergänzt, gelöscht oder dupliziert werden.
-- Aktuelle Kreisstruktur kann als Vorlage gespeichert oder aus einer Vorlage ersetzt werden.
-- Beim Ersetzen/Löschen einer Hydraulikstruktur werden dazugehörige verwaiste Ventileinstellungs-Snapshots transaktional entfernt.
-- Die Vollständigkeitsbestätigung `Bauteilaufnahme vollständig` ist direkt im schnellen Kreiseditor verfügbar und bleibt gesperrt, solange ein erfasstes Bauteil keinen gültigen Δp-Wert besitzt.
+### Batch 29 – Baustellen-Einstellliste
+- `technical-adjustment-list-v1` mit Geschoss/Raum/Heizfläche, Ziel-Q, vollständigem Kreis-Δp, TV/RL, Soll-kv, festgehaltenen Einstellungen und Aktualitätsstatus.
+- Offene Punkte pro Kreis sichtbar.
+- Festgehaltene Pumpenentscheidung inkl. Betriebspunkt/Reserve/Aktualitätsstatus.
+- Eigenständiger kompakter A4-PDF-/Archivpfad, maximal 10 erfolgreiche Stände pro Projekt.
+- Kein nachgebautes VdZ-/Verfahren-B-Formular.
 
-### 12. Explizite Thermostat-/Rücklaufeinstellung – Batch 28
-- Neues versioniertes Schema `valve-setting-selection-v1`.
-- Eine Einstellung kann nur aus einem tatsächlich hinterlegten diskreten Produktdatenpunkt und nur durch ausdrücklichen Benutzer-Tap festgehalten werden.
-- Eingefroren werden Projekt-/Kreis-/Bauteil-ID, Art/Name, gewählter Einstellpunkt und kv, damaliger Soll-kv, Zielvolumenstrom, Ventil-Δp, Fluiddichte sowie Hersteller-/Produkt-/Datensatz-/Quellen-/Rechteprovenienz.
-- `HeizBalanceValveSettingSelectionStore` hält projekt-/bauteilbezogene Entscheidungen lokal und transaktional.
-- `matchesCurrent` prüft aktuellen Soll-kv, Volumenstrom, Δp, Dichte und Produkt-/Datensatzidentität.
-- Sobald sich relevante Eingaben ändern oder der Datenpunkt nicht mehr existiert, erscheint `neu bewerten`; die alte Auswahl wird nicht still ersetzt.
-- Thermostat- und Rücklaufentscheidungen sind unabhängig voneinander festhaltbar.
-- Der mathematisch nächste kv-Punkt bleibt lediglich Vergleich und wird niemals automatisch übernommen.
+### Batch 30 – Produktionsbericht & Übergabe
+- Neuer projektbezogener Dokumentationsstore `project-documentation-v1`; bestehendes Projekt-JSON bleibt unverändert.
+- Dokumentierbar: Firma/Betrieb, Techniker vor Ort, Bearbeiter/Ersteller, expliziter Projektstatus, optionaler Ausführungstag, Übergabeempfänger, Übergabehinweis/Restpunkte, Druckschriftname und Ort.
+- Projektstatus ist eine Bearbeiterangabe: `In Bearbeitung`, `Aufnahme vollständig`, `Hydraulik technisch vorbereitet`, `Einstellwerte vorbereitet`, `Einstellung dokumentiert`, `Übergabe vorbereitet`.
+- Neuer eingefrorener Snapshot `technical-handover-v1` mit Projekt-/Personendaten, Geschoss-/Raum-/Heizflächenumfang, Wärmeverlust-/Q-/Δp-Abdeckung, Ventil-/Pumpenstatus und offenen technischen Punkten.
+- Eigenes Übergabe-Archiv mit maximal 10 erfolgreichen Ständen pro Projekt.
+- Übergabe-PDF enthält kompakte technische Übersicht, Geschosszusammenfassung, Restpunkte und freie handschriftliche Unterschriftsbereiche für Techniker/Bearbeiter sowie Auftraggeber/Empfänger.
+- Unterschrift bestätigt ausschließlich Übergabe/Kenntnisnahme des dokumentierten Arbeitsstands; keine automatische DIN-/Verfahren-B-/GEG-/BEG-/Förder-/Herstellerfreigabe.
+- Neuer Projekt-Cockpit-Einstieg `Produktionsbericht & Übergabe`.
+- Ein Produktions-PDF bündelt mit exakt einem `generatedAt` sieben versionierte Snapshots:
+  1. `technical-handover-v1`
+  2. `technical-report-v1`
+  3. `technical-low-temperature-v1`
+  4. `technical-temperature-scenarios-v1`
+  5. `technical-radiator-replacements-v1`
+  6. `technical-pump-curves-v1`
+  7. `technical-adjustment-list-v1`
+- Nach erfolgreichem Benutzerexport werden die sieben Snapshots in ihren jeweiligen lokalen Archiven gespeichert.
+- UI kennzeichnet Projekte ab 20 Räumen als Großprojekt und ab 50 Räumen als 50+-Räume-Projekt; es existiert kein künstliches Raumlimit.
+- Einstelllisten-PDF auf dynamische Writer-/Textmessungslogik gehärtet: wiederholte Kopf-/Fußzeilen, Geschossgruppierung, gemessene Ventilzeilen, wortweise Fortsetzung langer Hinweise und kontrollierte Mehrseiten-Kreise statt Abschneiden.
+- Übergabe-PDF verwendet ebenfalls dynamische Seitenfortsetzung für lange Texte und Geschossübersichten.
 
-### 13. Baustellen-Einstellliste – Batch 29
-- Neues unabhängiges Snapshot-Schema `technical-adjustment-list-v1`.
-- Die Liste enthält pro Heizflächenkreis Geschoss/Raum/Heizfläche, Zielvolumenstrom, vollständigen Kreis-Δp, Thermostat- und Rücklaufdaten, Soll-kv, ausdrücklich festgehaltene Einstellungen und deren Aktualitätsstatus.
-- Offene Punkte werden pro Kreis sichtbar aufgeführt: fehlender Q, fehlender vollständiger Δp, fehlendes Thermostatventil, fehlende Einstellung oder `neu bewerten`.
-- Eine festgehaltene Pumpenentscheidung wird inkl. Betriebspunkt/Reserve und Aktualitätsstatus aufgenommen.
-- Eigenständiger kompakter mehrseitiger A4-PDF-Renderer für die Baustelle.
-- Permanenter Hinweis: technische Vorbereitung, keine Verfahren-B-/GEG-/BEG-/Herstellerfreigabe.
-- Kein nachgebautes VdZ-Formularlayout.
-- Erfolgreicher PDF-Export archiviert exakt den verwendeten JSON-Snapshot; abgebrochene/fehlgeschlagene Exporte erzeugen keinen falschen Archivstand.
-- Eigenes Projektarchiv mit maximal 10 `technical-adjustment-list-v1`-Ständen.
-
-### 14. Technischer Bericht / Reproduzierbarkeit
-Bestehender Hauptbericht-Stack bleibt unverändert stabil:
+## Aktive versionierte Berichts-/Entscheidungsschemata
+Berichte/Snapshots:
 - `technical-report-v1`
 - `technical-low-temperature-v1`
 - `technical-temperature-scenarios-v1`
 - `technical-radiator-replacements-v1`
 - `technical-pump-curves-v1`
+- `technical-adjustment-list-v1`
+- `technical-handover-v1`
 
-Eigenschaften:
-- ein Exportzeitpunkt für die Hauptberichtsteile,
-- getrennte versionierte JSON-Archive,
-- gemeinsames mehrteiliges A4-PDF über PDFKit,
-- maximal letzte 10 Exportstände je Projekt/Berichtstyp.
-
-Zusätzlich steht `technical-adjustment-list-v1` als bewusst eigenständiger Baustellen-PDF-/Archivpfad bereit, damit der stabile Hauptbericht nicht für jeden Baustellenworkflow umgebaut werden muss.
-
-## Technische Regressionen / Invarianten
-`docs/HEIZBALANCE_REFERENCE_CASES.md` enthält u. a.:
-- technischer kv-Fall 0,6 m³/h bei 12 kPa → kv ≈ 1,73,
-- Niedertemperatur-Musterprojekt mit begrenzendem Bad,
-- 45/35-Szenario mit bewusstem Heizflächen-Upgradebedarf,
-- Pumpenkennlinien-Interpolation mit harter No-Extrapolation-Regel,
-- Pumpen-Leistungskennzahlen,
-- Aufnahme-Invarianten für Geschoss-/Raum-/Heizflächenkopien und Bauteilfavoriten,
-- Hydraulikvorlagen-/Kreiskopier-Invarianten,
-- explizite Ventileinstellungs-/Stale-Regeln,
-- Baustellen-Einstelllisten-Regeln.
+Projekt-/Entscheidungsschemata u. a.:
+- `component-favorite-v1`
+- `hydraulic-capture-template-v1`
+- `radiator-replacement-selection-v1`
+- `pump-curve-selection-v1`
+- `valve-setting-selection-v1`
+- `project-documentation-v1`
 
 ## Release-Härtung
-- Entwicklungs-Musterprojekt durch `#if DEBUG` vollständig aus Release entfernt.
-- CI baut komplette App-Matrix in Debug.
+- Entwicklungs-Musterprojekt per `#if DEBUG` aus Release entfernt.
+- CI baut die komplette App-Matrix in Debug.
 - HeizBalance besitzt zusätzlich ein echtes Release-Simulator-Build-Gate.
 - Export-Compliance und Buildnummer werden geprüft.
-- PR-CI nutzt `cancel-in-progress`, sodass Zwischenstände automatisch abgebrochen werden.
+- PR-CI verwendet `cancel-in-progress`.
 - Swift-6-Concurrency-Prüfungen bleiben aktiv; mutable UI-Persistenzstores sind `@MainActor`-isoliert.
 
 ## Validierte CI-Checkpoints
 - #50–#100: Heizflächen-, Hydraulik-, Ventil-, PDF-, Archiv-, Niedertemperatur- und Release-Grundlagen grün.
 - #111: Szenario-/3-PDF-Pfad grün.
 - #120/#123: persistentes Sanierungsziel + Dashboard grün.
-- #154/#159: Heizkörper-Produktdaten, Ersatzwahl, VDI-Blatt-6-Adapter grün.
+- #154/#159: Heizkörperdaten, Ersatzwahl, VDI-Blatt-6-Adapter grün.
 - #173: Ventilkatalog + Blatt-2-Adapter grün.
 - #181: Pumpenkatalog + Blatt-4-Adapter grün.
-- #192: Pumpenkennlinien-/Betriebspunkt-Core + No-Extrapolation + fünfter Berichtspfad grün.
+- #192: Pumpenkennlinien-/Betriebspunkt-Core + No-Extrapolation + Berichtspfad grün.
 - #202/#203: explizite Pumpen-/Kennlinienauswahl + Stale-Erkennung + Release grün.
-- #212/#213: Pumpen-Cockpit, katalogübergreifender Vergleich, Leistungskennzahlen, Report/PDF und Projektlistenstatus grün.
-- #231: Batch 25 schnelle Vor-Ort-Aufnahme; Core, vollständige Debug-iOS-Matrix und echter HeizBalance-Release-Build grün.
-- #249: Hydraulik-Batch fing im Gate einen reinen Swift-Syntaxfehler am failable Ventilauswahl-Initializer ab; kein fachlicher Rechenfehler.
-- **#250: finaler Code-Head für Batch 26–29 vollständig grün: Core-Tests, gesamte Debug-iOS-Matrix, HeizBalance Debug und echter HeizBalance Release-Simulator-Build.**
+- #212/#213: Pumpen-Cockpit, katalogübergreifender Vergleich, Leistungskennzahlen, Report/PDF und Projektstatus grün.
+- #231: Batch 25, Core + komplette Debug-iOS-Matrix + echter HeizBalance Release grün.
+- #249: Gate fing einen reinen Swift-Syntaxfehler im failable Ventilauswahl-Initializer ab; kein fachlicher Rechenfehler.
+- **#250: Batch 26–29 Code-Head vollständig grün: Core, gesamte Debug-iOS-Matrix, HeizBalance Debug und echter Release-Simulator-Build.**
+- **#256: finaler Hydraulik-/Handoff-Dokumentations-Head vollständig grün.**
+- **#266: Batch-30 Produktions-Code-Head `4c201688a40c939f63f9b5ee832c3477bc83700f` vollständig grün: Core, gesamte Debug-iOS-Matrix, HeizBalance Debug und echter Release-Simulator-Build.**
 
 ## Noch bewusst gesperrt / offen
 - Norm-Heizlast nach DIN EN 12831-1 + deutschem Ergänzungsregelwerk.
@@ -218,19 +189,19 @@ Zusätzlich steht `technical-adjustment-list-v1` als bewusst eigenständiger Bau
 - Vollautomatische Auswahl konkreter Ersatzheizkörper.
 - Automatische Pumpenproduktempfehlung/-auswahl, Regelartwahl und Effizienzfreigabe.
 - Pumpenkennlinien-Extrapolation außerhalb dokumentierter Datenbereiche.
-- EEI-/ErP-/Hersteller-Wirkungsgradaussage aus den technischen Pumpenkennzahlen.
+- EEI-/ErP-/Hersteller-Wirkungsgradaussage aus technischen Pumpenkennzahlen.
 - Rohdatenparser für VDI-3805-Herstellerdateien ohne rechtlich/fachlich verifizierte Datensatzspezifikation.
 - Echte Wärmepumpenauslegung, COP-/Bivalenzbewertung.
 - Flächenheizung nach DIN EN 1264 als eigener Fachblock.
-- Normativer hydraulischer Abgleich / Verfahren-B-Nachweis bleibt gesperrt, auch wenn die technische Einstellliste vollständig ist.
+- Normativer hydraulischer Abgleich / Verfahren-B-Nachweis bleibt gesperrt, auch wenn Einstellliste und Übergabedokumentation vollständig sind.
 
 ## Nächste größere Entwicklungsblöcke
-1. Baustellenbericht produktionsreif machen: Techniker/Firma/Datum, Projektstatus, Unterschriftsbereich, kompakte Ergebniszusammenfassung und große Projekte/Seitenumbrüche härten.
-2. Hydraulikdaten weiter produktionsnah machen: optionale Netzbaum-Struktur für automatische gemeinsame Abschnittsvolumenströme statt manueller Summenwerte.
-3. Echte Hersteller-/Lizenzquellen für Heizkörper-, Ventil- und Pumpendaten rechtlich klären und über die vorhandenen Mappingprofile als Referenzdaten validieren.
-4. Parallel normative Heizlast-Spezifikation und belastbare Referenzfälle aufbauen; Freigabe erst nach echter fachlicher Validierung.
-5. Danach eigener Fachblock Flächenheizung bzw. echte Wärmepumpen-/Bivalenzbewertung – getrennt von den bereits vorhandenen Heizkörper-/Niedertemperaturprüfungen.
+1. Produktionsbericht praktisch mit realen Großprojekten/PDFs visuell prüfen und ggf. Tabellen-/Seitenlayout weiter verdichten.
+2. Optionale Netzbaum-Struktur für automatische gemeinsame Abschnittsvolumenströme statt manueller Summenwerte.
+3. Echte Hersteller-/Lizenzquellen für Heizkörper-, Ventil- und Pumpendaten rechtlich klären und über die vorhandenen Mappingprofile validieren.
+4. Normative Heizlast-Spezifikation und belastbare Referenzfälle aufbauen; Freigabe erst nach echter fachlicher Validierung.
+5. Danach getrennte Fachblöcke Flächenheizung bzw. Wärmepumpen-/Bivalenzbewertung.
 
 ## Batch-Verifikation
-- Der maßgebliche Code-Head `a618b2630b057f9bc6e85ec1b143a480a1a7670e` wurde in CI #250 vollständig erfolgreich validiert.
-- Der finale Dokumentations-Head enthält ausschließlich Handoff-/Referenzdokumentation und wird zusätzlich durch dieselbe PR-CI geprüft.
+- Maßgeblicher Batch-30 Code-Head: `4c201688a40c939f63f9b5ee832c3477bc83700f`, CI #266 vollständig grün.
+- Der finale Dokumentations-/PR-Head wird nach Abschluss erneut durch dieselbe vollständige CI-Matrix geprüft; erst dieser Lauf gilt als finaler Batch-30-Checkpoint.
