@@ -5,6 +5,8 @@ struct HeizBalanceFloorEditor: View {
     let designOutdoorTemperatureC: Double?
     let designFlowTemperatureC: Double?
     let designReturnTemperatureC: Double?
+    let hydraulicFluidDensityKGPerM3: Double?
+    let hydraulicKinematicViscosityMM2S: Double?
 
     var body: some View {
         Form {
@@ -24,7 +26,9 @@ struct HeizBalanceFloorEditor: View {
                             room: $room,
                             designOutdoorTemperatureC: designOutdoorTemperatureC,
                             designFlowTemperatureC: designFlowTemperatureC,
-                            designReturnTemperatureC: designReturnTemperatureC
+                            designReturnTemperatureC: designReturnTemperatureC,
+                            hydraulicFluidDensityKGPerM3: hydraulicFluidDensityKGPerM3,
+                            hydraulicKinematicViscosityMM2S: hydraulicKinematicViscosityMM2S
                         )
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
@@ -66,6 +70,8 @@ struct HeizBalanceRoomEditor: View {
     let designOutdoorTemperatureC: Double?
     let designFlowTemperatureC: Double?
     let designReturnTemperatureC: Double?
+    let hydraulicFluidDensityKGPerM3: Double?
+    let hydraulicKinematicViscosityMM2S: Double?
 
     private var preview: HeizBalanceRoomPreviewState {
         room.heatLossPreview(designOutdoorTemperatureC: designOutdoorTemperatureC)
@@ -159,7 +165,9 @@ struct HeizBalanceRoomEditor: View {
                             surface: $surface,
                             designFlowTemperatureC: designFlowTemperatureC,
                             designReturnTemperatureC: designReturnTemperatureC,
-                            roomTemperatureC: room.targetTemperature
+                            roomTemperatureC: room.targetTemperature,
+                            hydraulicFluidDensityKGPerM3: hydraulicFluidDensityKGPerM3,
+                            hydraulicKinematicViscosityMM2S: hydraulicKinematicViscosityMM2S
                         )
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {

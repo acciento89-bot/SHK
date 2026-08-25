@@ -33,6 +33,9 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
     var designFlowTemperatureC: Double?
     var designReturnTemperatureC: Double?
     var systemTemperatureSource: HeizBalanceInputSource?
+    var hydraulicFluidDensityKGPerM3: Double?
+    var hydraulicKinematicViscosityMM2S: Double?
+    var hydraulicFluidSource: HeizBalanceInputSource?
     var notes: String
     var floors: [HeizBalanceFloor]
     var createdAt: Date
@@ -51,6 +54,9 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         designFlowTemperatureC: Double? = nil,
         designReturnTemperatureC: Double? = nil,
         systemTemperatureSource: HeizBalanceInputSource? = nil,
+        hydraulicFluidDensityKGPerM3: Double? = nil,
+        hydraulicKinematicViscosityMM2S: Double? = nil,
+        hydraulicFluidSource: HeizBalanceInputSource? = nil,
         notes: String = "",
         floors: [HeizBalanceFloor] = [],
         createdAt: Date = Date(),
@@ -68,6 +74,9 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         self.designFlowTemperatureC = designFlowTemperatureC
         self.designReturnTemperatureC = designReturnTemperatureC
         self.systemTemperatureSource = systemTemperatureSource
+        self.hydraulicFluidDensityKGPerM3 = hydraulicFluidDensityKGPerM3
+        self.hydraulicKinematicViscosityMM2S = hydraulicKinematicViscosityMM2S
+        self.hydraulicFluidSource = hydraulicFluidSource
         self.notes = notes
         self.floors = floors
         self.createdAt = createdAt
@@ -163,6 +172,7 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
     var exponent: Double?
     var powerSource: HeizBalanceInputSource?
     var assignedRequiredPowerW: Double?
+    var pipeSections: [HeizBalancePipeSection]?
     var note: String
 
     init(
@@ -175,6 +185,7 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
         exponent: Double? = nil,
         powerSource: HeizBalanceInputSource? = nil,
         assignedRequiredPowerW: Double? = nil,
+        pipeSections: [HeizBalancePipeSection]? = nil,
         note: String = ""
     ) {
         self.id = id
@@ -186,7 +197,13 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
         self.exponent = exponent
         self.powerSource = powerSource
         self.assignedRequiredPowerW = assignedRequiredPowerW
+        self.pipeSections = pipeSections
         self.note = note
+    }
+
+    var pipeSectionItems: [HeizBalancePipeSection] {
+        get { pipeSections ?? [] }
+        set { pipeSections = newValue }
     }
 
     enum Kind: String, Codable, CaseIterable, Identifiable {
@@ -209,6 +226,34 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
         }
 
         var systemImage: String { "radiator" }
+    }
+}
+
+struct HeizBalancePipeSection: Identifiable, Codable, Hashable {
+    var id: UUID
+    var name: String
+    var innerDiameterMM: Double?
+    var lengthM: Double?
+    var roughnessMM: Double?
+    var zetaTotal: Double?
+    var note: String
+
+    init(
+        id: UUID = UUID(),
+        name: String = "Rohrabschnitt",
+        innerDiameterMM: Double? = nil,
+        lengthM: Double? = nil,
+        roughnessMM: Double? = nil,
+        zetaTotal: Double? = nil,
+        note: String = ""
+    ) {
+        self.id = id
+        self.name = name
+        self.innerDiameterMM = innerDiameterMM
+        self.lengthM = lengthM
+        self.roughnessMM = roughnessMM
+        self.zetaTotal = zetaTotal
+        self.note = note
     }
 }
 

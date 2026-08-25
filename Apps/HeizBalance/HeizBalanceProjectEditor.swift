@@ -24,6 +24,12 @@ struct HeizBalanceProjectEditor: View {
         return flow <= returnTemperature
     }
 
+    private var fluidPropertiesInvalid: Bool {
+        if let density = draft.hydraulicFluidDensityKGPerM3, density <= 0 { return true }
+        if let viscosity = draft.hydraulicKinematicViscosityMM2S, viscosity <= 0 { return true }
+        return false
+    }
+
     var body: some View {
         Form {
             Section("Projekt") {
@@ -81,6 +87,33 @@ struct HeizBalanceProjectEditor: View {
             }
 
             Section {
+                OptionalDecimalField(
+                    title: "Fluiddichte",
+                    value: $draft.hydraulicFluidDensityKGPerM3,
+                    unit: "kg/m³"
+                )
+                OptionalDecimalField(
+                    title: "Kinematische Viskosität",
+                    value: $draft.hydraulicKinematicViscosityMM2S,
+                    unit: "mm²/s"
+                )
+                InputSourcePicker(
+                    title: "Quelle Fluidwerte",
+                    selection: $draft.hydraulicFluidSource
+                )
+
+                if fluidPropertiesInvalid {
+                    Label("Dichte und Viskosität müssen größer als 0 sein.", systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Hydraulik-Fluid")
+            } footer: {
+                Text("Für Rohrdruckverluste werden die Fluidwerte bewusst als Projektdaten erfasst. HeizBalance setzt hier derzeit keine versteckten Wasser- oder Glykolwerte voraus.")
+            }
+
+            Section {
                 if draft.floors.isEmpty {
                     Text("Noch keine Geschosse angelegt")
                         .foregroundStyle(.secondary)
@@ -92,7 +125,9 @@ struct HeizBalanceProjectEditor: View {
                             floor: $floor,
                             designOutdoorTemperatureC: draft.designOutdoorTemperatureC,
                             designFlowTemperatureC: draft.designFlowTemperatureC,
-                            designReturnTemperatureC: draft.designReturnTemperatureC
+                            designReturnTemperatureC: draft.designReturnTemperatureC,
+                            hydraulicFluidDensityKGPerM3: draft.hydraulicFluidDensityKGPerM3,
+                            hydraulicKinematicViscosityMM2S: draft.hydraulicKinematicViscosityMM2S
                         )
                     } label: {
                         HStack {
@@ -162,13 +197,13 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 LabeledContent("Hydraulischer Abgleich") {
-                    Text("Heizflächenaufnahme gestartet")
+                    Text("Heizflächen + Rohrnetz in Vorbereitung")
                         .foregroundStyle(.secondary)
                 }
             } header: {
                 Text("Berechnungsstatus")
             } footer: {
-                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Die aktuelle Wärme- und Heizflächenberechnung bleibt eine technische Vorberechnung.")
+                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Die aktuelle Wärme-, Heizflächen- und Rohrnetzberechnung bleibt eine technische Vorberechnung.")
             }
         }
         .navigationTitle(isNewProject ? "Neues Projekt" : draft.name)
