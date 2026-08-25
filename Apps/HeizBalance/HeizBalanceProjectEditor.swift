@@ -117,6 +117,13 @@ struct HeizBalanceProjectEditor: View {
                     Text("Noch nicht freigegeben")
                         .foregroundStyle(.secondary)
                 }
+
+                NavigationLink {
+                    HeizBalanceCalculationStatusView()
+                } label: {
+                    Label("Rechenprofil & Validierung", systemImage: "checkmark.shield")
+                }
+
                 LabeledContent("Hydraulischer Abgleich") {
                     Text("Noch nicht implementiert")
                         .foregroundStyle(.secondary)
