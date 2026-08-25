@@ -17,12 +17,13 @@ final class HeizBalanceHydronicCircuitTests: XCTestCase {
             )
         )
 
+        let completePressureLoss = try XCTUnwrap(result.completePressureLossKPa)
         XCTAssertEqual(result.sections.count, 2)
         XCTAssertTrue(result.localResistanceCoverageComplete)
         XCTAssertEqual(result.straightPipePressureLossKPa, 1.1129933712, accuracy: 0.000001)
         XCTAssertEqual(result.knownLocalPressureLossKPa, 0.1664989989, accuracy: 0.000001)
         XCTAssertEqual(result.partialPressureLossKPa, 1.2794923701, accuracy: 0.000001)
-        XCTAssertEqual(result.completePressureLossKPa, 1.2794923701, accuracy: 0.000001)
+        XCTAssertEqual(completePressureLoss, 1.2794923701, accuracy: 0.000001)
         XCTAssertNotNil(result.completeHeadMeters)
     }
 
