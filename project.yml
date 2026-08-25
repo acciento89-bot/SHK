@@ -71,3 +71,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.servicecheck
         PRODUCT_NAME: AnlagenCheck
         INFOPLIST_KEY_CFBundleDisplayName: AnlagenCheck
+  HeizBalance:
+    templates: [SHKApp]
+    sources: [Apps/HeizBalance]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.heizbalance
+        PRODUCT_NAME: HeizBalance
+        INFOPLIST_KEY_CFBundleDisplayName: HeizBalance
