@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scheme: [KalteCalc, LueftungsCalc, HeizkoerperCalc, RohrCalc, AnlagenCheck]
+        scheme: [KalteCalc, LueftungsCalc, HeizkoerperCalc, RohrCalc, AnlagenCheck, HeizBalance]
     steps:
       - uses: actions/checkout@v5
       - name: Install XcodeGen
