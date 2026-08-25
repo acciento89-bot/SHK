@@ -45,7 +45,10 @@ struct HeizBalancePumpCurveReportPDFRenderer {
             section("Berichtsprofil")
             keyValue("Projekt", snapshot.projectName)
             keyValue("Snapshot", snapshot.schema)
-            keyValue("Rechenprofil", snapshot.calculationProfile)
+            keyValue("Kennlinien-Rechenprofil", snapshot.calculationProfile)
+            if let metricsProfile = snapshot.technicalMetricsProfile {
+                keyValue("Kennzahlen-Rechenprofil", metricsProfile)
+            }
             keyValue("Erzeugt", DateFormatter.pumpReportDate.string(from: snapshot.generatedAt))
             keyValue("Automatische Pumpenauswahl", snapshot.automaticPumpSelectionReleased ? "Freigegeben" : "Nicht freigegeben")
 
@@ -53,7 +56,13 @@ struct HeizBalancePumpCurveReportPDFRenderer {
             if let operatingPoint = snapshot.operatingPoint {
                 keyValue("Volumenstrom", number(operatingPoint.volumeFlowM3H, 3) + " m³/h")
                 keyValue("Erforderliche Förderhöhe", number(operatingPoint.requiredHeadM, 2) + " m")
-                paragraph("Kennlinien werden ausschließlich innerhalb ihres dokumentierten Volumenstrombereichs ausgewertet. Zwischenwerte sind lineare technische Zwischenwerte; außerhalb wird nicht extrapoliert.", font: smallFont, after: 8)
+                if let density = operatingPoint.fluidDensityKGPerM3 {
+                    keyValue("Fluiddichte", number(density, 1) + " kg/m³")
+                }
+                if let power = operatingPoint.requiredHydraulicPowerW {
+                    keyValue("Hydraulischer Leistungsbedarf", number(power, 1) + " W", bold: true)
+                }
+                paragraph("Der hydraulische Leistungsbedarf wird aus explizitem Projektvolumenstrom, erforderlicher Förderhöhe und Projektdichte berechnet. Kennlinien werden ausschließlich innerhalb ihres dokumentierten Volumenstrombereichs ausgewertet.", font: smallFont, after: 8)
             } else {
                 paragraph("Projekt-Betriebspunkt ist noch nicht vollständig berechenbar. Pumpenkennlinien werden deshalb nur dokumentiert, nicht bewertet.")
             }
@@ -124,7 +133,7 @@ struct HeizBalancePumpCurveReportPDFRenderer {
         }
 
         private func render(curve: HeizBalancePumpCurveReportSnapshot.CurveData) {
-            ensure(48)
+            ensure(52)
             line(curve.label, font: headingFont, indent: 16, after: 1)
             if let mode = curve.controlMode, !mode.isEmpty {
                 keyValue("Regel-/Betriebsart", mode, indent: 22)
@@ -145,8 +154,23 @@ struct HeizBalancePumpCurveReportPDFRenderer {
                     keyValue("Kennlinien-Förderhöhe", number(evaluation.availableHeadM, 2) + " m", indent: 22)
                     keyValue("Erforderliche Förderhöhe", number(evaluation.requiredHeadM, 2) + " m", indent: 22)
                     keyValue("Reserve", number(evaluation.headReserveM, 2) + " m", indent: 22)
+                    if let reservePercent = evaluation.headReservePercent {
+                        keyValue("Förderhöhenreserve", number(reservePercent, 1) + " %", indent: 22)
+                    }
+                    if let requiredHydraulicPowerW = evaluation.requiredHydraulicPowerW {
+                        keyValue("Hydraulischer Leistungsbedarf", number(requiredHydraulicPowerW, 1) + " W", indent: 22)
+                    }
+                    if let availableHydraulicPowerW = evaluation.availableHydraulicPowerW {
+                        keyValue("Hydraulische Leistung an Kennlinie", number(availableHydraulicPowerW, 1) + " W", indent: 22)
+                    }
                     if let power = evaluation.electricalInputPowerW {
-                        keyValue("Elektrische Aufnahme", number(power, 1) + " W", indent: 22)
+                        keyValue("Dokumentierte elektrische Aufnahme P₁", number(power, 1) + " W", indent: 22)
+                    }
+                    if let ratio = evaluation.requiredHydraulicToElectricalRatio {
+                        keyValue("Pₕ,erf / P₁", number(ratio * 100, 1) + " %", indent: 22)
+                    }
+                    if let position = evaluation.documentedFlowPosition {
+                        keyValue("Position im dokumentierten Q-Bereich", number(position * 100, 1) + " %", indent: 22)
                     }
                     keyValue(
                         "Zwischenwert",
