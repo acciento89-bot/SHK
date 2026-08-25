@@ -130,4 +130,42 @@ Bei Abweichung/offenem Segment-Q:
 - technischer Pumpen-Betriebspunkt nicht als vollständig freigeben
 - bestehende Pumpenentscheidung damit neu bewerten.
 
+## Zentrale Shared-Edge-/Pfadhydraulik – Batches 32–34
+Rechenprofil: `hydraulic-network-path-v1`.
+
+Referenztopologie:
+- Hauptstrang als zentraler Shared-Edge bei 450 l/h
+- EG-Strang als zentraler Shared-Edge bei 250 l/h
+- OG-Strang als zentraler Shared-Edge bei 200 l/h
+- Wohnzimmer direkt am EG
+- Schlafzimmer direkt am OG.
+
+Jeder zentrale Edge besitzt eigene dokumentierte Rohrgeometrie und ζ-Werte. Die konkreten numerischen Δp entstehen aus diesen Eingaben und den expliziten Fluidwerten; es werden keine Referenz-Δp erfunden.
+
+Erwartete Pfadidentität:
+- Wohnzimmer: `Hauptstrang → EG`
+- Schlafzimmer: `Hauptstrang → OG`.
+
+Erwartete Druckverlustregeln:
+- Wohnzimmer vollständig = `Δp Hauptstrang + Δp EG + Δp terminal Wohnzimmer`
+- Schlafzimmer vollständig = `Δp Hauptstrang + Δp OG + Δp terminal Schlafzimmer`
+- der physische Hauptstrang wird nur einmal als zentraler Edge gespeichert/berechnet, obwohl sein Verlust logisch in beiden Verbraucherpfaden vorkommt
+- parallele Verbraucherpfade werden nicht gegeneinander addiert; maßgebend bleibt der höchste vollständige Verbraucherpfad.
+
+### Missing-ζ-Regression
+Fehlt am zentralen Hauptstrang die ζ-Summe:
+- der bekannte gerade Rohrverlust bleibt > 0 sichtbar
+- `completePressureLossKPa` des Hauptstrangs bleibt `nil`
+- alle nachgelagerten vollständigen Verbraucherpfade bleiben `nil`
+- kein vollständiger Pumpen-Betriebspunkt darf daraus entstehen.
+
+### Unzugeordneter Verbraucher
+Eine Heizfläche ohne direktes Netzsegment darf keinen vollständigen zentralen Verbraucherpfad erhalten. Der terminal bekannte Verlust darf sichtbar bleiben; der vollständige Pfad bleibt offen.
+
+### Legacy-Doppelzählungsschutz
+Sobald der zentrale Pfadmodus aktiv ist:
+- nur `Gemeinsame Verteilung` mit `networkSegmentID` zählt als zentraler Shared-Edge
+- unverknüpfte Legacy-Shared-Rohre bleiben gespeichert, werden aber nicht zusätzlich zum Verbraucherpfad addiert
+- terminal gerechnet werden nur `Heizflächen-Anbindung` plus explizite terminale Bauteilverluste.
+
 Diese Regeln sind technische Regressionen und kein normativer hydraulischer Abgleich.
