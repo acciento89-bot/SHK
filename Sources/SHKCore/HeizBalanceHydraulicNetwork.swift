@@ -95,7 +95,7 @@ enum HeizBalanceHydraulicNetworkCalculator {
         var cached: [String: SegmentResult] = [:]
 
         func evaluate(_ segmentID: String, depth: Int) -> SegmentResult? {
-            if visitState[segmentID] == .visiting { return nil }
+            if case .visiting? = visitState[segmentID] { return nil }
             if let existing = cached[segmentID] { return existing }
             guard let segment = segmentByID[segmentID] else { return nil }
 
@@ -143,12 +143,11 @@ enum HeizBalanceHydraulicNetworkCalculator {
             .map(\.id)
             .sorted()
 
-        var results: [SegmentResult] = []
         for root in roots {
             guard evaluate(root, depth: 0) != nil else { return nil }
         }
         guard cached.count == input.segments.count else { return nil }
-        results = cached.values.sorted {
+        let results = cached.values.sorted {
             if $0.depth == $1.depth { return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             return $0.depth < $1.depth
         }
