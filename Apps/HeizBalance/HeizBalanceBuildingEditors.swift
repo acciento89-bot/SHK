@@ -46,22 +46,87 @@ struct HeizBalanceFloorEditor: View {
                             .foregroundStyle(.secondary)
                         }
                     }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            duplicateRoom(room)
+                        } label: {
+                            Label("Duplizieren", systemImage: "plus.square.on.square")
+                        }
+                        .tint(.blue)
+                    }
+                    .contextMenu {
+                        Button {
+                            duplicateRoom(room)
+                        } label: {
+                            Label("Raum duplizieren", systemImage: "plus.square.on.square")
+                        }
+                    }
                 }
                 .onDelete { offsets in
                     floor.rooms.remove(atOffsets: offsets)
                 }
 
-                Button {
-                    floor.rooms.append(HeizBalanceRoom(name: "Raum \(floor.rooms.count + 1)"))
+                Menu {
+                    Button {
+                        addEmptyRoom()
+                    } label: {
+                        Label("Leerer Raum", systemImage: "square.dashed")
+                    }
+
+                    Section("Schnellvorlagen") {
+                        ForEach(HeizBalanceRoomQuickTemplate.allCases) { template in
+                            Button {
+                                addRoom(template)
+                            } label: {
+                                Label(template.title, systemImage: template.systemImage)
+                            }
+                        }
+                    }
                 } label: {
                     Label("Raum hinzufügen", systemImage: "plus.circle")
                 }
             } header: {
                 Text("Räume")
+            } footer: {
+                Text("Schnellvorlagen setzen nur den Raumtyp als Startpunkt; Maße, Temperatur und Quellen bleiben prüfbare Projekteingaben. Beim Duplizieren werden IDs erneuert und hydraulische Entscheidungen bewusst nicht übernommen.")
             }
         }
         .navigationTitle(floor.name)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func addEmptyRoom() {
+        floor.rooms.append(HeizBalanceRoom(name: "Raum \(floor.rooms.count + 1)"))
+    }
+
+    private func addRoom(_ template: HeizBalanceRoomQuickTemplate) {
+        var room = template.makeRoom()
+        if floor.rooms.contains(where: { $0.name == room.name }) {
+            let count = floor.rooms.filter { $0.name.hasPrefix(room.name) }.count + 1
+            room.name += " \(count)"
+        }
+        floor.rooms.append(room)
+    }
+
+    private func duplicateRoom(_ room: HeizBalanceRoom) {
+        let copy = room.duplicatedForCapture(suggestedName: nextCopyName(for: room.name))
+        if let index = floor.rooms.firstIndex(where: { $0.id == room.id }) {
+            floor.rooms.insert(copy, at: index + 1)
+        } else {
+            floor.rooms.append(copy)
+        }
+    }
+
+    private func nextCopyName(for sourceName: String) -> String {
+        let base = sourceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Raum" : sourceName
+        var candidate = base + " Kopie"
+        var number = 2
+        let existing = Set(floor.rooms.map { $0.name })
+        while existing.contains(candidate) {
+            candidate = base + " Kopie \(number)"
+            number += 1
+        }
+        return candidate
     }
 }
 
@@ -133,24 +198,47 @@ struct HeizBalanceRoomEditor: View {
                             }
                         }
                     }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            duplicateComponent(component)
+                        } label: {
+                            Label("Duplizieren", systemImage: "plus.square.on.square")
+                        }
+                        .tint(.blue)
+                    }
                 }
                 .onDelete { offsets in
                     room.components.remove(atOffsets: offsets)
                 }
 
                 Menu {
-                    ForEach(HeizBalanceComponent.Kind.allCases) { kind in
-                        Button(kind.title) {
-                            room.components.append(HeizBalanceComponent(kind: kind))
+                    Section("Einzelnes Bauteil") {
+                        ForEach(HeizBalanceComponent.Kind.allCases) { kind in
+                            Button(kind.title) {
+                                room.components.append(HeizBalanceComponent(kind: kind))
+                            }
+                        }
+                    }
+
+                    Section("Bauteilsätze ohne Kennwerte") {
+                        ForEach(HeizBalanceComponentSetTemplate.allCases) { template in
+                            Button {
+                                room.components.append(contentsOf: template.makeComponents())
+                            } label: {
+                                VStack(alignment: .leading) {
+                                    Text(template.title)
+                                    Text(template.detail)
+                                }
+                            }
                         }
                     }
                 } label: {
-                    Label("Bauteil hinzufügen", systemImage: "plus.circle")
+                    Label("Bauteil / Satz hinzufügen", systemImage: "plus.circle")
                 }
             } header: {
                 Text("Bauteile")
             } footer: {
-                Text("Normative Tabellenwerte werden nicht ungeprüft in der App hinterlegt. U-Wert und Randbedingung bleiben nachvollziehbare Projekteingaben.")
+                Text("Bauteilsätze legen nur leere Bauteile an – ohne U-Werte, Flächen oder versteckte Normannahmen. Einzelne Bauteile lassen sich per Wischgeste duplizieren.")
             }
 
             Section {
@@ -191,6 +279,14 @@ struct HeizBalanceRoomEditor: View {
                             }
                         }
                     }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            duplicateHeatingSurface(surface)
+                        } label: {
+                            Label("Duplizieren", systemImage: "plus.square.on.square")
+                        }
+                        .tint(.blue)
+                    }
                 }
                 .onDelete { offsets in
                     var items = heatingSurfacesBinding.wrappedValue
@@ -212,7 +308,7 @@ struct HeizBalanceRoomEditor: View {
             } header: {
                 Text("Heizflächen")
             } footer: {
-                Text("Leistung und Exponent werden je Heizfläche als dokumentierte Hersteller- oder Projektwerte erfasst. Herstellerkennlinien und Ventilvoreinstellungen folgen erst mit geprüften Datensätzen.")
+                Text("Beim Duplizieren werden nur physische Heizflächendaten übernommen. Zugeordnete Last, Rohrnetz, Ventilverluste und Ersatzproduktentscheidung werden bewusst zurückgesetzt.")
             }
 
             Section("Technische Vorberechnung") {
@@ -221,6 +317,26 @@ struct HeizBalanceRoomEditor: View {
         }
         .navigationTitle(room.name)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func duplicateComponent(_ component: HeizBalanceComponent) {
+        let copy = component.duplicatedForCapture()
+        if let index = room.components.firstIndex(where: { $0.id == component.id }) {
+            room.components.insert(copy, at: index + 1)
+        } else {
+            room.components.append(copy)
+        }
+    }
+
+    private func duplicateHeatingSurface(_ surface: HeizBalanceHeatingSurface) {
+        var items = heatingSurfacesBinding.wrappedValue
+        let copy = surface.duplicatedPhysicalSurfaceForCapture()
+        if let index = items.firstIndex(where: { $0.id == surface.id }) {
+            items.insert(copy, at: index + 1)
+        } else {
+            items.append(copy)
+        }
+        heatingSurfacesBinding.wrappedValue = items
     }
 }
 
