@@ -73,6 +73,7 @@ struct HeizBalanceAdjustmentListSnapshot: Codable, Hashable {
                 .map { ($0.componentID, $0) }
         )
         let networkState = project.hydraulicNetworkState()
+        let pathState = project.hydraulicNetworkPathState()
         let staleNetworkSurfaceIDs = Set(networkState.linkedPipes.filter { !$0.isCurrent }.map(\.surfaceID))
 
         var rows: [Row] = []
@@ -91,15 +92,24 @@ struct HeizBalanceAdjustmentListSnapshot: Codable, Hashable {
                         returnTemperatureC: project.designReturnTemperatureC,
                         roomTemperatureC: room.targetTemperature
                     )
-                    let rawCircuit = surface.circuitPressureLossSummary(
-                        flowTemperatureC: project.designFlowTemperatureC,
-                        returnTemperatureC: project.designReturnTemperatureC,
-                        roomTemperatureC: room.targetTemperature,
-                        densityKGPerM3: project.hydraulicFluidDensityKGPerM3,
-                        kinematicViscosityMM2S: project.hydraulicKinematicViscosityMM2S
-                    )
-                    let networkCurrent = !staleNetworkSurfaceIDs.contains(surface.id)
-                    let completeCircuitPressureLossKPa = networkCurrent ? rawCircuit?.completeCircuitPressureLossKPa : nil
+
+                    let completeCircuitPressureLossKPa: Double?
+                    let networkCurrent: Bool
+                    if pathState.centralPipeModeActive {
+                        let path = pathState.result?.consumer(id: surface.id.uuidString)
+                        completeCircuitPressureLossKPa = path?.completePathPressureLossKPa
+                        networkCurrent = path?.pathCoverageComplete == true
+                    } else {
+                        let rawCircuit = surface.circuitPressureLossSummary(
+                            flowTemperatureC: project.designFlowTemperatureC,
+                            returnTemperatureC: project.designReturnTemperatureC,
+                            roomTemperatureC: room.targetTemperature,
+                            densityKGPerM3: project.hydraulicFluidDensityKGPerM3,
+                            kinematicViscosityMM2S: project.hydraulicKinematicViscosityMM2S
+                        )
+                        networkCurrent = !staleNetworkSurfaceIDs.contains(surface.id)
+                        completeCircuitPressureLossKPa = networkCurrent ? rawCircuit?.completeCircuitPressureLossKPa : nil
+                    }
 
                     if hydronic != nil { flowReady += 1 }
                     if completeCircuitPressureLossKPa != nil { pressureReady += 1 }
@@ -152,7 +162,11 @@ struct HeizBalanceAdjustmentListSnapshot: Codable, Hashable {
 
                     var missing: [String] = []
                     if hydronic == nil { missing.append("Ziel-Volumenstrom fehlt") }
-                    if !networkCurrent { missing.append("Netzbaum-Q neu synchronisieren") }
+                    if pathState.centralPipeModeActive && !networkCurrent {
+                        missing.append("Netzpfad / zentraler Kreis-Δp unvollständig")
+                    } else if !pathState.centralPipeModeActive && !networkCurrent {
+                        missing.append("Netzbaum-Q neu synchronisieren")
+                    }
                     if completeCircuitPressureLossKPa == nil { missing.append("vollständiger Kreis-Δp fehlt") }
                     if thermostats.isEmpty { missing.append("Thermostatventil nicht erfasst") }
                     if !thermostats.isEmpty && thermostats.contains(where: { $0.heldSetting == nil }) {
@@ -214,7 +228,7 @@ struct HeizBalanceAdjustmentListSnapshot: Codable, Hashable {
             customerName: project.customerName,
             address: project.displayAddress,
             technicalPreparationOnly: true,
-            notice: "Technische Baustellen-Einstellliste – keine Verfahren-B-, GEG-/BEG- oder Herstellerfreigabe. Enthalten sind ausschließlich explizit erfasste Berechnungswerte und ausdrücklich festgehaltene Einstellungen. Netzbaum-verknüpfte Rohrabschnitte werden bei veraltetem Summenstrom als unvollständig markiert.",
+            notice: "Technische Baustellen-Einstellliste – keine Verfahren-B-, GEG-/BEG- oder Herstellerfreigabe. Im zentralen Netzpfadmodus werden gemeinsame verknüpfte Rohrabschnitte genau einmal je Netzsegment gerechnet und jedem nachgelagerten Verbraucherpfad zugerechnet; Legacy-Shared-Rohre werden dabei nicht zusätzlich pro Heizfläche summiert.",
             summary: .init(
                 circuitCount: rows.count,
                 flowReadyCount: flowReady,
