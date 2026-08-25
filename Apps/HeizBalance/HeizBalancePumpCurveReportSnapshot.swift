@@ -85,6 +85,7 @@ struct HeizBalancePumpCurveReportSnapshot: Codable, Hashable {
 }
 
 extension HeizBalanceProject {
+    @MainActor
     func pumpCurveReportSnapshot(
         datasets: [HeizBalancePumpProductDataset],
         generatedAt: Date = Date()
