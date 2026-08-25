@@ -7,6 +7,7 @@ struct HeizBalanceTechnicalReportExportView: View {
     @State private var exportDocument = HeizBalancePDFDocument(data: Data())
     @State private var pendingSnapshot: HeizBalanceTechnicalReportSnapshot?
     @State private var pendingLowTemperatureSnapshot: HeizBalanceLowTemperatureReportSnapshot?
+    @State private var pendingTemperatureScenarioSnapshot: HeizBalanceTemperatureScenarioReportSnapshot?
     @State private var archiveEntries: [HeizBalanceReportArchiveStore.ArchiveEntry] = []
     @State private var showingExporter = false
     @State private var exportMessage: String?
@@ -19,6 +20,10 @@ struct HeizBalanceTechnicalReportExportView: View {
         HeizBalanceLowTemperatureReportArchiveStore()
     }
 
+    private var temperatureScenarioArchiveStore: HeizBalanceTemperatureScenarioReportArchiveStore {
+        HeizBalanceTemperatureScenarioReportArchiveStore()
+    }
+
     private var snapshot: HeizBalanceTechnicalReportSnapshot {
         project.technicalReportSnapshot()
     }
@@ -27,6 +32,10 @@ struct HeizBalanceTechnicalReportExportView: View {
         project.lowTemperatureProjectState(
             comparisonFlowTemperatureC: project.designFlowTemperatureC
         )
+    }
+
+    private var temperatureScenarioSnapshot: HeizBalanceTemperatureScenarioReportSnapshot {
+        project.temperatureScenarioReportSnapshot()
     }
 
     private var roomCount: Int {
@@ -134,6 +143,46 @@ struct HeizBalanceTechnicalReportExportView: View {
             }
 
             Section {
+                if temperatureScenarioSnapshot.scenarios.isEmpty {
+                    Text("Keine Temperaturszenarien auswertbar.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(temperatureScenarioSnapshot.scenarios) { scenario in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(scenario.title)
+                                    .font(.subheadline.weight(.semibold))
+                                Text(
+                                    scenario.flowTemperatureC.formatted(.number.precision(.fractionLength(0...1)))
+                                        + " / "
+                                        + scenario.returnTemperatureC.formatted(.number.precision(.fractionLength(0...1)))
+                                        + " °C"
+                                )
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            if scenario.coverageComplete {
+                                Text("\(scenario.sufficientSurfaceCount)/\(scenario.surfaceCount)")
+                                    .font(.subheadline.monospacedDigit())
+                                    .foregroundStyle(scenario.allSufficient ? .green : .orange)
+                            } else {
+                                Text("offen")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Temperatur-Szenarien")
+            } footer: {
+                Text("Der Szenario-Bericht dokumentiert Projekt-Temperaturen sowie 50/40, 45/35, 45/40 und 40/35 °C. Für zu kleine Heizflächen werden erforderliche ΔT50-Nennleistung und Nennleistungsfaktor ausgegeben; konkrete Ersatzmodelle erfordern dokumentierte Herstellerdaten.")
+            }
+
+            Section {
                 if let system = snapshot.hydraulicSystem {
                     LabeledContent("Hydraulikkreise") {
                         Text("\(system.circuitCount)")
@@ -188,7 +237,7 @@ struct HeizBalanceTechnicalReportExportView: View {
             } header: {
                 Text("Export")
             } footer: {
-                Text("Das gemeinsame PDF enthält Hauptbericht und Niedertemperatur-Supplement. Nach erfolgreichem Export werden `technical-report-v1` und `technical-low-temperature-v1` mit demselben Zeitstempel lokal archiviert.")
+                Text("Das gemeinsame PDF enthält Hauptbericht, Niedertemperatur-Supplement und Szenario-Matrix. Nach erfolgreichem Export werden alle drei versionierten Snapshots mit demselben Zeitstempel lokal archiviert.")
             }
 
             Section {
@@ -210,7 +259,7 @@ struct HeizBalanceTechnicalReportExportView: View {
                             )
                             .font(.subheadline.weight(.semibold))
 
-                            Text(entry.snapshot.schema + " + technical-low-temperature-v1")
+                            Text(entry.snapshot.schema + " + technical-low-temperature-v1 + technical-temperature-scenarios-v1")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
@@ -234,7 +283,7 @@ struct HeizBalanceTechnicalReportExportView: View {
             } header: {
                 Text("Berichtsarchiv")
             } footer: {
-                Text("Das Archiv speichert die letzten 10 erfolgreichen Exportstände je Projekt. Hauptbericht und Niedertemperatur-Snapshot werden getrennt versioniert; die PDF-Datei bleibt am vom Benutzer gewählten Exportort.")
+                Text("Das Archiv speichert die letzten 10 erfolgreichen Exportstände je Projekt. Hauptbericht, Niedertemperatur- und Szenario-Snapshot werden getrennt versioniert; die PDF-Datei bleibt am vom Benutzer gewählten Exportort.")
             }
         }
         .navigationTitle("Technischer Bericht")
@@ -259,16 +308,26 @@ struct HeizBalanceTechnicalReportExportView: View {
             generatedAt: generatedAt,
             comparisonFlowTemperatureC: project.designFlowTemperatureC
         )
+        let freshTemperatureScenarioSnapshot = project.temperatureScenarioReportSnapshot(
+            generatedAt: generatedAt
+        )
 
         pendingSnapshot = freshSnapshot
         pendingLowTemperatureSnapshot = freshLowTemperatureSnapshot
+        pendingTemperatureScenarioSnapshot = freshTemperatureScenarioSnapshot
 
         let mainReport = HeizBalanceTechnicalReportPDFRenderer.render(freshSnapshot)
         let lowTemperatureReport = HeizBalanceLowTemperatureReportPDFRenderer.render(
             freshLowTemperatureSnapshot
         )
-        let combinedReport = HeizBalancePDFMerger.merge([mainReport, lowTemperatureReport])
-            ?? mainReport
+        let temperatureScenarioReport = HeizBalanceTemperatureScenarioReportPDFRenderer.render(
+            freshTemperatureScenarioSnapshot
+        )
+        let combinedReport = HeizBalancePDFMerger.merge([
+            mainReport,
+            lowTemperatureReport,
+            temperatureScenarioReport
+        ]) ?? mainReport
 
         exportDocument = HeizBalancePDFDocument(data: combinedReport)
         exportMessage = nil
@@ -279,31 +338,35 @@ struct HeizBalanceTechnicalReportExportView: View {
         switch result {
         case .success:
             guard let pendingSnapshot,
-                  let pendingLowTemperatureSnapshot else {
+                  let pendingLowTemperatureSnapshot,
+                  let pendingTemperatureScenarioSnapshot else {
                 exportMessage = "PDF-Bericht exportiert; Berichtssnapshots waren nicht mehr vollständig verfügbar."
-                self.pendingSnapshot = nil
-                self.pendingLowTemperatureSnapshot = nil
+                clearPendingSnapshots()
                 return
             }
 
             do {
                 _ = try archiveStore.archive(pendingSnapshot)
                 _ = try lowTemperatureArchiveStore.archive(pendingLowTemperatureSnapshot)
-                self.pendingSnapshot = nil
-                self.pendingLowTemperatureSnapshot = nil
+                _ = try temperatureScenarioArchiveStore.archive(pendingTemperatureScenarioSnapshot)
+                clearPendingSnapshots()
                 reloadArchive()
-                exportMessage = "PDF-Bericht exportiert; Haupt- und Niedertemperatur-Snapshot archiviert."
+                exportMessage = "PDF-Bericht exportiert; Haupt-, Niedertemperatur- und Szenario-Snapshot archiviert."
             } catch {
-                self.pendingSnapshot = nil
-                self.pendingLowTemperatureSnapshot = nil
+                clearPendingSnapshots()
                 exportMessage = "PDF-Bericht exportiert; Snapshot-Archivierung fehlgeschlagen: \(error.localizedDescription)"
             }
 
         case .failure(let error):
-            pendingSnapshot = nil
-            pendingLowTemperatureSnapshot = nil
+            clearPendingSnapshots()
             exportMessage = "PDF-Export fehlgeschlagen: \(error.localizedDescription)"
         }
+    }
+
+    private func clearPendingSnapshots() {
+        pendingSnapshot = nil
+        pendingLowTemperatureSnapshot = nil
+        pendingTemperatureScenarioSnapshot = nil
     }
 
     private func reloadArchive() {
