@@ -113,8 +113,6 @@ Wichtige Fachdokumente:
 - OG = 200 l/h
 - Hauptstrang = 450 l/h
 
-Die Core-Regressionen prüfen zusätzlich fehlende Verbraucher-Q, Doppelzuordnung, Zyklen, unbekannte Eltern und unzugeordnete Verbraucher.
-
 ### Rohrverknüpfung / Auto-Sync
 - Nur `Gemeinsame Verteilung` kann fachlich mit einem Netzsegment verknüpft werden.
 - Ohne Verknüpfung bleibt manueller `explicitDesignVolumeFlowLPH` gültig.
@@ -139,13 +137,11 @@ Die Core-Regressionen prüfen zusätzlich fehlende Verbraucher-Q, Doppelzuordnun
 
 ### Bericht
 - Neues Schema `technical-hydraulic-network-v1`.
-- Friert Segmenthierarchie, Verbraucherzuordnung, bekannte/vollständige Q, unresolved Verbraucher und verknüpfte Rohrabschnitte samt stored/calculated/current ein.
 - Eigener A4-PDF-Teil und separates 10er-Projektarchiv.
 - Produktionsbericht = **8 gemeinsam datierte Snapshots**: Übergabe, Hauptbericht, Netzbaum, Niedertemperatur, Szenarien, Heizkörperauswahl, Pumpenkennlinien, Einstellliste.
 - Separater `Technischer Bericht & PDF` = **6 gemeinsam datierte Snapshots**: Hauptbericht, Netzbaum, Niedertemperatur, Szenarien, Heizkörperauswahl, Pumpenkennlinien.
 
 ## Aktive versionierte Schemata
-Berichte/Snapshots:
 - `technical-report-v1`
 - `technical-hydraulic-network-v1`
 - `technical-low-temperature-v1`
@@ -154,8 +150,6 @@ Berichte/Snapshots:
 - `technical-pump-curves-v1`
 - `technical-adjustment-list-v1`
 - `technical-handover-v1`
-
-Projekt-/Entscheidungsschemata u. a.:
 - `hydraulic-network-v1`
 - `component-favorite-v1`
 - `hydraulic-capture-template-v1`
@@ -175,7 +169,7 @@ Projekt-/Entscheidungsschemata u. a.:
 - #231: Batch 25 grün.
 - #250/#256: Hydraulik-Batches 26–29 + finaler Handoff grün.
 - #266/#268: Batch 30 Produktionsbericht + finaler Head grün.
-- Batch 31 wird erst als final grün markiert, wenn der **endgültige Branch-Head nach Netzbaum-Code und Handoff-Doku** Core, komplette Debug-iOS-Matrix, HeizBalance Debug und echten HeizBalance Release-Build bestanden hat.
+- Batch 31: finaler Head ist der Stand nach Netzbaum-Code, beiden Exportpfaden und Handoff-Dokumentation; seine vollständige PR-CI ist das Abschluss-Gate.
 
 ## Bewusst noch gesperrt / offen
 - Norm-Heizlast nach DIN EN 12831-1 + deutschem Ergänzungsregelwerk.
