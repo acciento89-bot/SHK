@@ -68,7 +68,7 @@ struct HeizBalanceAdjustmentListView: View {
                         pump.selectionCurrent ? "Pumpenauswahl aktuell" : "Pumpenauswahl neu bewerten",
                         systemImage: pump.selectionCurrent ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
                     )
-                    .foregroundStyle(pump.selectionCurrent ? .green : .orange)
+                    .foregroundStyle(pump.selectionCurrent ? Color.green : Color.orange)
                 } header: {
                     Text("Pumpe")
                 }
@@ -125,7 +125,7 @@ struct HeizBalanceAdjustmentListView: View {
 
             Section {
                 LabeledContent("Archivierte Einstelllisten", value: "\(archiveEntries.count) / 10")
-                ForEach(Array(archiveEntries.prefix(5).enumerated()), id: \.offset) { _, item in
+                ForEach(Array(archiveEntries.prefix(5)), id: \.generatedAt) { item in
                     Text(item.generatedAt.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
                 }
