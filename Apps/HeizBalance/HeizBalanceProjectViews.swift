@@ -51,6 +51,12 @@ struct HeizBalanceProjectListView: View {
                     } label: {
                         Label("Ventildaten", systemImage: "slider.horizontal.3")
                     }
+
+                    NavigationLink {
+                        HeizBalancePumpDatasetManager()
+                    } label: {
+                        Label("Pumpendaten", systemImage: "arrow.triangle.2.circlepath")
+                    }
                 } label: {
                     Label("Produktdaten", systemImage: "shippingbox")
                 }
