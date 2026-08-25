@@ -208,7 +208,7 @@ struct HeizBalanceProjectEditor: View {
                     Label("Temperatur-Szenarien", systemImage: "chart.xyaxis.line")
                 }
 
-                HeizBalanceRetrofitTargetDashboardView(project: draft)
+                HeizBalanceRetrofitTargetDashboardView(project: $draft)
 
                 NavigationLink {
                     HeizBalanceValveDataManager(project: $draft)
