@@ -203,6 +203,12 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 NavigationLink {
+                    HeizBalanceTemperatureScenarioView(project: draft)
+                } label: {
+                    Label("Temperatur-Szenarien", systemImage: "chart.xyaxis.line")
+                }
+
+                NavigationLink {
                     HeizBalanceValveDataManager(project: $draft)
                 } label: {
                     Label("Ventildaten & Kennlinien", systemImage: "slider.horizontal.3")
@@ -221,7 +227,7 @@ struct HeizBalanceProjectEditor: View {
             } header: {
                 Text("Berechnungsstatus")
             } footer: {
-                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Wärme-, Heizflächen-, Niedertemperatur-, Rohrnetz-, Ventil- und Berichtsausgaben bleiben bis zur fachlichen Freigabe technische Vorbereitung.")
+                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Wärme-, Heizflächen-, Niedertemperatur-, Szenario-, Rohrnetz-, Ventil- und Berichtsausgaben bleiben bis zur fachlichen Freigabe technische Vorbereitung.")
             }
         }
         .navigationTitle(isNewProject ? "Neues Projekt" : draft.name)
