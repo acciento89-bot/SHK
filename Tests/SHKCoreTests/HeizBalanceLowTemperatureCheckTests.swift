@@ -44,6 +44,49 @@ struct HeizBalanceLowTemperatureCheckTests {
     }
 
     @Test
+    func technicalDemoCaseIsLimitedByBathroomAtFortyFiveThirtyFive() throws {
+        let inputs: [HeizBalanceLowTemperatureCheckCalculator.Input] = [
+            .init(
+                nominalPowerDeltaT50W: 2500,
+                exponent: 1.3,
+                requiredPowerW: 700,
+                roomTemperatureC: 20,
+                waterTemperatureDifferenceK: 10,
+                comparisonFlowTemperatureC: 45
+            ),
+            .init(
+                nominalPowerDeltaT50W: 1800,
+                exponent: 1.3,
+                requiredPowerW: 500,
+                roomTemperatureC: 19,
+                waterTemperatureDifferenceK: 10,
+                comparisonFlowTemperatureC: 45
+            ),
+            .init(
+                nominalPowerDeltaT50W: 2200,
+                exponent: 1.3,
+                requiredPowerW: 600,
+                roomTemperatureC: 24,
+                waterTemperatureDifferenceK: 10,
+                comparisonFlowTemperatureC: 45
+            )
+        ]
+
+        let results = try inputs.map {
+            try #require(HeizBalanceLowTemperatureCheckCalculator.calculate($0))
+        }
+        let limiting = try #require(results.max { $0.minimumFlowTemperatureC < $1.minimumFlowTemperatureC })
+
+        #expect(abs(results[0].minimumFlowTemperatureC - 43.7805) < 0.001)
+        #expect(abs(results[1].minimumFlowTemperatureC - 42.6657) < 0.001)
+        #expect(abs(results[2].minimumFlowTemperatureC - 47.4041) < 0.001)
+        #expect(abs(limiting.minimumFlowTemperatureC - 47.4041) < 0.001)
+        #expect(results[0].comparisonSufficient == true)
+        #expect(results[1].comparisonSufficient == true)
+        #expect(results[2].comparisonSufficient == false)
+    }
+
+    @Test
     func rejectsMissingPhysicalTemperatureWindow() {
         let result = HeizBalanceLowTemperatureCheckCalculator.calculate(
             .init(
