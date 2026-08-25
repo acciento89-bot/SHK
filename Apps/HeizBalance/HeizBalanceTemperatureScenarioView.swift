@@ -191,7 +191,7 @@ struct HeizBalanceTemperatureScenarioView: View {
                    flow <= returnTemperature {
                     Label("Vorlauf muss über Rücklauf liegen.", systemImage: "exclamationmark.triangle")
                         .font(.caption)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Color.orange)
                 }
             } header: {
                 Text("Szenarien")
@@ -241,7 +241,7 @@ struct HeizBalanceTemperatureScenarioView: View {
                         : "Mindestens eine Heizfläche ist bei diesem Temperaturniveau zu klein.",
                     systemImage: summary.allSufficient ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
                 )
-                .foregroundStyle(summary.allSufficient ? .green : .orange)
+                .foregroundStyle(summary.allSufficient ? Color.green : Color.orange)
 
                 if let limiting = summary.limitingEntry,
                    let result = limiting.result {
@@ -331,14 +331,14 @@ private struct HeizBalanceTemperatureScenarioSurfaceRow: View {
 
         LabeledContent("Deckungsgrad") {
             Text(scenarioPercentText(result.capacityRatio))
-                .foregroundStyle(result.sufficient ? .secondary : .orange)
+                .foregroundStyle(result.sufficient ? Color.secondary : Color.orange)
         }
         .font(.caption)
 
         if result.sufficient {
             Label("Heizfläche ausreichend", systemImage: "checkmark.circle")
                 .font(.caption)
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.green)
         } else {
             LabeledContent("Erforderlich bei ΔT50") {
                 Text(scenarioWattText(result.requiredNominalPowerDeltaT50W))
