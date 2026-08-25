@@ -116,27 +116,21 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 
 ### 10. Projekt-Cockpit – Batch 21
 - Neues `HeizBalanceProjectTechnicalStatusView` direkt im Projekteditor.
-- Zeigt auf einen Blick:
-  - Raumdaten vollständig/unvollständig,
-  - Sanierungsziel erreichbar/Upgradebedarf/unvollständig,
-  - Hydraulikstatus samt Q/H bei vollständigem Betriebspunkt,
-  - Pumpenentscheidung aktuell/veraltet/nicht vorhanden.
-- Der Berechnungsstatus ist damit nicht mehr nur eine Sammlung einzelner Links, sondern ein technischer Arbeitsstand des Projekts.
+- Zeigt auf einen Blick Raumdaten, Sanierungsziel, Hydraulikstatus und Pumpenentscheidung.
+- Bei vollständiger Hydraulik werden Projekt-Q/H direkt angezeigt.
+- Veraltete Pumpenentscheidungen werden deutlich als `neu bewerten` markiert.
 
 ### 11. Status direkt in der Projektliste – Batch 21
 - Jede Projektzeile zeigt kompakte Statuschips `Räume`, `Hydraulik`, `Pumpe`.
 - Grün = technischer Arbeitsschritt aktuell vollständig.
-- Orange bei festgehaltener, aber durch geänderten/unvollständigen Betriebspunkt veralteter Pumpenentscheidung.
+- Orange = festgehaltene Pumpenentscheidung ist wegen geändertem/unvollständigem Betriebspunkt veraltet.
 - Statuschips sind ausdrücklich keine normative Freigabe.
 
 ### 12. Katalogübergreifender Pumpen-Arbeitsbereich – Batch 22
 - Neues `HeizBalancePumpProjectWorkspaceView` als zentrale Projektansicht `Pumpe & Betriebspunkt`.
 - Zeigt aktuellen Auslegungs-Volumenstrom und erforderliche Förderhöhe.
 - Alle importierten Pumpenkataloge werden in einem direkten Kennlinienvergleich zusammengeführt.
-- `HeizBalancePumpCurveComparisonCalculator` klassifiziert jede Kennlinie als:
-  - technisch ausreichend,
-  - Förderhöhe zu gering,
-  - außerhalb dokumentierter Kennlinie.
+- `HeizBalancePumpCurveComparisonCalculator` klassifiziert jede Kennlinie als technisch ausreichend, Förderhöhe zu gering oder außerhalb dokumentierter Kennlinie.
 - Zusammenfassung mit Gesamtzahl, auswertbaren, ausreichenden, zu schwachen und außerhalb liegenden Kennlinien.
 - Filter `Alle / Ausreichend / Zu wenig / Außerhalb`.
 - Ausreichende Kennlinien werden zur Lesbarkeit zuerst gruppiert; innerhalb der Gruppen nur alphabetisch sortiert. Kein Ranking nach Produktgüte.
@@ -145,27 +139,15 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 
 ### 13. Technische Pumpen-Leistungskennzahlen – Batch 23
 - Neuer Core `HeizBalancePumpTechnicalMetricsCalculator`, Profil `pump-technical-metrics-v1`.
-- Aus explizitem Q, H und Fluiddichte werden berechnet:
-  - erforderliche hydraulische Leistung,
-  - hydraulische Leistung bei verfügbarer Kennlinien-Förderhöhe,
-  - Förderhöhenreserve in m,
-  - Förderhöhenreserve in %,
-  - Position des Betriebspunkts im dokumentierten Q-Bereich.
+- Aus explizitem Q, H und Fluiddichte werden erforderliche hydraulische Leistung, hydraulische Leistung bei verfügbarer Kennlinien-H, H-Reserve m/%, und Q-Bereichsposition berechnet.
 - Wenn P₁ dokumentiert ist, zusätzlich `Pₕ,erf/P₁`.
 - Ohne dokumentiertes P₁ wird kein Verhältniswert erfunden.
 - `Pₕ,erf/P₁` wird ausdrücklich nicht als Pumpenwirkungsgrad/EEI/ErP-Freigabe bezeichnet.
-- Neue Core-Regressionsfälle prüfen Berechnung und harte Eingabevalidierung.
+- Core-Regressionsfälle prüfen Berechnung und harte Eingabevalidierung.
 
 ### 14. Pumpenbericht/PDF – Batch 24
 - Bestehendes Snapshot-Schema `technical-pump-curves-v1` bleibt rückwärtskompatibel und erhält nur optionale neue Kennzahlenfelder.
-- Optional eingefroren werden:
-  - Projektdichte,
-  - erforderliche hydraulische Leistung,
-  - verfügbare hydraulische Leistung je Kennlinie,
-  - H-Reserve %,
-  - `Pₕ,erf/P₁`,
-  - Position im dokumentierten Q-Bereich,
-  - Profil `pump-technical-metrics-v1`.
+- Optional eingefroren werden Projektdichte, erforderliche/verfügbare hydraulische Leistung, H-Reserve %, `Pₕ,erf/P₁`, Q-Bereichsposition und Profil `pump-technical-metrics-v1`.
 - PDF zeigt diese Werte zusammen mit Katalog-/Quellen-/Kennlinienprovenienz und einer ggf. festgehaltenen Pumpenentscheidung.
 - PDF-Hinweis stellt klar: technische Verhältniskennzahl ≠ Effizienz-/ErP-/Herstellerfreigabe.
 
@@ -232,3 +214,7 @@ Eigenschaften:
 3. Bericht für reale Baustellen härten: große Projekte, Seitenumbrüche, kompakte Ergebniszusammenfassung, Unterschrift/Techniker/Projektstatus und druckbare Einstelllisten.
 4. Erste echte Hersteller-/Lizenzquellen für Heizkörper-, Ventil- und Pumpendaten rechtlich klären und über die Mappingprofile als Referenzdaten validieren.
 5. Parallel normative Heizlast-Spezifikation und belastbare Referenzfälle aufbauen; Freigabe erst nach echter fachlicher Validierung.
+
+## Batch-Verifikation
+- CI #213 hat den vollständigen Code-Head des Batches mit Core-Tests, kompletter Debug-iOS-Matrix sowie HeizBalance Debug- und echtem Release-Simulator-Build erfolgreich validiert.
+- Nachgelagerte reine Dokumentations-Commits ändern keine Rechen- oder App-Logik; der abschließende Dokumentations-Head wird zusätzlich durch dieselbe PR-CI geprüft.
