@@ -20,6 +20,7 @@ struct HeizBalanceProductionReportView: View {
     @State private var pendingPumpCurve: HeizBalancePumpCurveReportSnapshot?
     @State private var pendingAdjustment: HeizBalanceAdjustmentListSnapshot?
     @State private var pendingHandover: HeizBalanceProductionHandoverSnapshot?
+    @State private var pendingHydraulicNetwork: HeizBalanceHydraulicNetworkReportSnapshot?
     @State private var handoverArchive: [HeizBalanceProductionHandoverSnapshot] = []
 
     private var documentation: HeizBalanceDocumentationMetadata {
@@ -43,6 +44,10 @@ struct HeizBalanceProductionReportView: View {
         )
     }
 
+    private var networkSnapshot: HeizBalanceHydraulicNetworkReportSnapshot {
+        .make(project: project)
+    }
+
     private var roomCount: Int { currentHandover.summary.roomCount }
     private var heatingSurfaceCount: Int { currentHandover.summary.heatingSurfaceCount }
     private var isLargeProject: Bool { roomCount >= 20 }
@@ -58,6 +63,7 @@ struct HeizBalanceProductionReportView: View {
 
     var body: some View {
         let handover = currentHandover
+        let network = networkSnapshot
 
         List {
             Section {
@@ -118,8 +124,27 @@ struct HeizBalanceProductionReportView: View {
             }
 
             Section {
+                LabeledContent("Netzsegmente", value: "\(network.segments.count)")
+                LabeledContent("Verbraucher zugeordnet", value: "\(network.assignedConsumerCount) / \(network.consumerCount)")
+                LabeledContent("Verknüpfte Rohrabschnitte", value: "\(network.linkedPipes.count)")
+                if !network.networkValid {
+                    Label("Netzbaum ungültig", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                } else if network.staleLinkedPipeCount > 0 {
+                    Label("\(network.staleLinkedPipeCount) Netzbaum-Q neu synchronisieren", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                } else if !network.linkedPipes.isEmpty {
+                    Label("Netzbaum-Verknüpfungen aktuell", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+            } header: {
+                Text("Hydraulischer Netzbaum")
+            }
+
+            Section {
                 packageRow("Übergabe-Zusammenfassung", schema: HeizBalanceProductionHandoverSnapshot.schemaVersion)
                 packageRow("Technischer Hauptbericht", schema: HeizBalanceTechnicalReportSnapshot.schemaVersion)
+                packageRow("Hydraulischer Netzbaum", schema: HeizBalanceHydraulicNetworkReportSnapshot.schemaVersion)
                 packageRow("Niedertemperatur", schema: HeizBalanceLowTemperatureReportSnapshot.schemaVersion)
                 packageRow("Temperatur-Szenarien", schema: HeizBalanceTemperatureScenarioReportSnapshot.schemaVersion)
                 packageRow("Heizkörper-Auswahl", schema: HeizBalanceRadiatorReplacementReportSnapshot.schemaVersion)
@@ -128,7 +153,7 @@ struct HeizBalanceProductionReportView: View {
             } header: {
                 Text("PDF-Paket")
             } footer: {
-                Text("Alle sieben Snapshots werden beim Export mit exakt demselben Zeitstempel erzeugt. Das Übergabeblatt steht vorne, danach folgen Fachbericht und Supplements; die kompakte Einstellliste bildet den Baustellen-Anhang.")
+                Text("Alle acht Snapshots werden beim Export mit exakt demselben Zeitstempel erzeugt. Der Netzbaum dokumentiert die automatische Summenstrom-Herkunft und den Synchronisationsstatus der gemeinsamen Rohrabschnitte.")
             }
 
             Section {
@@ -226,6 +251,7 @@ struct HeizBalanceProductionReportView: View {
             generatedAt: generatedAt
         )
         let main = project.technicalReportSnapshot(generatedAt: generatedAt)
+        let network = HeizBalanceHydraulicNetworkReportSnapshot.make(project: project, generatedAt: generatedAt)
         let lowTemperature = project.lowTemperatureReportSnapshot(
             generatedAt: generatedAt,
             comparisonFlowTemperatureC: project.designFlowTemperatureC
@@ -245,6 +271,7 @@ struct HeizBalanceProductionReportView: View {
 
         pendingHandover = handover
         pendingMain = main
+        pendingHydraulicNetwork = network
         pendingLowTemperature = lowTemperature
         pendingTemperatureScenario = temperatureScenario
         pendingRadiatorReplacement = radiatorReplacement
@@ -254,6 +281,7 @@ struct HeizBalanceProductionReportView: View {
         let reports = [
             HeizBalanceProductionHandoverPDFRenderer.render(handover),
             HeizBalanceTechnicalReportPDFRenderer.render(main),
+            HeizBalanceHydraulicNetworkReportPDFRenderer.render(network),
             HeizBalanceLowTemperatureReportPDFRenderer.render(lowTemperature),
             HeizBalanceTemperatureScenarioReportPDFRenderer.render(temperatureScenario),
             HeizBalanceRadiatorReplacementReportPDFRenderer.render(radiatorReplacement),
@@ -273,6 +301,7 @@ struct HeizBalanceProductionReportView: View {
         case .success:
             guard let handover = pendingHandover,
                   let main = pendingMain,
+                  let network = pendingHydraulicNetwork,
                   let lowTemperature = pendingLowTemperature,
                   let temperatureScenario = pendingTemperatureScenario,
                   let radiatorReplacement = pendingRadiatorReplacement,
@@ -286,6 +315,7 @@ struct HeizBalanceProductionReportView: View {
             do {
                 _ = try HeizBalanceProductionHandoverArchiveStore().archive(handover)
                 _ = try HeizBalanceReportArchiveStore().archive(main)
+                _ = try HeizBalanceHydraulicNetworkReportArchiveStore().archive(network)
                 _ = try HeizBalanceLowTemperatureReportArchiveStore().archive(lowTemperature)
                 _ = try HeizBalanceTemperatureScenarioReportArchiveStore().archive(temperatureScenario)
                 _ = try HeizBalanceRadiatorReplacementReportArchiveStore().archive(radiatorReplacement)
@@ -293,7 +323,7 @@ struct HeizBalanceProductionReportView: View {
                 _ = try HeizBalanceAdjustmentListArchiveStore().archive(adjustment)
                 clearPending()
                 reloadArchive()
-                exportMessage = "Produktionsbericht exportiert; alle sieben versionierten Snapshots wurden archiviert."
+                exportMessage = "Produktionsbericht exportiert; alle acht versionierten Snapshots wurden archiviert."
             } catch {
                 clearPending()
                 exportMessage = "PDF exportiert; Snapshot-Archivierung fehlgeschlagen: \(error.localizedDescription)"
@@ -307,6 +337,7 @@ struct HeizBalanceProductionReportView: View {
 
     private func clearPending() {
         pendingMain = nil
+        pendingHydraulicNetwork = nil
         pendingLowTemperature = nil
         pendingTemperatureScenario = nil
         pendingRadiatorReplacement = nil
