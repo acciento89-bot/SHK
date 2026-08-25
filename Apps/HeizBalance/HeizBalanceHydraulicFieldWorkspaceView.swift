@@ -54,19 +54,19 @@ struct HeizBalanceHydraulicFieldWorkspaceView: View {
                 Section("Kreise") {
                     ForEach(entries) { entry in
                         if let binding = surfaceBinding(for: entry),
-                           let context = context(for: entry) {
+                           let roomTemperature = roomTemperature(for: entry) {
                             NavigationLink {
                                 HeizBalanceHydraulicCircuitWorkspaceView(
                                     projectID: project.id,
                                     surface: binding,
-                                    roomTemperatureC: context.roomTemperatureC,
+                                    roomTemperatureC: roomTemperature,
                                     designFlowTemperatureC: project.designFlowTemperatureC,
                                     designReturnTemperatureC: project.designReturnTemperatureC,
                                     densityKGPerM3: project.hydraulicFluidDensityKGPerM3,
                                     kinematicViscosityMM2S: project.hydraulicKinematicViscosityMM2S
                                 )
                             } label: {
-                                circuitRow(entry: entry, surface: binding.wrappedValue, roomTemperatureC: context.roomTemperatureC)
+                                circuitRow(entry: entry, surface: binding.wrappedValue, roomTemperatureC: roomTemperature)
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
@@ -121,9 +121,9 @@ struct HeizBalanceHydraulicFieldWorkspaceView: View {
         .padding(.vertical, 2)
     }
 
-    private func context(for entry: CircuitEntry) -> (roomTemperatureC: Double)? {
+    private func roomTemperature(for entry: CircuitEntry) -> Double? {
         guard let location = locate(entry) else { return nil }
-        return (project.floors[location.floor].rooms[location.room].targetTemperature)
+        return project.floors[location.floor].rooms[location.room].targetTemperature
     }
 
     private func surfaceBinding(for entry: CircuitEntry) -> Binding<HeizBalanceHeatingSurface>? {
@@ -223,6 +223,12 @@ struct HeizBalanceHydraulicCircuitWorkspaceView: View {
                 surface.hydraulicComponentAssessmentComplete = false
             }
         )
+    }
+
+    private var valveIndices: [Int] {
+        (surface.hydraulicLossComponents ?? []).indices.filter { index in
+            surface.hydraulicLossComponents?[index].supportsValveProductData == true
+        }
     }
 
     var body: some View {
@@ -375,18 +381,14 @@ struct HeizBalanceHydraulicCircuitWorkspaceView: View {
 
     @ViewBuilder
     private var valveSettingSection: some View {
-        let valves = Array((surface.hydraulicLossComponents ?? []).enumerated())
-            .filter { $0.element.supportsValveProductData }
-
         Section {
-            if valves.isEmpty {
+            if valveIndices.isEmpty {
                 Text("Noch keine Thermostat- oder Rücklaufventile im Kreis.")
                     .foregroundStyle(.secondary)
             }
 
-            ForEach(valves, id: \.element.id) { pair in
-                let index = pair.offset
-                let component = pair.element
+            ForEach(valveIndices, id: \.self) { index in
+                let component = componentBinding.wrappedValue[index]
                 VStack(alignment: .leading, spacing: 8) {
                     Text(component.name)
                         .font(.subheadline.weight(.semibold))
@@ -403,7 +405,7 @@ struct HeizBalanceHydraulicCircuitWorkspaceView: View {
                             systemImage: fresh ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
                         )
                         .font(.caption)
-                        .foregroundStyle(fresh ? .green : .orange)
+                        .foregroundStyle(fresh ? Color.green : Color.orange)
 
                         Button(role: .destructive) {
                             valveSelectionStore.delete(projectID: projectID, componentID: component.id)
