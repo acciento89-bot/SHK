@@ -1,6 +1,8 @@
 import Foundation
 
 struct HeizBalancePumpCurveOperatingPointCalculator {
+    static let profileVersion = "linear-documented-pump-curve-v1"
+
     struct Input: Hashable {
         var targetVolumeFlowM3H: Double
         var requiredHeadM: Double
