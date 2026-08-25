@@ -173,6 +173,8 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
     var powerSource: HeizBalanceInputSource?
     var assignedRequiredPowerW: Double?
     var pipeSections: [HeizBalancePipeSection]?
+    var hydraulicLossComponents: [HeizBalanceHydraulicLossComponent]?
+    var hydraulicComponentAssessmentComplete: Bool?
     var note: String
 
     init(
@@ -186,6 +188,8 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
         powerSource: HeizBalanceInputSource? = nil,
         assignedRequiredPowerW: Double? = nil,
         pipeSections: [HeizBalancePipeSection]? = nil,
+        hydraulicLossComponents: [HeizBalanceHydraulicLossComponent]? = nil,
+        hydraulicComponentAssessmentComplete: Bool? = nil,
         note: String = ""
     ) {
         self.id = id
@@ -198,12 +202,23 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
         self.powerSource = powerSource
         self.assignedRequiredPowerW = assignedRequiredPowerW
         self.pipeSections = pipeSections
+        self.hydraulicLossComponents = hydraulicLossComponents
+        self.hydraulicComponentAssessmentComplete = hydraulicComponentAssessmentComplete
         self.note = note
     }
 
     var pipeSectionItems: [HeizBalancePipeSection] {
         get { pipeSections ?? [] }
         set { pipeSections = newValue }
+    }
+
+    var hydraulicLossComponentItems: [HeizBalanceHydraulicLossComponent] {
+        get { hydraulicLossComponents ?? [] }
+        set { hydraulicLossComponents = newValue }
+    }
+
+    var isHydraulicComponentAssessmentComplete: Bool {
+        hydraulicComponentAssessmentComplete == true
     }
 
     enum Kind: String, Codable, CaseIterable, Identifiable {
@@ -254,6 +269,53 @@ struct HeizBalancePipeSection: Identifiable, Codable, Hashable {
         self.roughnessMM = roughnessMM
         self.zetaTotal = zetaTotal
         self.note = note
+    }
+}
+
+struct HeizBalanceHydraulicLossComponent: Identifiable, Codable, Hashable {
+    var id: UUID
+    var kind: Kind
+    var name: String
+    var pressureLossKPa: Double?
+    var source: HeizBalanceInputSource?
+    var note: String
+
+    init(
+        id: UUID = UUID(),
+        kind: Kind = .thermostaticValve,
+        name: String = "",
+        pressureLossKPa: Double? = nil,
+        source: HeizBalanceInputSource? = nil,
+        note: String = ""
+    ) {
+        self.id = id
+        self.kind = kind
+        self.name = name.isEmpty ? kind.title : name
+        self.pressureLossKPa = pressureLossKPa
+        self.source = source
+        self.note = note
+    }
+
+    enum Kind: String, Codable, CaseIterable, Identifiable {
+        case thermostaticValve
+        case returnValve
+        case heatingSurface
+        case distributor
+        case fitting
+        case other
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .thermostaticValve: "Thermostatventil"
+            case .returnValve: "Rücklaufverschraubung"
+            case .heatingSurface: "Heizfläche"
+            case .distributor: "Verteiler / Sammler"
+            case .fitting: "Armatur / Bauteil"
+            case .other: "Sonstiger Verlust"
+            }
+        }
     }
 }
 
