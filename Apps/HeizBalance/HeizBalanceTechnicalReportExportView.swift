@@ -5,8 +5,14 @@ struct HeizBalanceTechnicalReportExportView: View {
     let project: HeizBalanceProject
 
     @State private var exportDocument = HeizBalancePDFDocument(data: Data())
+    @State private var pendingSnapshot: HeizBalanceTechnicalReportSnapshot?
+    @State private var archiveEntries: [HeizBalanceReportArchiveStore.ArchiveEntry] = []
     @State private var showingExporter = false
     @State private var exportMessage: String?
+
+    private var archiveStore: HeizBalanceReportArchiveStore {
+        HeizBalanceReportArchiveStore()
+    }
 
     private var snapshot: HeizBalanceTechnicalReportSnapshot {
         project.technicalReportSnapshot()
@@ -115,33 +121,113 @@ struct HeizBalanceTechnicalReportExportView: View {
             } header: {
                 Text("Export")
             } footer: {
-                Text("Das PDF enthält ausschließlich den aktuellen technischen Projektstand. Normative Freigaben, Verfahren-B-Bestätigung, automatische Ventilvoreinstellung und Pumpenauswahl bleiben gesperrt.")
+                Text("Das PDF enthält ausschließlich den aktuellen technischen Projektstand. Nach einem erfolgreichen Export wird exakt der dafür verwendete `technical-report-v1`-Snapshot lokal archiviert.")
+            }
+
+            Section {
+                LabeledContent("Archivierte Exporte") {
+                    Text("\(archiveEntries.count) / 10")
+                }
+
+                if archiveEntries.isEmpty {
+                    Text("Noch kein erfolgreich exportierter Bericht archiviert.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(archiveEntries.prefix(5)) { entry in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(
+                                entry.snapshot.generatedAt.formatted(
+                                    date: .abbreviated,
+                                    time: .shortened
+                                )
+                            )
+                            .font(.subheadline.weight(.semibold))
+
+                            Text(entry.snapshot.schema)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            if let system = entry.snapshot.hydraulicSystem {
+                                Text(
+                                    "Kreise \(system.completePressureCircuitCount)/\(system.circuitCount) vollständig · Betriebspunkt \(system.pumpOperatingPointReady ? "vollständig" : "unvollständig")"
+                                )
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+
+                    if archiveEntries.count > 5 {
+                        Text("Weitere \(archiveEntries.count - 5) Snapshots sind lokal archiviert.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Berichtsarchiv")
+            } footer: {
+                Text("Das Archiv speichert die letzten 10 erfolgreich exportierten Berichtssnapshots je Projekt als JSON in Application Support. Die PDF-Datei selbst bleibt am vom Benutzer gewählten Exportort.")
             }
         }
         .navigationTitle("Technischer Bericht")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            reloadArchive()
+        }
         .fileExporter(
             isPresented: $showingExporter,
             document: exportDocument,
             contentType: .pdf,
             defaultFilename: filename
         ) { result in
-            switch result {
-            case .success:
-                exportMessage = "PDF-Bericht exportiert."
-            case .failure(let error):
-                exportMessage = "PDF-Export fehlgeschlagen: \(error.localizedDescription)"
-            }
+            handleExportResult(result)
         }
     }
 
     private func preparePDFExport() {
         let freshSnapshot = project.technicalReportSnapshot(generatedAt: Date())
+        pendingSnapshot = freshSnapshot
         exportDocument = HeizBalancePDFDocument(
             data: HeizBalanceTechnicalReportPDFRenderer.render(freshSnapshot)
         )
         exportMessage = nil
         showingExporter = true
+    }
+
+    private func handleExportResult(_ result: Result<URL, Error>) {
+        switch result {
+        case .success:
+            guard let pendingSnapshot else {
+                exportMessage = "PDF-Bericht exportiert; Snapshot war nicht mehr verfügbar."
+                return
+            }
+
+            do {
+                _ = try archiveStore.archive(pendingSnapshot)
+                self.pendingSnapshot = nil
+                reloadArchive()
+                exportMessage = "PDF-Bericht exportiert und Berichtssnapshot archiviert."
+            } catch {
+                self.pendingSnapshot = nil
+                exportMessage = "PDF-Bericht exportiert; Snapshot-Archivierung fehlgeschlagen: \(error.localizedDescription)"
+            }
+
+        case .failure(let error):
+            pendingSnapshot = nil
+            exportMessage = "PDF-Export fehlgeschlagen: \(error.localizedDescription)"
+        }
+    }
+
+    private func reloadArchive() {
+        do {
+            archiveEntries = try archiveStore.entries(projectID: project.id)
+        } catch {
+            archiveEntries = []
+            if exportMessage == nil {
+                exportMessage = "Berichtsarchiv konnte nicht gelesen werden: \(error.localizedDescription)"
+            }
+        }
     }
 }
 
