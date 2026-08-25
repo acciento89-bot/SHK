@@ -116,3 +116,47 @@ Für einen vollständigen Projekt-Betriebspunkt muss der Vergleich alle importie
 - Betriebspunkt außerhalb des dokumentierten Kennlinienbereichs
 
 Die App darf ausreichende Kennlinien zur besseren Lesbarkeit zuerst gruppieren. Innerhalb der Gruppen erfolgt nur eine deterministische alphabetische Sortierung; daraus darf keine Rangliste oder automatische Produktempfehlung abgeleitet werden. Nur eine technisch ausreichende Kennlinie darf durch einen ausdrücklichen Benutzer-Tap als Projektauswahl festgehalten werden.
+
+## Vor-Ort-Aufnahme – Copy-/Vorlagen-Invarianten
+Diese Regeln schützen vor verstecktem Mitkopieren alter technischer Entscheidungen. Sie sind Workflow-Regressionen, keine normativen Rechenfälle.
+
+### Geschoss duplizieren
+- Das neue Geschoss erhält eine neue ID.
+- Jeder kopierte Raum erhält eine neue ID.
+- Jedes kopierte Bauteil und jede kopierte Heizfläche erhält eine neue ID.
+- Raumgeometrie, Solltemperatur, Luftwechsel-Eingaben, Bauteil-U-Werte und physische Heizflächendaten dürfen als Aufnahmehilfe übernommen werden.
+- Raumnummern werden nicht übernommen.
+- Heizflächen-Zuordnung der erforderlichen Leistung, Rohrabschnitte, hydraulische Bauteilverluste, Hydraulik-Vollständigkeitsstatus und Ersatzheizkörper-Auswahl werden nicht übernommen.
+
+### Raum duplizieren
+- Die neue Raum-ID muss sich vom Ursprung unterscheiden.
+- Ein eindeutiger Kopiename wird erzeugt.
+- Bauteile und Heizflächen werden über dieselben Sicherheitsregeln wie beim Geschosskopieren neu erzeugt.
+
+### Bauteil duplizieren
+- Neue ID.
+- Art, Bezeichnung, Fläche, U-Wert, U-Wert-Quelle, thermische Randbedingung und Notiz dürfen übernommen werden.
+- Es entsteht keine gemeinsame Referenz auf das Ursprungsbauteil.
+
+### Heizfläche duplizieren
+- Neue ID.
+- Physische Daten wie Art, Hersteller, Modell, Nennleistung ΔT50, Exponent, Quelle und Notiz dürfen übernommen werden.
+- `assignedRequiredPowerW`, Rohrnetz, hydraulische Verlustbauteile, Hydraulik-Vollständigkeit und `replacementSelection` müssen leer sein.
+
+### Raum-Schnellvorlagen und Bauteilsätze
+- Raum-Schnellvorlagen dürfen nur Name/Typ als Aufnahmehilfe setzen und keine normativen Luftwechsel-/U-Wert-Annahmen einführen.
+- Bauteilsätze erzeugen nur Bauteilarten; Fläche und U-Wert bleiben leer bzw. 0/nil.
+
+### Eigene Bauteilvorlage `component-favorite-v1`
+Eine gespeicherte Vorlage darf enthalten:
+- Bauteilart
+- Bezeichnung
+- U-Wert
+- dokumentierte U-Wert-Quelle
+- Notiz / Aufbauhinweis
+
+Sie darf **nicht** enthalten:
+- Bauteilfläche
+- raumspezifische Gegenseitentemperatur
+
+Beim Anwenden auf ein bestehendes Bauteil bleibt die bereits erfasste Fläche bestehen. Die thermische Randbedingung wird auf den Standard der gewählten Bauteilart gesetzt; eine erforderliche Gegenseitentemperatur muss anschließend explizit im Projekt geprüft/eingegeben werden. Ein ungültiger U-Wert ≤ 0 darf nicht als Favorit persistiert werden.
