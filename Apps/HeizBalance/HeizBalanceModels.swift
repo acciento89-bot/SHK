@@ -96,11 +96,11 @@ struct HeizBalanceRoom: Identifiable, Codable, Hashable {
     }
 
     var floorArea: Double {
-        max(0, length) * max(0, width)
+        HeizBalanceGeometry.floorArea(lengthM: length, widthM: width)
     }
 
     var volume: Double {
-        floorArea * max(0, height)
+        HeizBalanceGeometry.roomVolume(lengthM: length, widthM: width, heightM: height)
     }
 }
 
