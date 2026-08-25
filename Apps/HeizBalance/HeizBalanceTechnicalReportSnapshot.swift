@@ -131,6 +131,12 @@ struct HeizBalanceTechnicalReportSnapshot: Codable, Hashable {
         var sourceReference: String
         var points: [ValvePresetPointData]
         var comparison: ValveComparisonData?
+        var datasetID: String?
+        var productID: String?
+        var articleNumber: String?
+        var sourceURL: String?
+        var usageBasis: String?
+        var rightsNote: String?
     }
 
     struct ValvePresetPointData: Codable, Hashable {
@@ -441,7 +447,13 @@ extension HeizBalanceProject {
                         exactMatch: $0.exactMatch,
                         automaticPresetReleased: false
                     )
-                }
+                },
+                datasetID: data.datasetID,
+                productID: data.productID,
+                articleNumber: data.articleNumber,
+                sourceURL: data.sourceURL,
+                usageBasis: data.usageBasis,
+                rightsNote: data.rightsNote
             )
         }
 
