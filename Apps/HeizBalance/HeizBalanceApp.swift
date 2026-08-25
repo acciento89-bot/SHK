@@ -10,6 +10,7 @@ struct HeizBalanceApp: App {
     @State private var componentFavoriteStore = HeizBalanceComponentFavoriteStore()
     @State private var hydraulicCaptureTemplateStore = HeizBalanceHydraulicCaptureTemplateStore()
     @State private var valveSettingSelectionStore = HeizBalanceValveSettingSelectionStore()
+    @State private var documentationStore = HeizBalanceDocumentationStore()
 
     var body: some Scene {
         WindowGroup {
@@ -22,6 +23,7 @@ struct HeizBalanceApp: App {
                 .environment(componentFavoriteStore)
                 .environment(hydraulicCaptureTemplateStore)
                 .environment(valveSettingSelectionStore)
+                .environment(documentationStore)
                 .preferredColorScheme(.dark)
                 .shkKeyboardDismissal()
         }
