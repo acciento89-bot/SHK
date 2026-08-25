@@ -203,9 +203,23 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 NavigationLink {
-                    HeizBalanceTemperatureScenarioView(project: draft)
+                    HeizBalanceTemperatureScenarioView(project: $draft)
                 } label: {
                     Label("Temperatur-Szenarien", systemImage: "chart.xyaxis.line")
+                }
+
+                if let targetFlow = draft.retrofitTargetFlowTemperatureC,
+                   let targetReturn = draft.retrofitTargetReturnTemperatureC,
+                   targetFlow > targetReturn {
+                    LabeledContent("Sanierungsziel") {
+                        Text(
+                            targetFlow.formatted(.number.precision(.fractionLength(0...1)))
+                                + " / "
+                                + targetReturn.formatted(.number.precision(.fractionLength(0...1)))
+                                + " °C"
+                        )
+                        .fontWeight(.semibold)
+                    }
                 }
 
                 NavigationLink {
