@@ -217,6 +217,12 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 NavigationLink {
+                    HeizBalancePumpDatasetManager(project: draft)
+                } label: {
+                    Label("Pumpenkennlinien & Betriebspunkt", systemImage: "arrow.triangle.2.circlepath")
+                }
+
+                NavigationLink {
                     HeizBalanceTechnicalReportExportView(project: draft)
                 } label: {
                     Label("Technischer Bericht & PDF", systemImage: "doc.richtext")
@@ -229,7 +235,7 @@ struct HeizBalanceProjectEditor: View {
             } header: {
                 Text("Berechnungsstatus")
             } footer: {
-                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Wärme-, Heizflächen-, Niedertemperatur-, Szenario-, Rohrnetz-, Ventil- und Berichtsausgaben bleiben bis zur fachlichen Freigabe technische Vorbereitung.")
+                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Wärme-, Heizflächen-, Niedertemperatur-, Szenario-, Rohrnetz-, Ventil-, Pumpenkennlinien- und Berichtsausgaben bleiben bis zur fachlichen Freigabe technische Vorbereitung.")
             }
         }
         .navigationTitle(isNewProject ? "Neues Projekt" : draft.name)
