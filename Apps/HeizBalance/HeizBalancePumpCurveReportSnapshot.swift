@@ -12,6 +12,8 @@ struct HeizBalancePumpCurveReportSnapshot: Codable, Hashable {
     var automaticPumpSelectionReleased: Bool
     var notice: String
     var datasets: [DatasetData]
+    var selectedPump: HeizBalancePumpSelection?
+    var selectedPumpMatchesOperatingPoint: Bool?
 
     struct OperatingPointData: Codable, Hashable {
         var volumeFlowM3H: Double
@@ -102,6 +104,21 @@ extension HeizBalanceProject {
             operatingPoint = nil
         }
 
+        let heldSelection = HeizBalancePumpSelectionStore.shared.selection(projectID: id)
+        let heldSelectionMatchesOperatingPoint: Bool?
+        if let heldSelection {
+            if let operatingPoint {
+                heldSelectionMatchesOperatingPoint = heldSelection.matchesOperatingPoint(
+                    volumeFlowM3H: operatingPoint.volumeFlowM3H,
+                    requiredHeadM: operatingPoint.requiredHeadM
+                )
+            } else {
+                heldSelectionMatchesOperatingPoint = false
+            }
+        } else {
+            heldSelectionMatchesOperatingPoint = nil
+        }
+
         let datasetData = datasets.map { dataset in
             HeizBalancePumpCurveReportSnapshot.DatasetData(
                 id: dataset.id,
@@ -135,8 +152,10 @@ extension HeizBalanceProject {
             projectName: name,
             operatingPoint: operatingPoint,
             automaticPumpSelectionReleased: false,
-            notice: "Technischer Pumpenkennlinienvergleich. Keine automatische Pumpenauswahl, keine Extrapolation außerhalb dokumentierter Kennlinienbereiche und keine Herstellerfreigabe.",
-            datasets: datasetData
+            notice: "Technischer Pumpenkennlinienvergleich. Eine ausdrücklich festgehaltene Benutzerauswahl ist keine automatische Pumpenempfehlung. Keine Extrapolation außerhalb dokumentierter Kennlinienbereiche und keine Herstellerfreigabe.",
+            datasets: datasetData,
+            selectedPump: heldSelection,
+            selectedPumpMatchesOperatingPoint: heldSelectionMatchesOperatingPoint
         )
     }
 
