@@ -72,6 +72,8 @@ struct HeizBalanceAdjustmentListSnapshot: Codable, Hashable {
                 .filter { $0.projectID == project.id }
                 .map { ($0.componentID, $0) }
         )
+        let networkState = project.hydraulicNetworkState()
+        let staleNetworkSurfaceIDs = Set(networkState.linkedPipes.filter { !$0.isCurrent }.map(\.surfaceID))
 
         var rows: [Row] = []
         var flowReady = 0
@@ -89,16 +91,18 @@ struct HeizBalanceAdjustmentListSnapshot: Codable, Hashable {
                         returnTemperatureC: project.designReturnTemperatureC,
                         roomTemperatureC: room.targetTemperature
                     )
-                    let circuit = surface.circuitPressureLossSummary(
+                    let rawCircuit = surface.circuitPressureLossSummary(
                         flowTemperatureC: project.designFlowTemperatureC,
                         returnTemperatureC: project.designReturnTemperatureC,
                         roomTemperatureC: room.targetTemperature,
                         densityKGPerM3: project.hydraulicFluidDensityKGPerM3,
                         kinematicViscosityMM2S: project.hydraulicKinematicViscosityMM2S
                     )
+                    let networkCurrent = !staleNetworkSurfaceIDs.contains(surface.id)
+                    let completeCircuitPressureLossKPa = networkCurrent ? rawCircuit?.completeCircuitPressureLossKPa : nil
 
                     if hydronic != nil { flowReady += 1 }
-                    if circuit?.completeCircuitPressureLossKPa != nil { pressureReady += 1 }
+                    if completeCircuitPressureLossKPa != nil { pressureReady += 1 }
 
                     var thermostats: [ValveEntry] = []
                     var returns: [ValveEntry] = []
@@ -148,7 +152,8 @@ struct HeizBalanceAdjustmentListSnapshot: Codable, Hashable {
 
                     var missing: [String] = []
                     if hydronic == nil { missing.append("Ziel-Volumenstrom fehlt") }
-                    if circuit?.completeCircuitPressureLossKPa == nil { missing.append("vollständiger Kreis-Δp fehlt") }
+                    if !networkCurrent { missing.append("Netzbaum-Q neu synchronisieren") }
+                    if completeCircuitPressureLossKPa == nil { missing.append("vollständiger Kreis-Δp fehlt") }
                     if thermostats.isEmpty { missing.append("Thermostatventil nicht erfasst") }
                     if !thermostats.isEmpty && thermostats.contains(where: { $0.heldSetting == nil }) {
                         missing.append("Thermostateinstellung nicht festgehalten")
@@ -167,7 +172,7 @@ struct HeizBalanceAdjustmentListSnapshot: Codable, Hashable {
                             surfaceID: surface.id,
                             surfaceName: surface.name,
                             targetVolumeFlowLPH: hydronic?.targetVolumeFlowLPH,
-                            completeCircuitPressureLossKPa: circuit?.completeCircuitPressureLossKPa,
+                            completeCircuitPressureLossKPa: completeCircuitPressureLossKPa,
                             thermostatSettings: thermostats,
                             returnSettings: returns,
                             missingNotes: missing
@@ -209,7 +214,7 @@ struct HeizBalanceAdjustmentListSnapshot: Codable, Hashable {
             customerName: project.customerName,
             address: project.displayAddress,
             technicalPreparationOnly: true,
-            notice: "Technische Baustellen-Einstellliste – keine Verfahren-B-, GEG-/BEG- oder Herstellerfreigabe. Enthalten sind ausschließlich explizit erfasste Berechnungswerte und ausdrücklich festgehaltene Einstellungen.",
+            notice: "Technische Baustellen-Einstellliste – keine Verfahren-B-, GEG-/BEG- oder Herstellerfreigabe. Enthalten sind ausschließlich explizit erfasste Berechnungswerte und ausdrücklich festgehaltene Einstellungen. Netzbaum-verknüpfte Rohrabschnitte werden bei veraltetem Summenstrom als unvollständig markiert.",
             summary: .init(
                 circuitCount: rows.count,
                 flowReadyCount: flowReady,
