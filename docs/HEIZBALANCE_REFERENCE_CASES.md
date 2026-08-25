@@ -82,3 +82,37 @@ Zusätzliche harte Regeln:
 - Unterhalb des kleinsten oder oberhalb des größten dokumentierten Volumenstroms wird kein Ergebnis erzeugt; HeizBalance extrapoliert Pumpenkennlinien nicht.
 - Die elektrische Aufnahme wird nur interpoliert, wenn beide begrenzenden Punkte einen dokumentierten Leistungswert enthalten.
 - Aus dem Vergleich folgt keine automatische Pumpenauswahl, Regelartwahl oder Effizienzfreigabe.
+
+## Technische Pumpen-Leistungskennzahlen `pump-technical-metrics-v1`
+Dieser Fall prüft ausschließlich die transparent berechneten hydraulischen Kennzahlen des Pumpen-Arbeitsbereichs.
+
+Eingaben:
+- Volumenstrom: 1,5 m³/h
+- erforderliche Förderhöhe: 3,2 m
+- verfügbare Kennlinien-Förderhöhe: 4,0 m
+- Fluiddichte: 998 kg/m³
+- dokumentierte elektrische Aufnahme P₁: 34 W
+- dokumentierter Kennlinienbereich: 0,0 bis 2,0 m³/h
+
+Erwartungen:
+- erforderliche hydraulische Leistung: ca. 13,05 W
+- hydraulische Leistung bei 4,0 m Kennlinien-Förderhöhe: ca. 16,31 W
+- Förderhöhenreserve: 0,8 m
+- Förderhöhenreserve bezogen auf den Bedarf: 25 %
+- Verhältnis `Pₕ,erf / P₁`: ca. 38,4 %
+- Position des Betriebspunkts im dokumentierten Volumenstrombereich: 75 %
+
+Harte Interpretationsregeln:
+- `Pₕ,erf / P₁` ist lediglich eine technische Verhältniskennzahl aus Projektbedarf und dokumentierter elektrischer Aufnahme.
+- Die Kennzahl ist **kein** geprüfter Pumpenwirkungsgrad, kein EEI-/ErP-Nachweis und keine Hersteller-Effizienzfreigabe.
+- Ohne dokumentierte elektrische Aufnahme wird kein Verhältniswert erfunden.
+- Ohne explizite gültige Fluiddichte wird keine hydraulische Leistungskennzahl ausgegeben.
+- Die Kennlinienbereichsposition wird nur berechnet, wenn Minimum und Maximum dokumentiert sind und der Betriebspunkt innerhalb dieses Bereichs liegt.
+
+## Direkter katalogübergreifender Pumpenvergleich
+Für einen vollständigen Projekt-Betriebspunkt muss der Vergleich alle importierten Kennlinien in drei technisch nachvollziehbare Zustände aufteilen:
+- Förderhöhe technisch ausreichend
+- Förderhöhe technisch nicht ausreichend
+- Betriebspunkt außerhalb des dokumentierten Kennlinienbereichs
+
+Die App darf ausreichende Kennlinien zur besseren Lesbarkeit zuerst gruppieren. Innerhalb der Gruppen erfolgt nur eine deterministische alphabetische Sortierung; daraus darf keine Rangliste oder automatische Produktempfehlung abgeleitet werden. Nur eine technisch ausreichende Kennlinie darf durch einen ausdrücklichen Benutzer-Tap als Projektauswahl festgehalten werden.
