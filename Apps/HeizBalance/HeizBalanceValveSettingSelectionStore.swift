@@ -42,8 +42,15 @@ final class HeizBalanceValveSettingSelectionStore {
     }
 
     func delete(projectID: UUID, componentID: UUID) {
+        delete(projectID: projectID, componentIDs: [componentID])
+    }
+
+    func delete(projectID: UUID, componentIDs: Set<UUID>) {
+        guard !componentIDs.isEmpty else { return }
         let previous = selections
-        selections.removeAll { $0.projectID == projectID && $0.componentID == componentID }
+        selections.removeAll {
+            $0.projectID == projectID && componentIDs.contains($0.componentID)
+        }
         do {
             try persist()
             persistenceError = nil
