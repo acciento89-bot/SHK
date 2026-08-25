@@ -46,6 +46,12 @@ struct HeizBalanceProjectListView: View {
                         } label: {
                             Label("Bauteilvorlagen", systemImage: "square.stack.3d.up")
                         }
+
+                        NavigationLink {
+                            HeizBalanceHydraulicCaptureTemplateManager()
+                        } label: {
+                            Label("Hydraulikvorlagen", systemImage: "point.3.connected.trianglepath.dotted")
+                        }
                     }
 
                     Section("Produktdaten") {
