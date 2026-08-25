@@ -36,8 +36,10 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 12. Externe Produktdaten werden nur über versionierte, validierte Importschemata übernommen; Quelle, Datenstand und Nutzungsgrundlage bleiben erhalten.
 13. Pumpenkennlinien werden außerhalb ihres dokumentierten Volumenstrombereichs nicht extrapoliert.
 14. Ein technisch ausreichender Pumpenkennlinienvergleich ist keine automatische Pumpenauswahl oder Herstellerfreigabe.
+15. Eine Pumpe/Kennlinie darf nur nach ausdrücklicher Benutzeraktion und nur bei technisch ausreichender Abdeckung des aktuellen Projekt-Betriebspunkts festgehalten werden.
+16. Eine festgehaltene Pumpenauswahl wird vollständig eingefroren und bei geändertem bzw. unvollständigem Projekt-Betriebspunkt als neu zu bewerten markiert.
 
-## Aktueller Stand – Foundation Pass 19
+## Aktueller Stand – Foundation Pass 20
 
 ### Projekt- und Gebäudeaufnahme
 - Persistente lokale Struktur Projekt → Geschoss → Raum → Bauteil.
@@ -63,7 +65,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Pflichtmetadaten: eindeutige Datensatz-ID, Hersteller, Datensatzname, Datenstand/Version, Quellenreferenz und dokumentierte Nutzungsgrundlage.
 - Produktdaten: eindeutige ID, Serie/Modell, Nennleistung ΔT50, Exponent sowie optionale Abmessungen, Artikelnummer und produktspezifische Quelle.
 - Harte Importvalidierung für leere/doppelte IDs, reservierte Trenner, ungültige Leistungen/Exponenten und ungültige Abmessungen.
-- Globaler lokaler Datensatzspeicher mit transaktionalem Import/Löschen: bei Schreibfehler wird der vorherige Zustand wiederhergestellt.
+- Globaler lokaler Datensatzspeicher mit transaktionalem Import/Löschen.
 - `HeizBalanceRadiatorProductMatchingCalculator` vergleicht importierte Produkte gegen explizites Sanierungsziel, Raumtemperatur und erforderliche Heizflächenleistung.
 - Optionale Einbauraumfilter für Breite/Höhe/Tiefe; Produkte ohne dokumentiertes gefordertes Maß werden bei aktivem Filter nicht still zugelassen.
 - Kandidaten werden nach ausreichender Leistung und kleinster rechnerischer Reserve sortiert; dies ist ausdrücklich keine automatische Produktempfehlung.
@@ -113,7 +115,6 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - `HeizBalancePumpDatasetImportDecoder` erkennt natives `pump-product-dataset-v1` oder `vdi-3805-part4-mapped-v1`.
 - Der Adapter ist kein Rohparser und baut keine geschützten VDI-Satzbeschreibungen nach.
 - Dokumentation und fiktives Mapping-Beispiel: `docs/HEIZBALANCE_VDI3805_PUMP_IMPORT.md`.
-- CI #181 validiert Pumpenkatalog-Unterbau, komplette Debug-Matrix und echten HeizBalance-Release-Build.
 
 ### Pumpenkennlinie gegen Projekt-Betriebspunkt – Pass 19
 - Core-Baustein `HeizBalancePumpCurveOperatingPointCalculator` mit Rechenprofil `linear-documented-pump-curve-v1`.
@@ -126,6 +127,23 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Außerhalb des dokumentierten Kennlinienbereichs zeigt die App ausdrücklich `nicht bewertbar – keine Extrapolation`.
 - Ein ausreichendes Kennlinienergebnis ist ausdrücklich keine automatische Pumpenauswahl, Regelartwahl, Effizienzfreigabe oder Herstellerfreigabe.
 - Technischer Regressionfall in `docs/HEIZBALANCE_REFERENCE_CASES.md`: 1,5 m³/h zwischen 1,0/4,0 m/28 W und 2,0/2,0 m/40 W ergibt 3,0 m und 34 W; bei 3,2 m Bedarf Reserve −0,2 m und damit nicht ausreichend.
+
+### Explizite Pumpen-/Kennlinienauswahl – Pass 20
+- Neues versioniertes Auswahl-Schema `pump-curve-selection-v1`.
+- Eine Auswahl ist ausschließlich über einen ausdrücklichen Benutzer-Tap möglich; HeizBalance wählt keine Pumpe selbstständig aus.
+- Der Button `Diese Pumpe/Kennlinie festhalten` wird nur angeboten, wenn der aktuelle Projekt-Betriebspunkt innerhalb der dokumentierten Kennlinie liegt und die erforderliche Förderhöhe technisch abgedeckt wird.
+- Nicht ausreichende oder außerhalb des dokumentierten Volumenstrombereichs liegende Kennlinien können nicht festgehalten werden.
+- Der Auswahl-Snapshot friert Hersteller, Datensatz-ID/-name/-version, Quelle/URL/Nutzungsgrundlage/Rechtehinweis, Produkt-ID/-name/Serie/Artikelnummer, Kennlinien-ID/-bezeichnung/Regelart/Drehzahl/Quelle sowie alle dokumentierten Kennlinienpunkte ein.
+- Zusätzlich werden Rechenprofil, Projektvolumenstrom, erforderliche und verfügbare Förderhöhe, Reserve, optional interpolierte elektrische Aufnahme, verwendete Begrenzungspunkte und Exact-Point-Status eingefroren.
+- `HeizBalancePumpSelectionStore` persistiert genau eine aktuelle Pumpenauswahl je Projekt transaktional in der lokalen App-Unterstützung; der Store ist unter Swift 6 sauber auf `@MainActor` isoliert.
+- Die festgehaltene Auswahl bleibt erhalten und dokumentierbar, auch wenn der globale Pumpenkatalog später geändert oder gelöscht wird.
+- Ändert sich der Projekt-Betriebspunkt oder wird er unvollständig, wird die Auswahl ausdrücklich als `neu zu bewerten` markiert; sie wird nicht still neu gerechnet oder automatisch ersetzt.
+- Die Auswahl kann vom Benutzer ausdrücklich entfernt oder durch eine andere ausreichende Kennlinie ersetzt werden.
+- `technical-pump-curves-v1` wurde rückwärtskompatibel um die optionale festgehaltene Auswahl und deren Bezug zum aktuellen Betriebspunkt erweitert.
+- Das Pumpen-PDF zeigt die festgehaltene Benutzerauswahl mit Herkunft, Rechenprofil, damaligem Betriebspunkt, Förderhöhenreserve und Status zum aktuellen Betriebspunkt.
+- Die PDF-Dokumentation stellt ausdrücklich klar: festgehaltene Auswahl ≠ automatische Empfehlung, Effizienzfreigabe oder Herstellerfreigabe.
+- CI #200 deckte den ersten Pass-20-Stand auf und fand korrekt eine Swift-6-Concurrency-Verletzung am Selection-Singleton; diese wurde ohne `nonisolated(unsafe)` durch MainActor-Isolation behoben.
+- CI #202 ist vollständig grün: Core-Tests, komplette Debug-iOS-Matrix, HeizBalance Debug, Selection-/Reportpfad und echter HeizBalance-Release-Build.
 
 ### Niedertemperatur-Minimalcheck
 - `HeizBalanceLowTemperatureCheckCalculator` bestimmt bei fester expliziter Wasserspreizung die minimal technisch ausreichende VL/RL-Kombination je Heizfläche.
@@ -148,15 +166,15 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Szenario 45/35 °C: Wohnzimmer ca. 109 %, Schlafzimmer ca. 117 %, Bad ca. 83 %; Bad benötigt rund 2.639 W ΔT50 statt 2.200 W, Faktor rund ×1,20.
 - Sämtliche Fälle in `docs/HEIZBALANCE_REFERENCE_CASES.md` sind technische Regressionen, keine DIN-/Norm-Referenzfälle.
 
-### Bericht / PDF / Reproduzierbarkeit – Stand Pass 19
+### Bericht / PDF / Reproduzierbarkeit – Stand Pass 20
 - Hauptsnapshot `technical-report-v1`.
 - Niedertemperatur-Snapshot `technical-low-temperature-v1`, Profil `fixed-spread-emitter-check-v1`.
 - Szenario-Snapshot `technical-temperature-scenarios-v1`, Profil `explicit-flow-return-emitter-sizing-v1`.
 - Ersatzheizkörper-Snapshot `technical-radiator-replacements-v1`.
-- Neuer Pumpenkennlinien-Snapshot `technical-pump-curves-v1`, Profil `linear-documented-pump-curve-v1`.
-- Pumpen-Snapshot friert Projekt-Betriebspunkt, vollständige Katalog-/Quellenmetadaten, Kennlinien, dokumentierte Kennlinienpunkte und die daraus erzeugte technische Bewertung ein.
+- Pumpenkennlinien-Snapshot `technical-pump-curves-v1`, Profil `linear-documented-pump-curve-v1`.
+- Pumpen-Snapshot friert Projekt-Betriebspunkt, Katalog-/Quellenmetadaten, Kennlinien, dokumentierte Kennlinienpunkte, technische Bewertung und optional die ausdrücklich festgehaltene `pump-curve-selection-v1` ein.
 - Alle fünf Snapshots erhalten beim selben Export exakt denselben Zeitstempel und bleiben getrennt versioniert.
-- Ein gemeinsames PDF wird aus fünf A4-Teilen über PDFKit zusammengeführt: Hauptbericht, Niedertemperatur, Temperatur-Szenarien, Ersatzheizkörper-Auswahl und Pumpenkennlinien/Betriebspunkt.
+- Ein gemeinsames PDF wird aus fünf A4-Teilen über PDFKit zusammengeführt: Hauptbericht, Niedertemperatur, Temperatur-Szenarien, Ersatzheizkörper-Auswahl und Pumpenkennlinien/Betriebspunkt inklusive optionaler Benutzerauswahl.
 - Nach erfolgreichem PDF-Export werden alle fünf JSON-Snapshots getrennt archiviert; fehlgeschlagene/abgebrochene Exporte erzeugen keinen falschen Archivstand.
 - Archivbegrenzung: letzte 10 Exportstände je Projekt und Berichtstyp.
 - `technical-report-v1` enthält für dokumentierte Ventile weiterhin optionale Katalog-/Produkt-/Quellen-/Rechteprovenienz; alte Archive bleiben lesbar.
@@ -167,6 +185,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Für HeizBalance existiert zusätzlich ein echter Release-Simulator-Build-Gate.
 - Export-Compliance und Buildnummer werden in CI geprüft.
 - PR-CI nutzt `cancel-in-progress`, sodass veraltete Zwischenläufe automatisch abgebrochen werden.
+- Swift-6-Concurrency-Gates bleiben aktiv; für mutable UI-Persistenz wird keine unsichere globale Isolation verwendet.
 
 ## Validierte CI-Checkpoints
 - #50 Heizflächenaufnahme/Leistungs- und Volumenstrom-Vorbereitung: grün.
@@ -190,24 +209,25 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - #154: Foundation Pass 15 grün – Heizkörper-Herstellerdatenschema, Matching, explizite Ersatzwahl und vierter Reportpfad.
 - #159: Foundation Pass 16 grün – VDI-3805-Blatt-6-Mappingadapter und Importschemaerkennung.
 - #173: Foundation Pass 17 grün – Ventilkatalogschema, VDI-3805-Blatt-2-Adapter, Katalog→Projektventil und Report-Provenienz.
-- #181: **Foundation Pass 18 vollständig grün** – Pumpenkatalogschema, VDI-3805-Blatt-4-Adapter, globaler Pumpendaten-Store/UI, Core-Tests, komplette Debug-iOS-Matrix und echter HeizBalance-Release-Build.
-- #192: **Foundation Pass 19 vollständig grün** – versionierter Pumpenkennlinien-/Betriebspunkt-Core, harte No-Extrapolation-Regel, Projektvergleich, `technical-pump-curves-v1`, fünfter PDF-/Archivpfad, Regressionstests, komplette Debug-iOS-Matrix und echter HeizBalance-Release-Build.
+- #181: Foundation Pass 18 grün – Pumpenkatalogschema, VDI-3805-Blatt-4-Adapter, globaler Pumpendaten-Store/UI und Release-Build.
+- #192: Foundation Pass 19 grün – Pumpenkennlinien-/Betriebspunkt-Core, No-Extrapolation-Regel, `technical-pump-curves-v1`, fünfter PDF-/Archivpfad und Release-Build.
+- #202: **Foundation Pass 20 vollständig grün** – explizite versionierte Pumpen-/Kennlinienauswahl, persistenter Selection-Store, Stale-Betriebspunkt-Erkennung, rückwärtskompatible Reportintegration, PDF-Auswahlnachweis, komplette Debug-iOS-Matrix und echter HeizBalance-Release-Build.
 
 ## Noch bewusst gesperrt / offen
 - Norm-Heizlast nach DIN EN 12831-1 + deutschem Ergänzungsregelwerk.
 - Verfahren-B-Freigabe / GEG-/BEG-Konformitätsaussage.
 - Automatische Ventilvoreinstellung, auch bei importierten echten Herstellerdaten.
 - Vollautomatische Auswahl konkreter Ersatzheizkörper; HeizBalance erlaubt technisch passende Kandidaten und eine explizite Benutzerauswahl.
-- Automatische Pumpenproduktempfehlung/-auswahl, Regelartwahl und Effizienzfreigabe.
+- Automatische Pumpenproduktempfehlung/-auswahl, Regelartwahl und Effizienzfreigabe; Pass 20 erlaubt ausschließlich eine ausdrückliche Benutzerauswahl bereits technisch ausreichender Kennlinien.
 - Pumpenkennlinien-Extrapolation außerhalb dokumentierter Datenbereiche.
 - Rohdatenparser für VDI-3805-Herstellerdateien ohne rechtlich und fachlich verifizierte Datensatzspezifikation.
 - Echte Wärmepumpenauslegung, COP-/Bivalenz- und Betriebspunktbewertung der Wärmepumpe.
 - Flächenheizung nach DIN EN 1264 als eigener Fachblock.
 
 ## Nächste Entwicklungsschritte
-1. Explizite Benutzer-Auswahl eines Pumpenprodukts/einer Kennlinie als versionierten Projektsnapshot ergänzen – analog zur Heizkörperauswahl, weiterhin ohne automatische Empfehlung.
-2. Pumpenvergleich optional um dokumentierte elektrische Aufnahme und technische hydraulische Leistungskennzahlen erweitern, ohne eine Effizienz-/ErP-Aussage zu erfinden.
+1. Pumpenvergleich um rein technische hydraulische Leistungskennzahlen aus dokumentierten Daten ergänzen, ohne Effizienz-/ErP- oder Herstellerfreigaben zu erfinden.
+2. Festgehaltene Pumpenauswahl zusätzlich in Projektübersicht/Dashboard sichtbar machen und bei geänderten Hydraulikdaten prominent als veraltet markieren.
 3. Erste echte Hersteller-/Lizenzquellen für Heizkörper-, Ventil- und Pumpendaten rechtlich klären und über die Mappingprofile als Referenzdaten validieren.
-4. PDF-Ausgabe mit größeren realistischen Projekten und umfangreichen Produktkatalogen visuell sowie auf Seitenumbrüche testen.
+4. PDF-Ausgabe mit größeren realistischen Projekten, vielen Kennlinien und festgehaltenen Produktentscheidungen visuell sowie auf Seitenumbrüche testen.
 5. Parallel die fachliche Spezifikation der späteren Norm-Heizlastmodule anhand rechtmäßig zugänglicher Regelwerksunterlagen und belastbarer Referenzfälle aufbauen.
 6. Erst nach echter fachlicher Referenzvalidierung normative Gates schrittweise freigeben.
