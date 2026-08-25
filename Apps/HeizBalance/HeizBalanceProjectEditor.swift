@@ -20,6 +20,10 @@ struct HeizBalanceProjectEditor: View {
         draft.hydraulicSystemPreparationState().result
     }
 
+    private var hydraulicNetworkState: HeizBalanceHydraulicNetworkProjectState {
+        draft.hydraulicNetworkState()
+    }
+
     private var systemTemperatureInvalid: Bool {
         guard let flow = draft.designFlowTemperatureC,
               let returnTemperature = draft.designReturnTemperatureC else {
@@ -245,6 +249,23 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 NavigationLink {
+                    HeizBalanceHydraulicNetworkView(project: $draft)
+                } label: {
+                    HStack {
+                        Label("Hydraulischer Netzbaum", systemImage: "arrow.triangle.branch")
+                        Spacer()
+                        if hydraulicNetworkState.hasStaleLinkedPipes {
+                            Text("\(hydraulicNetworkState.staleLinkedPipeCount) veraltet")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        } else if !hydraulicNetworkState.linkedPipes.isEmpty {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        }
+                    }
+                }
+
+                NavigationLink {
                     HeizBalancePumpProjectWorkspaceView(project: draft)
                 } label: {
                     Label("Pumpe & Betriebspunkt", systemImage: "arrow.triangle.2.circlepath")
@@ -266,6 +287,9 @@ struct HeizBalanceProjectEditor: View {
                     if hydraulicSystemResult?.pumpOperatingPointReady == true {
                         Text("Technischer Betriebspunkt vollständig")
                             .foregroundStyle(.green)
+                    } else if hydraulicNetworkState.hasStaleLinkedPipes {
+                        Text("Netzbaum-Q synchronisieren")
+                            .foregroundStyle(.orange)
                     } else {
                         Text("Kreise / Druckverluste ergänzen")
                             .foregroundStyle(.secondary)
@@ -274,7 +298,7 @@ struct HeizBalanceProjectEditor: View {
             } header: {
                 Text("Berechnungsstatus")
             } footer: {
-                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Wärme-, Heizflächen-, Niedertemperatur-, Szenario-, Rohrnetz-, Ventil-, Pumpen- und Berichtsausgaben bleiben bis zur fachlichen Freigabe technische Vorbereitung.")
+                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Wärme-, Heizflächen-, Niedertemperatur-, Szenario-, Rohrnetz-, Netzbaum-, Ventil-, Pumpen- und Berichtsausgaben bleiben bis zur fachlichen Freigabe technische Vorbereitung.")
             }
         }
         .navigationTitle(isNewProject ? "Neues Projekt" : draft.name)
