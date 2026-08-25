@@ -131,6 +131,8 @@ struct HeizBalanceFloorEditor: View {
 }
 
 struct HeizBalanceRoomEditor: View {
+    @Environment(HeizBalanceComponentFavoriteStore.self) private var componentFavoriteStore
+
     @Binding var room: HeizBalanceRoom
     let designOutdoorTemperatureC: Double?
     let designFlowTemperatureC: Double?
@@ -192,10 +194,16 @@ struct HeizBalanceRoomEditor: View {
                         HStack {
                             Label(component.name, systemImage: component.kind.systemImage)
                             Spacer()
-                            if component.area > 0 {
-                                Text(component.area.formatted(.number.precision(.fractionLength(2))) + " m²")
-                                    .foregroundStyle(.secondary)
+                            VStack(alignment: .trailing, spacing: 2) {
+                                if component.area > 0 {
+                                    Text(component.area.formatted(.number.precision(.fractionLength(2))) + " m²")
+                                }
+                                if let uValue = component.uValue {
+                                    Text("U " + uValue.formatted(.number.precision(.fractionLength(0...3))))
+                                        .font(.caption2)
+                                }
                             }
+                            .foregroundStyle(.secondary)
                         }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -212,6 +220,18 @@ struct HeizBalanceRoomEditor: View {
                 }
 
                 Menu {
+                    if !componentFavoriteStore.favorites.isEmpty {
+                        Section("Eigene Bauteilvorlagen") {
+                            ForEach(componentFavoriteStore.favorites) { favorite in
+                                Button {
+                                    room.components.append(favorite.makeComponent())
+                                } label: {
+                                    Label(favorite.title, systemImage: favorite.kind.systemImage)
+                                }
+                            }
+                        }
+                    }
+
                     Section("Einzelnes Bauteil") {
                         ForEach(HeizBalanceComponent.Kind.allCases) { kind in
                             Button(kind.title) {
@@ -225,10 +245,7 @@ struct HeizBalanceRoomEditor: View {
                             Button {
                                 room.components.append(contentsOf: template.makeComponents())
                             } label: {
-                                VStack(alignment: .leading) {
-                                    Text(template.title)
-                                    Text(template.detail)
-                                }
+                                Label(template.title, systemImage: "square.stack.3d.up")
                             }
                         }
                     }
@@ -238,7 +255,7 @@ struct HeizBalanceRoomEditor: View {
             } header: {
                 Text("Bauteile")
             } footer: {
-                Text("Bauteilsätze legen nur leere Bauteile an – ohne U-Werte, Flächen oder versteckte Normannahmen. Einzelne Bauteile lassen sich per Wischgeste duplizieren.")
+                Text("Eigene Vorlagen übernehmen Art/U-Wert/Quelle, aber niemals Fläche oder eine raumspezifische Gegenseitentemperatur. Bauteilsätze enthalten keine Kennwerte oder versteckten Normannahmen.")
             }
 
             Section {
@@ -341,7 +358,11 @@ struct HeizBalanceRoomEditor: View {
 }
 
 struct HeizBalanceComponentEditor: View {
+    @Environment(HeizBalanceComponentFavoriteStore.self) private var favoriteStore
+
     @Binding var component: HeizBalanceComponent
+    @State private var showingSaveFavorite = false
+    @State private var favoriteTitle = ""
 
     private var boundaryBinding: Binding<HeizBalanceComponent.ThermalBoundary> {
         Binding(
@@ -353,6 +374,18 @@ struct HeizBalanceComponentEditor: View {
                 }
             }
         )
+    }
+
+    private var suggestedFavoriteTitle: String {
+        let base = component.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? component.kind.title
+            : component.name
+        if let uValue = component.uValue,
+           uValue.isFinite,
+           uValue > 0 {
+            return base + " · U " + uValue.formatted(.number.precision(.fractionLength(0...3)))
+        }
+        return base
     }
 
     var body: some View {
@@ -370,6 +403,48 @@ struct HeizBalanceComponentEditor: View {
                 DecimalField(title: "Fläche", value: $component.area, unit: "m²")
                 OptionalDecimalField(title: "U-Wert", value: $component.uValue, unit: "W/(m²·K)")
                 InputSourcePicker(title: "Quelle U-Wert", selection: $component.uValueSource)
+            }
+
+            Section {
+                if favoriteStore.favorites.isEmpty {
+                    Text("Noch keine eigenen Bauteilvorlagen gespeichert.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Menu {
+                        ForEach(favoriteStore.favorites) { favorite in
+                            Button {
+                                apply(favorite)
+                            } label: {
+                                Label(favorite.title, systemImage: favorite.kind.systemImage)
+                            }
+                        }
+                    } label: {
+                        Label("Gespeicherte Vorlage übernehmen", systemImage: "square.and.arrow.down")
+                    }
+                }
+
+                Button {
+                    favoriteTitle = suggestedFavoriteTitle
+                    showingSaveFavorite = true
+                } label: {
+                    Label("Aktuelles Bauteil als Vorlage speichern", systemImage: "star.square")
+                }
+
+                NavigationLink {
+                    HeizBalanceComponentFavoriteManager()
+                } label: {
+                    Label("Bauteilvorlagen verwalten", systemImage: "square.stack.3d.up")
+                }
+
+                if let error = favoriteStore.persistenceError {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Bauteilvorlagen")
+            } footer: {
+                Text("Gespeichert werden Art, Bezeichnung, U-Wert, Quelle und Notiz. Fläche wird nie übernommen. Beim Anwenden wird die thermische Randbedingung auf den Standard der Bauteilart zurückgesetzt und muss vor Ort geprüft werden.")
             }
 
             Section {
@@ -403,6 +478,19 @@ struct HeizBalanceComponentEditor: View {
             component.thermalBoundary = newKind.defaultThermalBoundary
             component.customBoundaryTemperatureC = nil
         }
+        .alert("Bauteilvorlage speichern", isPresented: $showingSaveFavorite) {
+            TextField("Name der Vorlage", text: $favoriteTitle)
+            Button("Speichern") {
+                favoriteStore.save(title: favoriteTitle, component: component)
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Die Vorlage speichert keine Fläche und keine raumspezifische Gegenseitentemperatur.")
+        }
+    }
+
+    private func apply(_ favorite: HeizBalanceComponentFavorite) {
+        favorite.apply(to: &component)
     }
 }
 
