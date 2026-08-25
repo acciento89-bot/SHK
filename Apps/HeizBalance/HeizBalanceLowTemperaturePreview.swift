@@ -109,8 +109,8 @@ extension HeizBalanceProject {
                 entry.result == nil ? nil : entry
             }
             .max {
-                ($0.result?.minimumFlowTemperatureC ?? -.infinity)
-                    < ($1.result?.minimumFlowTemperatureC ?? -.infinity)
+                ($0.result?.minimumFlowTemperatureC ?? -Double.infinity)
+                    < ($1.result?.minimumFlowTemperatureC ?? -Double.infinity)
             }
 
         return HeizBalanceLowTemperatureProjectState(
@@ -244,8 +244,13 @@ struct HeizBalanceLowTemperaturePreviewView: View {
                                 HStack {
                                     Text("Deckung Vergleich")
                                     Spacer()
-                                    Text((ratio * 100).formatted(.number.precision(.fractionLength(0))) + " %")
-                                        .foregroundStyle(sufficient ? .secondary : .orange)
+                                    if sufficient {
+                                        Text((ratio * 100).formatted(.number.precision(.fractionLength(0))) + " %")
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        Text((ratio * 100).formatted(.number.precision(.fractionLength(0))) + " %")
+                                            .foregroundStyle(.orange)
+                                    }
                                 }
                                 .font(.caption)
                             }
