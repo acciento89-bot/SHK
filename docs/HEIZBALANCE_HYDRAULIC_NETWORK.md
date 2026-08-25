@@ -124,7 +124,7 @@ Der Projekt-Cockpit-Status zeigt veraltete Netz-Q orange und verhindert, dass ei
 - gespeicherten und aktuell berechneten Q,
 - aktuellen/veralteten Synchronisationsstatus.
 
-Der Produktionsbericht enthält den Netzbaum als eigenen PDF-Teil und erweitert das gemeinsam datierte Paket von sieben auf acht getrennt versionierte Snapshots.
+Der Produktionsbericht enthält den Netzbaum als eigenen PDF-Teil und umfasst acht gemeinsam datierte, getrennt versionierte Snapshots.
 
 Der separate `Technischer Bericht & PDF` enthält den Netzbaum ebenfalls als eigenen Supplement-Teil und archiviert sechs gemeinsam datierte Snapshots: Hauptbericht, Netzbaum, Niedertemperatur, Szenarien, Heizkörper-Auswahl und Pumpenkennlinien.
 
