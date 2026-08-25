@@ -49,16 +49,16 @@ final class HeizBalanceHydraulicNetworkPathTests: XCTestCase {
         let eg = try XCTUnwrap(result.segment(id: "eg"))
         let living = try XCTUnwrap(result.consumer(id: "living"))
         let bed = try XCTUnwrap(result.consumer(id: "bed"))
+        let rootLoss = try XCTUnwrap(root.completePressureLossKPa)
+        let egLoss = try XCTUnwrap(eg.completePressureLossKPa)
+        let livingLoss = try XCTUnwrap(living.completePathPressureLossKPa)
+        let bedLoss = try XCTUnwrap(bed.completePathPressureLossKPa)
 
         XCTAssertEqual(living.pathSegmentIDs, ["root", "eg"])
         XCTAssertEqual(bed.pathSegmentIDs, ["root", "og"])
-        XCTAssertEqual(
-            try XCTUnwrap(living.completePathPressureLossKPa),
-            try XCTUnwrap(root.completePressureLossKPa) + try XCTUnwrap(eg.completePressureLossKPa) + 5,
-            accuracy: 0.000001
-        )
-        XCTAssertGreaterThan(try XCTUnwrap(living.completePathPressureLossKPa), 5)
-        XCTAssertGreaterThan(try XCTUnwrap(bed.completePathPressureLossKPa), 6)
+        XCTAssertEqual(livingLoss, rootLoss + egLoss + 5, accuracy: 0.000001)
+        XCTAssertGreaterThan(livingLoss, 5)
+        XCTAssertGreaterThan(bedLoss, 6)
     }
 
     func testMissingZetaBlocksCompletePathButKeepsKnownStraightLoss() throws {
