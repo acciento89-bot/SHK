@@ -64,7 +64,9 @@ final class HeizBalanceRadiatorDatasetStore {
     }
 
     func product(compositeID: String) -> (dataset: HeizBalanceRadiatorProductDataset, product: HeizBalanceRadiatorProductDataset.Product)? {
-        guard let separatorRange = compositeID.range(of: "::") else { return nil }
+        guard let separatorRange = compositeID.range(of: HeizBalanceRadiatorProductDataset.compositeIDSeparator) else {
+            return nil
+        }
         let datasetID = String(compositeID[..<separatorRange.lowerBound])
         let productID = String(compositeID[separatorRange.upperBound...])
 
