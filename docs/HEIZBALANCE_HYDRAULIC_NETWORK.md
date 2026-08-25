@@ -126,6 +126,8 @@ Der Projekt-Cockpit-Status zeigt veraltete Netz-Q orange und verhindert, dass ei
 
 Der Produktionsbericht enthält den Netzbaum als eigenen PDF-Teil und erweitert das gemeinsam datierte Paket von sieben auf acht getrennt versionierte Snapshots.
 
+Der separate `Technischer Bericht & PDF` enthält den Netzbaum ebenfalls als eigenen Supplement-Teil und archiviert sechs gemeinsam datierte Snapshots: Hauptbericht, Netzbaum, Niedertemperatur, Szenarien, Heizkörper-Auswahl und Pumpenkennlinien.
+
 ## Bewusste Grenze dieses Batches
 Der Netzbaum automatisiert die **Verbraucher-/Segment-Volumenströme**. Die physische Rohrgeometrie und die Druckverlustrechnung bleiben weiterhin an den realen Rohrabschnitten der Heizflächenpfade.
 
