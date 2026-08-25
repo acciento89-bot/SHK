@@ -10,8 +10,8 @@ final class HeizBalanceHydronicCircuitTests: XCTestCase {
                     densityKGPerM3: 980,
                     kinematicViscosityM2S: 0.55e-6,
                     sections: [
-                        .init(id: "a", name: "Anbindung", innerDiameterMM: 12, lengthM: 10, roughnessMM: 0.007, zetaTotal: 5),
-                        .init(id: "b", name: "Strang", innerDiameterMM: 16, lengthM: 8, roughnessMM: 0.007, zetaTotal: 2)
+                        .init(id: "a", name: "Anbindung", volumeFlowLPH: 100, innerDiameterMM: 12, lengthM: 10, roughnessMM: 0.007, zetaTotal: 5),
+                        .init(id: "b", name: "Strang", volumeFlowLPH: 100, innerDiameterMM: 16, lengthM: 8, roughnessMM: 0.007, zetaTotal: 2)
                     ]
                 )
             )
@@ -27,6 +27,27 @@ final class HeizBalanceHydronicCircuitTests: XCTestCase {
         XCTAssertNotNil(result.completeHeadMeters)
     }
 
+    func testUsesSectionSpecificFlowForSharedDistribution() throws {
+        let result = try XCTUnwrap(
+            HeizBalanceHydronicCircuitCalculator.calculate(
+                .init(
+                    targetVolumeFlowLPH: 100,
+                    densityKGPerM3: 980,
+                    kinematicViscosityM2S: 0.55e-6,
+                    sections: [
+                        .init(id: "branch", name: "Anbindung", volumeFlowLPH: 100, innerDiameterMM: 16, lengthM: 5, roughnessMM: 0.007, zetaTotal: 0),
+                        .init(id: "main", name: "Gemeinsamer Strang", volumeFlowLPH: 400, innerDiameterMM: 16, lengthM: 5, roughnessMM: 0.007, zetaTotal: 0)
+                    ]
+                )
+            )
+        )
+
+        XCTAssertEqual(result.sections[0].volumeFlowLPH, 100, accuracy: 0.000001)
+        XCTAssertEqual(result.sections[1].volumeFlowLPH, 400, accuracy: 0.000001)
+        XCTAssertGreaterThan(result.sections[1].velocityMS, result.sections[0].velocityMS)
+        XCTAssertGreaterThan(result.sections[1].pressureDropPaPerM, result.sections[0].pressureDropPaPerM)
+    }
+
     func testKeepsResultPartialWhenLocalResistanceIsUnknown() throws {
         let result = try XCTUnwrap(
             HeizBalanceHydronicCircuitCalculator.calculate(
@@ -35,7 +56,7 @@ final class HeizBalanceHydronicCircuitTests: XCTestCase {
                     densityKGPerM3: 985,
                     kinematicViscosityM2S: 0.65e-6,
                     sections: [
-                        .init(id: "a", name: "Rohr", innerDiameterMM: 14, lengthM: 12, roughnessMM: 0.007, zetaTotal: nil)
+                        .init(id: "a", name: "Rohr", volumeFlowLPH: 120, innerDiameterMM: 14, lengthM: 12, roughnessMM: 0.007, zetaTotal: nil)
                     ]
                 )
             )
@@ -56,7 +77,7 @@ final class HeizBalanceHydronicCircuitTests: XCTestCase {
                     targetVolumeFlowLPH: 0,
                     densityKGPerM3: 980,
                     kinematicViscosityM2S: 0.55e-6,
-                    sections: [.init(id: "a", name: "Rohr", innerDiameterMM: 12, lengthM: 5, roughnessMM: 0.007, zetaTotal: 0)]
+                    sections: [.init(id: "a", name: "Rohr", volumeFlowLPH: 100, innerDiameterMM: 12, lengthM: 5, roughnessMM: 0.007, zetaTotal: 0)]
                 )
             )
         )
@@ -67,7 +88,18 @@ final class HeizBalanceHydronicCircuitTests: XCTestCase {
                     targetVolumeFlowLPH: 100,
                     densityKGPerM3: 980,
                     kinematicViscosityM2S: 0.55e-6,
-                    sections: [.init(id: "a", name: "Rohr", innerDiameterMM: -1, lengthM: 5, roughnessMM: 0.007, zetaTotal: 0)]
+                    sections: [.init(id: "a", name: "Rohr", volumeFlowLPH: 100, innerDiameterMM: -1, lengthM: 5, roughnessMM: 0.007, zetaTotal: 0)]
+                )
+            )
+        )
+
+        XCTAssertNil(
+            HeizBalanceHydronicCircuitCalculator.calculate(
+                .init(
+                    targetVolumeFlowLPH: 100,
+                    densityKGPerM3: 980,
+                    kinematicViscosityM2S: 0.55e-6,
+                    sections: [.init(id: "a", name: "Rohr", volumeFlowLPH: 0, innerDiameterMM: 12, lengthM: 5, roughnessMM: 0.007, zetaTotal: 0)]
                 )
             )
         )
