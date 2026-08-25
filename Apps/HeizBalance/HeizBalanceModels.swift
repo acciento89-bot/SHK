@@ -184,6 +184,7 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
     var pipeSections: [HeizBalancePipeSection]?
     var hydraulicLossComponents: [HeizBalanceHydraulicLossComponent]?
     var hydraulicComponentAssessmentComplete: Bool?
+    var replacementSelection: HeizBalanceRadiatorReplacementSelection?
     var note: String
 
     init(
@@ -199,6 +200,7 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
         pipeSections: [HeizBalancePipeSection]? = nil,
         hydraulicLossComponents: [HeizBalanceHydraulicLossComponent]? = nil,
         hydraulicComponentAssessmentComplete: Bool? = nil,
+        replacementSelection: HeizBalanceRadiatorReplacementSelection? = nil,
         note: String = ""
     ) {
         self.id = id
@@ -213,6 +215,7 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
         self.pipeSections = pipeSections
         self.hydraulicLossComponents = hydraulicLossComponents
         self.hydraulicComponentAssessmentComplete = hydraulicComponentAssessmentComplete
+        self.replacementSelection = replacementSelection
         self.note = note
     }
 
