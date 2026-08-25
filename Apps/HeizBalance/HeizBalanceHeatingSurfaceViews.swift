@@ -100,6 +100,40 @@ extension HeizBalanceHeatingSurface {
             )
         )
     }
+
+    func circuitPressureLossSummary(
+        flowTemperatureC: Double?,
+        returnTemperatureC: Double?,
+        roomTemperatureC: Double,
+        densityKGPerM3: Double?,
+        kinematicViscosityMM2S: Double?
+    ) -> HeizBalanceCircuitPressureLossSummaryCalculator.Result? {
+        guard let pipeCircuit = pipeCircuitPreparation(
+            flowTemperatureC: flowTemperatureC,
+            returnTemperatureC: returnTemperatureC,
+            roomTemperatureC: roomTemperatureC,
+            densityKGPerM3: densityKGPerM3,
+            kinematicViscosityMM2S: kinematicViscosityMM2S
+        ) else {
+            return nil
+        }
+
+        let components = (hydraulicLossComponents ?? []).map {
+            HeizBalanceCircuitPressureLossSummaryCalculator.ComponentInput(
+                id: $0.id.uuidString,
+                pressureLossKPa: $0.pressureLossKPa
+            )
+        }
+
+        return HeizBalanceCircuitPressureLossSummaryCalculator.calculate(
+            .init(
+                partialPipePressureLossKPa: pipeCircuit.partialPressureLossKPa,
+                completePipePressureLossKPa: pipeCircuit.completePressureLossKPa,
+                components: components,
+                componentAssessmentComplete: isHydraulicComponentAssessmentComplete
+            )
+        )
+    }
 }
 
 struct HeizBalanceHeatingSurfaceEditor: View {
@@ -136,11 +170,42 @@ struct HeizBalanceHeatingSurfaceEditor: View {
         )
     }
 
+    private var circuitPressureLoss: HeizBalanceCircuitPressureLossSummaryCalculator.Result? {
+        surface.circuitPressureLossSummary(
+            flowTemperatureC: designFlowTemperatureC,
+            returnTemperatureC: designReturnTemperatureC,
+            roomTemperatureC: roomTemperatureC,
+            densityKGPerM3: hydraulicFluidDensityKGPerM3,
+            kinematicViscosityMM2S: hydraulicKinematicViscosityMM2S
+        )
+    }
+
     private var pipeSectionsBinding: Binding<[HeizBalancePipeSection]> {
         Binding(
             get: { surface.pipeSections ?? [] },
             set: { surface.pipeSections = $0 }
         )
+    }
+
+    private var lossComponentsBinding: Binding<[HeizBalanceHydraulicLossComponent]> {
+        Binding(
+            get: { surface.hydraulicLossComponents ?? [] },
+            set: { surface.hydraulicLossComponents = $0 }
+        )
+    }
+
+    private var componentAssessmentBinding: Binding<Bool> {
+        Binding(
+            get: { surface.isHydraulicComponentAssessmentComplete },
+            set: { surface.hydraulicComponentAssessmentComplete = $0 }
+        )
+    }
+
+    private var componentValuesComplete: Bool {
+        lossComponentsBinding.wrappedValue.allSatisfy { component in
+            guard let loss = component.pressureLossKPa else { return false }
+            return loss.isFinite && loss >= 0
+        }
     }
 
     private var missingPreviewInputs: [String] {
@@ -389,7 +454,108 @@ struct HeizBalanceHeatingSurfaceEditor: View {
             } header: {
                 Text("Rohrnetz-Vorbereitung")
             } footer: {
-                Text("Hier werden ausschließlich Rohrreibung und explizit erfasste ζ-Einzelwiderstände betrachtet. Ventil, Heizfläche, Verteiler, Wärmeerzeuger und weitere Bauteile sind noch nicht Teil dieses Druckverlustwerts.")
+                Text("Hier werden ausschließlich Rohrreibung und explizit erfasste ζ-Einzelwiderstände betrachtet.")
+            }
+
+            Section {
+                if lossComponentsBinding.wrappedValue.isEmpty {
+                    Text("Noch keine separaten Bauteilverluste erfasst")
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(lossComponentsBinding) { $component in
+                    NavigationLink {
+                        HeizBalanceHydraulicLossComponentEditor(component: $component)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(component.name)
+                                Text(component.kind.title)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if let loss = component.pressureLossKPa {
+                                Text(loss.formatted(.number.precision(.fractionLength(0...3))) + " kPa")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                .onDelete { offsets in
+                    var items = lossComponentsBinding.wrappedValue
+                    items.remove(atOffsets: offsets)
+                    lossComponentsBinding.wrappedValue = items
+                    surface.hydraulicComponentAssessmentComplete = false
+                }
+
+                Menu {
+                    ForEach(HeizBalanceHydraulicLossComponent.Kind.allCases) { kind in
+                        Button(kind.title) {
+                            var items = lossComponentsBinding.wrappedValue
+                            items.append(HeizBalanceHydraulicLossComponent(kind: kind))
+                            lossComponentsBinding.wrappedValue = items
+                            surface.hydraulicComponentAssessmentComplete = false
+                        }
+                    }
+                } label: {
+                    Label("Bauteilverlust hinzufügen", systemImage: "plus.circle")
+                }
+
+                Toggle("Bauteilaufnahme vollständig", isOn: componentAssessmentBinding)
+                    .disabled(!componentValuesComplete)
+            } header: {
+                Text("Weitere Druckverluste")
+            } footer: {
+                Text("Ventile, Rücklaufverschraubungen, Heizflächen, Verteiler und andere Bauteile werden nur mit explizitem Δp und dokumentierter Quelle erfasst. Die Vollständigkeit muss bewusst bestätigt werden; sie wird nie automatisch unterstellt.")
+            }
+
+            Section {
+                if let circuitPressureLoss {
+                    LabeledContent("Bekannter Rohrverlust") {
+                        Text(circuitPressureLoss.knownPipePressureLossKPa.formatted(.number.precision(.fractionLength(0...3))) + " kPa")
+                    }
+                    LabeledContent("Bekannte Bauteilverluste") {
+                        Text(circuitPressureLoss.knownComponentPressureLossKPa.formatted(.number.precision(.fractionLength(0...3))) + " kPa")
+                    }
+                    LabeledContent("Bekannte Kreissumme") {
+                        Text(circuitPressureLoss.knownCircuitPressureLossKPa.formatted(.number.precision(.fractionLength(0...3))) + " kPa")
+                            .fontWeight(.semibold)
+                    }
+
+                    if let complete = circuitPressureLoss.completeCircuitPressureLossKPa {
+                        LabeledContent("Vollständiger Kreis Δp") {
+                            Text(complete.formatted(.number.precision(.fractionLength(0...3))) + " kPa")
+                                .fontWeight(.bold)
+                        }
+                        Label("Rohr- und Bauteilaufnahme dieses Kreises sind als vollständig erfasst.", systemImage: "checkmark.circle")
+                            .font(.caption)
+                    } else {
+                        if !circuitPressureLoss.pipeCoverageComplete {
+                            Label("Rohrweg noch unvollständig: mindestens eine ζ-Summe fehlt.", systemImage: "exclamationmark.triangle")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                        if circuitPressureLoss.missingComponentCount > 0 {
+                            Label("\(circuitPressureLoss.missingComponentCount) Bauteilverlust(e) ohne Δp-Wert.", systemImage: "exclamationmark.triangle")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                        if !circuitPressureLoss.componentCoverageComplete && circuitPressureLoss.missingComponentCount == 0 {
+                            Label("Bauteilaufnahme noch nicht als vollständig bestätigt.", systemImage: "circle.dashed")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } else {
+                    Label("Für die Kreiszusammenfassung fehlen noch gültige Rohrnetz-Daten.", systemImage: "circle.dashed")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Hydraulischer Kreis")
+            } footer: {
+                Text("Nur ein vollständig erfasster Kreis darf später für ungünstigsten Kreis, Ventilauslegung und Pumpenanforderung verwendet werden. Die aktuelle Ausgabe ist weiterhin technische Vorbereitung, kein Verfahren-B-Nachweis.")
             }
 
             Section("Notiz") {
@@ -434,6 +600,44 @@ struct HeizBalancePipeSectionEditor: View {
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 .background(.bar)
+        }
+    }
+}
+
+struct HeizBalanceHydraulicLossComponentEditor: View {
+    @Binding var component: HeizBalanceHydraulicLossComponent
+
+    var body: some View {
+        Form {
+            Section("Bauteil") {
+                Picker("Art", selection: $component.kind) {
+                    ForEach(HeizBalanceHydraulicLossComponent.Kind.allCases) { kind in
+                        Text(kind.title).tag(kind)
+                    }
+                }
+                TextField("Bezeichnung", text: $component.name)
+            }
+
+            Section {
+                OptionalDecimalField(title: "Druckverlust", value: $component.pressureLossKPa, unit: "kPa")
+                InputSourcePicker(title: "Quelle Δp", selection: $component.source)
+            } header: {
+                Text("Hydraulischer Kennwert")
+            } footer: {
+                Text("Der Druckverlust muss zum vorgesehenen Ziel-Volumenstrom dieses Kreises passen. HeizBalance erzeugt hier keine Herstellerkennlinie und keine pauschale Ventilvoreinstellung.")
+            }
+
+            Section("Notiz") {
+                TextField("Hersteller / Typ / Datenblatt / Besonderheit", text: $component.note, axis: .vertical)
+                    .lineLimit(2...6)
+            }
+        }
+        .navigationTitle(component.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: component.kind) { _, newKind in
+            if component.name.isEmpty || HeizBalanceHydraulicLossComponent.Kind.allCases.map(\.title).contains(component.name) {
+                component.name = newKind.title
+            }
         }
     }
 }
