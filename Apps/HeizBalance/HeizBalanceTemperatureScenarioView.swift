@@ -115,18 +115,63 @@ extension HeizBalanceProject {
 }
 
 struct HeizBalanceTemperatureScenarioView: View {
-    let project: HeizBalanceProject
+    @Binding var project: HeizBalanceProject
 
-    @State private var customFlowTemperatureC: Double? = 45
-    @State private var customReturnTemperatureC: Double? = 35
+    @State private var customFlowTemperatureC: Double?
+    @State private var customReturnTemperatureC: Double?
+    @State private var customSource: HeizBalanceInputSource?
+
+    init(project: Binding<HeizBalanceProject>) {
+        _project = project
+        let value = project.wrappedValue
+        _customFlowTemperatureC = State(initialValue: value.retrofitTargetFlowTemperatureC ?? 45)
+        _customReturnTemperatureC = State(initialValue: value.retrofitTargetReturnTemperatureC ?? 35)
+        _customSource = State(initialValue: value.retrofitTargetTemperatureSource)
+    }
+
+    private var customScenarioValid: Bool {
+        guard let flow = customFlowTemperatureC,
+              let returnTemperature = customReturnTemperatureC else {
+            return false
+        }
+        return flow > returnTemperature
+    }
+
+    private var storedTargetValid: Bool {
+        guard let flow = project.retrofitTargetFlowTemperatureC,
+              let returnTemperature = project.retrofitTargetReturnTemperatureC else {
+            return false
+        }
+        return flow > returnTemperature
+    }
 
     private var scenarios: [HeizBalanceTemperatureScenario] {
         var values: [HeizBalanceTemperatureScenario] = []
 
+        func appendUnique(_ candidate: HeizBalanceTemperatureScenario) {
+            guard !values.contains(where: {
+                abs($0.flowTemperatureC - candidate.flowTemperatureC) < 0.001
+                    && abs($0.returnTemperatureC - candidate.returnTemperatureC) < 0.001
+            }) else { return }
+            values.append(candidate)
+        }
+
+        if let flow = project.retrofitTargetFlowTemperatureC,
+           let returnTemperature = project.retrofitTargetReturnTemperatureC,
+           flow > returnTemperature {
+            appendUnique(
+                .init(
+                    title: "Sanierungsziel",
+                    flowTemperatureC: flow,
+                    returnTemperatureC: returnTemperature
+                )
+            )
+        }
+
         if let flow = project.designFlowTemperatureC,
            let returnTemperature = project.designReturnTemperatureC,
            flow > returnTemperature {
-            values.append(
+            appendUnique(
                 .init(
                     title: "Projekt",
                     flowTemperatureC: flow,
@@ -141,24 +186,16 @@ struct HeizBalanceTemperatureScenarioView: View {
             .init(title: "45 / 40", flowTemperatureC: 45, returnTemperatureC: 40),
             .init(title: "40 / 35", flowTemperatureC: 40, returnTemperatureC: 35)
         ]
-
-        for preset in presets where !values.contains(where: {
-            abs($0.flowTemperatureC - preset.flowTemperatureC) < 0.001
-                && abs($0.returnTemperatureC - preset.returnTemperatureC) < 0.001
-        }) {
-            values.append(preset)
+        for preset in presets {
+            appendUnique(preset)
         }
 
         if let flow = customFlowTemperatureC,
            let returnTemperature = customReturnTemperatureC,
-           flow > returnTemperature,
-           !values.contains(where: {
-               abs($0.flowTemperatureC - flow) < 0.001
-                   && abs($0.returnTemperatureC - returnTemperature) < 0.001
-           }) {
-            values.append(
+           flow > returnTemperature {
+            appendUnique(
                 .init(
-                    title: "Benutzerdefiniert",
+                    title: "Aktuelle Eingabe",
                     flowTemperatureC: flow,
                     returnTemperatureC: returnTemperature
                 )
@@ -176,15 +213,16 @@ struct HeizBalanceTemperatureScenarioView: View {
         List {
             Section {
                 OptionalDecimalField(
-                    title: "Eigener Vorlauf",
+                    title: "Ziel-Vorlauf",
                     value: $customFlowTemperatureC,
                     unit: "°C"
                 )
                 OptionalDecimalField(
-                    title: "Eigener Rücklauf",
+                    title: "Ziel-Rücklauf",
                     value: $customReturnTemperatureC,
                     unit: "°C"
                 )
+                InputSourcePicker(title: "Quelle Zieltemperaturen", selection: $customSource)
 
                 if let flow = customFlowTemperatureC,
                    let returnTemperature = customReturnTemperatureC,
@@ -193,10 +231,38 @@ struct HeizBalanceTemperatureScenarioView: View {
                         .font(.caption)
                         .foregroundStyle(Color.orange)
                 }
+
+                Button {
+                    saveRetrofitTarget()
+                } label: {
+                    Label("Als Sanierungsziel speichern", systemImage: "target")
+                }
+                .disabled(!customScenarioValid)
+
+                if storedTargetValid {
+                    Button(role: .destructive) {
+                        clearRetrofitTarget()
+                    } label: {
+                        Label("Sanierungsziel löschen", systemImage: "trash")
+                    }
+                }
             } header: {
-                Text("Szenarien")
+                Text("Sanierungsziel")
             } footer: {
-                Text("Jedes Temperaturniveau wird direkt gegen die zugeordnete erforderliche Leistung jeder Heizfläche geprüft. Es werden keine Herstellerabmessungen oder Ersatzmodelle erfunden.")
+                Text("Ein gespeichertes Sanierungsziel gehört zum Projekt und wird bei späteren Öffnungen und im Szenario-Bericht reproduzierbar berücksichtigt. Die Quelle beschreibt, woher das gewünschte Temperaturniveau stammt.")
+            }
+
+            if storedTargetValid {
+                Section("Gespeichertes Ziel") {
+                    LabeledContent("Temperaturniveau") {
+                        Text(storedTargetTemperatureText)
+                            .fontWeight(.semibold)
+                    }
+                    LabeledContent("Quelle") {
+                        Text(project.retrofitTargetTemperatureSource?.title ?? "Nicht angegeben")
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
             }
 
             ForEach(summaries, id: \.id) { summary in
@@ -219,6 +285,30 @@ struct HeizBalanceTemperatureScenarioView: View {
         }
         .navigationTitle("Temperatur-Szenarien")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var storedTargetTemperatureText: String {
+        guard let flow = project.retrofitTargetFlowTemperatureC,
+              let returnTemperature = project.retrofitTargetReturnTemperatureC else {
+            return "—"
+        }
+        return flow.formatted(.number.precision(.fractionLength(0...1)))
+            + " / "
+            + returnTemperature.formatted(.number.precision(.fractionLength(0...1)))
+            + " °C"
+    }
+
+    private func saveRetrofitTarget() {
+        guard customScenarioValid else { return }
+        project.retrofitTargetFlowTemperatureC = customFlowTemperatureC
+        project.retrofitTargetReturnTemperatureC = customReturnTemperatureC
+        project.retrofitTargetTemperatureSource = customSource
+    }
+
+    private func clearRetrofitTarget() {
+        project.retrofitTargetFlowTemperatureC = nil
+        project.retrofitTargetReturnTemperatureC = nil
+        project.retrofitTargetTemperatureSource = nil
     }
 
     @ViewBuilder
