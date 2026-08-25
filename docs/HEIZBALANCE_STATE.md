@@ -19,6 +19,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Das reservierte Profil `de-room-heat-load-2017-2020` bleibt technisch gesperrt, bis Spezifikation und Referenzfälle vollständig fachlich verifiziert sind.
 - Regelwerks-/Quellenstand: `docs/HEIZBALANCE_NORM_RESEARCH.md`.
 - Referenz- und Regressionstrategie: `docs/HEIZBALANCE_REFERENCE_CASES.md`.
+- Produktdatenadapter verarbeiten nur dokumentierte, rechtmäßig nutzbare Datenquellen; geschützte Roh-Datensatzbeschreibungen aus Regelwerken werden nicht im Repository nachgebaut.
 
 ## Qualitäts-Gates
 1. Keine proprietären Norminhalte im Repository.
@@ -32,8 +33,9 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 9. Pumpen-Betriebspunkt nur bei vollständigen Verbraucherströmen und Kreis-Druckverlusten.
 10. System-Minimaltemperatur nur bei vollständig auswertbaren Heizflächen.
 11. Szenarioausgaben liefern benötigte Leistung/Faktor, erfinden aber kein Ersatzmodell.
+12. Externe Produktdaten werden nur über versionierte, validierte Importschemata übernommen; Quelle, Datenstand und Nutzungsgrundlage bleiben erhalten.
 
-## Aktueller Stand – Foundation Pass 14
+## Aktueller Stand – Foundation Pass 16
 
 ### Projekt- und Gebäudeaufnahme
 - Persistente lokale Struktur Projekt → Geschoss → Raum → Bauteil.
@@ -53,6 +55,30 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Verfügbare Heizflächenleistung und erforderliche Leistung sind getrennt.
 - Ziel-Volumenstrom wird aus zugeordneter erforderlicher Leistung und Wasserspreizung berechnet.
 - Raumebene aggregiert Heizflächenleistung, Leistungszuordnung und Ziel-Volumenströme.
+
+### Hersteller-/Produktdaten und Ersatzheizkörper
+- Internes, versioniertes Heizkörper-Katalogschema: `radiator-product-dataset-v1`.
+- Pflichtmetadaten: eindeutige Datensatz-ID, Hersteller, Datensatzname, Datenstand/Version, Quellenreferenz und dokumentierte Nutzungsgrundlage.
+- Produktdaten: eindeutige ID, Serie/Modell, Nennleistung ΔT50, Exponent sowie optionale Abmessungen, Artikelnummer und produktspezifische Quelle.
+- Harte Importvalidierung für leere/doppelte IDs, reservierte Trenner, ungültige Leistungen/Exponenten und ungültige Abmessungen.
+- Globaler lokaler Datensatzspeicher mit transaktionalem Import/Löschen: bei Schreibfehler wird der vorherige Zustand wiederhergestellt.
+- `HeizBalanceRadiatorProductMatchingCalculator` vergleicht importierte Produkte gegen explizites Sanierungsziel, Raumtemperatur und erforderliche Heizflächenleistung.
+- Optionale Einbauraumfilter für Breite/Höhe/Tiefe; Produkte ohne dokumentiertes gefordertes Maß werden bei aktivem Filter nicht still zugelassen.
+- Kandidaten werden nach ausreichender Leistung und kleinster rechnerischer Reserve sortiert; dies ist ausdrücklich keine automatische Produktempfehlung.
+- Eine Ersatzheizfläche wird nur nach explizitem Benutzer-Tap als `radiator-replacement-selection-v1` gespeichert.
+- Auswahl-Snapshot enthält Hersteller, Datensatzversion, Quelle/Nutzungsgrundlage, Produktdaten, Ziel-VL/RL, Bedarf, verfügbare Leistung und Deckungsgrad.
+- Ändert sich das Sanierungsziel nach einer Auswahl, wird der gespeicherte Vorschlag im Bericht als neu zu bewerten markiert.
+- Produktdatenverwaltung ist global aus der Projektliste und projektspezifisch aus der Upgradeansicht erreichbar.
+
+### VDI 3805 Produktdatenadapter – Heizkörper
+- Adapterprofil `vdi-3805-part6-mapped-v1` für autorisiert erzeugte, normalisierte Mappings mit Bezug auf VDI 3805 Blatt 6.
+- Der Adapter ist bewusst kein Rohparser der Richtlinie und enthält keine nachgebauten geschützten Satzbeschreibungen.
+- Pflichtfelder des Mappings: Standardbezug, Mappingprofil-Version, Hersteller, Datenstand, Quelle/Nutzungsgrundlage und Produktdaten.
+- `HeizBalanceRadiatorDatasetImportDecoder` erkennt automatisch natives `radiator-product-dataset-v1` oder `vdi-3805-part6-mapped-v1`.
+- Erfolgreiche VDI-Mappings werden in das stabile interne HeizBalance-Schema konvertiert; Standardbezug und Mappingprofil bleiben im Quellen-/Rechtehinweis nachvollziehbar.
+- Adaptertests prüfen Konvertierung, Schemaerkennung, falschen Standardteil, ungültige Abmessungen und unbekannte Schemas.
+- Format und fiktives Beispiel: `docs/HEIZBALANCE_VDI3805_IMPORT.md`.
+- Echte Rohdatenkonverter bleiben bis zu einer rechtmäßig nutzbaren Spezifikation bzw. Hersteller-/Lizenzquelle bewusst offen.
 
 ### Hydraulik
 - Explizite Fluiddichte und kinematische Viskosität; keine versteckten Wasser-/Glykolannahmen.
@@ -99,7 +125,8 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Die Quelle des gespeicherten Sanierungsziels wird im Szenariotitel des Report-Snapshots dokumentiert, sofern angegeben.
 - Pro Szenario: auswertbare Heizflächen, ausreichende Heizflächen, Systemstatus und thermisch schlechteste Heizfläche.
 - Detailansicht zeigt jede Heizfläche einzeln.
-- Keine konkrete Ersatzheizfläche oder Herstellerdimension wird erfunden; bei Unterdeckung wird stattdessen die mindestens benötigte ΔT50-Nennleistung und der Faktor ausgegeben.
+- Ohne importierte Produktdaten wird keine konkrete Ersatzheizfläche erfunden; bei Unterdeckung wird stattdessen mindestens benötigte ΔT50-Nennleistung und Faktor ausgegeben.
+- Mit gültigen Produktdaten können technisch passende Kandidaten angezeigt werden; die tatsächliche Auswahl bleibt explizit beim Benutzer.
 - Das Projekt-Dashboard zeigt das gespeicherte Sanierungsziel als fachlichen Sofortstatus: `Ziel erreichbar`, `Upgradebedarf`, `Daten unvollständig` oder noch keine Heizflächen.
 - Bei Upgradebedarf werden direkt die begrenzende Heizfläche, die mindestens erforderliche ΔT50-Nennleistung und der Größenfaktor angezeigt.
 - Die dokumentierte Quelle des Zieltemperaturniveaus ist auch im Dashboard sichtbar.
@@ -125,20 +152,23 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Hauptsnapshot `technical-report-v1`.
 - Niedertemperatur-Snapshot `technical-low-temperature-v1`, Profil `fixed-spread-emitter-check-v1`.
 - Szenario-Snapshot `technical-temperature-scenarios-v1`, Profil `explicit-flow-return-emitter-sizing-v1`.
+- Ersatzheizkörper-Snapshot `technical-radiator-replacements-v1` für ausdrücklich ausgewählte Produktkandidaten.
 - Jeder Snapshot bleibt eigenständig versioniert, damit alte Archive nicht still umdefiniert werden.
-- Ein Export erzeugt exakt einen gemeinsamen Zeitstempel für alle drei Snapshots.
-- PDF besteht aus drei zusammengeführten A4-Teilen: technischer Hauptbericht, Niedertemperatur-Supplement und Temperatur-Szenario-Supplement.
+- Ein Export erzeugt exakt einen gemeinsamen Zeitstempel für alle vier Snapshots.
+- PDF besteht aus vier zusammengeführten A4-Teilen: technischer Hauptbericht, Niedertemperatur-Supplement, Temperatur-Szenario-Supplement und dokumentierte Ersatzheizkörper-Auswahl.
 - Zusammenführung über PDFKit.
 - Das gespeicherte Sanierungsziel fließt ohne Schemaänderung als priorisiertes Szenario in den bestehenden Szenario-Snapshot und damit in PDF und Archiv ein.
-- Nach erfolgreichem PDF-Export werden die drei JSON-Snapshots getrennt archiviert; fehlgeschlagene/abgebrochene Exporte erzeugen keinen falschen Archivstand.
+- Nach erfolgreichem PDF-Export werden die vier JSON-Snapshots getrennt archiviert; fehlgeschlagene/abgebrochene Exporte erzeugen keinen falschen Archivstand.
 - Archivbegrenzung: letzte 10 Exportstände je Projekt und Berichtstyp.
 - Szenario-PDF dokumentiert pro Szenario den Systemstatus sowie je Heizfläche verfügbare Leistung, Deckungsgrad und bei Unterdeckung erforderliche ΔT50-Nennleistung/Faktor.
+- Ersatzheizkörper-Supplement dokumentiert nur explizit ausgewählte Kandidaten einschließlich Quelle und bewertet, ob die Auswahl noch zum aktuell gespeicherten Sanierungsziel gehört.
 
 ### Release-Härtung
 - Entwicklungs-Musterprojekt im Release-Build durch `#if DEBUG` vollständig entfernt.
 - CI baut die komplette App-Matrix in Debug.
 - Für HeizBalance existiert zusätzlich ein echter Release-Simulator-Build-Gate.
 - Export-Compliance und Buildnummer werden in CI geprüft.
+- PR-CI nutzt `cancel-in-progress`, sodass veraltete Zwischenläufe bei neuen Commits automatisch abgebrochen werden und nur der aktuelle Head relevant bleibt.
 
 ## Validierte CI-Checkpoints
 - #50 Heizflächenaufnahme/Leistungs- und Volumenstrom-Vorbereitung: grün.
@@ -159,19 +189,22 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - #104 / #109 / #110: während des Szenario-UI-Passes gefundene SwiftUI-Compilerprobleme; analysiert und behoben, nicht als Release-Checkpoint gewertet.
 - #111: Foundation Pass 12 vollständig grün – Core-Tests, gesamte Debug-iOS-Matrix, HeizBalance Szenario-/3-PDF-Pfad und echter HeizBalance-Release-Build erfolgreich.
 - #120: Foundation Pass 13 Code-Gate grün – persistentes Sanierungsziel, zentrale Report-Szenariointegration, Core-Tests, gesamte Debug-iOS-Matrix und echter HeizBalance-Release-Build erfolgreich.
-- #123: **Foundation Pass 14 vollständig grün** – Sanierungsziel-Dashboardstatus, Core-Tests, komplette Debug-iOS-Matrix und echter HeizBalance-Release-Build erfolgreich.
+- #123: Foundation Pass 14 vollständig grün – Sanierungsziel-Dashboardstatus, Core-Tests, komplette Debug-iOS-Matrix und echter HeizBalance-Release-Build erfolgreich.
+- #154: Foundation Pass 15 vollständig grün – Herstellerdatenschema, Matching, explizite Ersatzwahl, vierter Report-/Archivpfad, Core-Tests, Debug-Matrix und echter HeizBalance-Release-Build erfolgreich.
+- #159: **Foundation Pass 16 vollständig grün** – VDI-3805-Blatt-6-Mappingadapter, automatische Importschemaerkennung, Adaptertests, komplette Debug-iOS-Matrix und echter HeizBalance-Release-Build erfolgreich.
 
 ## Noch bewusst gesperrt / offen
 - Norm-Heizlast nach DIN EN 12831-1 + deutschem Ergänzungsregelwerk.
 - Verfahren-B-Freigabe / GEG-/BEG-Konformitätsaussage.
 - Automatische Ventilvoreinstellung aus echten Herstellerdaten.
-- Automatische Auswahl konkreter Ersatzheizkörper.
+- Vollautomatische Auswahl konkreter Ersatzheizkörper; HeizBalance erlaubt derzeit nur technisch passende Kandidaten und eine explizite Benutzerauswahl.
+- Rohdatenparser für VDI-3805-Herstellerdateien ohne rechtlich und fachlich verifizierte Datensatzspezifikation.
 - Echte Wärmepumpenauslegung, COP-/Bivalenz- und Betriebspunktbewertung der Wärmepumpe.
 - Flächenheizung nach DIN EN 1264 als eigener Fachblock.
 
 ## Nächste Entwicklungsschritte
-1. Herstellerdaten-Strategie für Heizkörper und Ventile definieren: ausschließlich autorisierte/legale strukturierte Daten; VDI-3805-kompatible Quellen prüfen.
-2. Auf Basis echter Heizkörperdaten konkrete Ersatz-/Upgradevorschläge aus der bereits berechneten erforderlichen ΔT50-Leistung ableiten.
-3. PDF-Ausgabe mit größeren realistischen Projekten visuell und auf Seitenumbrüche testen.
+1. VDI-3805-Blatt-2-Adapterstrategie für Heizungsarmaturen auf dieselbe versionierte, lizenzsaubere Architektur setzen und mit dem vorhandenen Ventil-kv-Modul verbinden.
+2. Erste echte Hersteller-/Lizenzquelle für Heizkörperdaten rechtlich klären und über das neue Mappingprofil als Referenzdatensatz validieren.
+3. PDF-Ausgabe mit größeren realistischen Projekten und ausgewählten Ersatzheizkörpern visuell sowie auf Seitenumbrüche testen.
 4. Parallel die fachliche Spezifikation der späteren Norm-Heizlastmodule anhand rechtmäßig zugänglicher Regelwerksunterlagen und belastbarer Referenzfälle aufbauen.
 5. Erst nach echter fachlicher Referenzvalidierung normative Gates schrittweise freigeben.
