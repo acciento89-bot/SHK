@@ -13,7 +13,9 @@ struct HeizBalanceRadiatorDatasetManager: View {
                     ContentUnavailableView(
                         "Keine Heizkörperdaten",
                         systemImage: "radiator",
-                        description: Text("Importiere einen dokumentierten JSON-Datensatz im Schema \(HeizBalanceRadiatorProductDataset.schemaVersion).")
+                        description: Text(
+                            "Importiere einen dokumentierten JSON-Datensatz im Schema \(HeizBalanceRadiatorProductDataset.schemaVersion) oder ein autorisiert erzeugtes \(HeizBalanceVDI3805RadiatorMappedDataset.schemaVersion)-Mapping."
+                        )
                     )
                 } else {
                     ForEach(store.datasets) { dataset in
@@ -50,7 +52,7 @@ struct HeizBalanceRadiatorDatasetManager: View {
                 Button {
                     showingImporter = true
                 } label: {
-                    Label("JSON-Datensatz importieren", systemImage: "square.and.arrow.down")
+                    Label("Produktdaten importieren", systemImage: "square.and.arrow.down")
                 }
 
                 if let importMessage {
@@ -67,7 +69,17 @@ struct HeizBalanceRadiatorDatasetManager: View {
             } header: {
                 Text("Import")
             } footer: {
-                Text("Pflichtmetadaten sind Hersteller, Datenstand, Quellenreferenz und Nutzungsgrundlage. Ungültige oder doppelte Produktdaten werden beim Import abgewiesen.")
+                Text("Unterstützt werden natives HeizBalance-JSON und autorisiert erzeugte VDI-3805-Blatt-6-Mappingdateien. Rohdatenstrukturen aus der Richtlinie werden nicht im App-Code nachgebaut. Pflichtmetadaten sind Hersteller, Datenstand, Quellenreferenz und Nutzungsgrundlage.")
+            }
+
+            Section {
+                LabeledContent("VDI-Bezug", value: "VDI 3805 Blatt 6")
+                LabeledContent("Mapping-Schema", value: HeizBalanceVDI3805RadiatorMappedDataset.schemaVersion)
+                Text("Das Mapping muss Standardbezug, Mappingprofil-Version und die rechtliche Nutzungsgrundlage dokumentieren. Erst danach werden die Daten in das interne HeizBalance-Schema überführt.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("VDI 3805 Adapter")
             }
         }
         .navigationTitle("Heizkörperdaten")
@@ -92,8 +104,9 @@ struct HeizBalanceRadiatorDatasetManager: View {
 
             do {
                 let data = try Data(contentsOf: url)
-                let dataset = try store.importDataset(data: data)
-                importMessage = "Importiert: \(dataset.manufacturer) · \(dataset.datasetName) · \(dataset.products.count) Produkte"
+                let receipt = try store.importDatasetWithReceipt(data: data)
+                let dataset = receipt.dataset
+                importMessage = "Importiert über \(receipt.origin.title): \(dataset.manufacturer) · \(dataset.datasetName) · \(dataset.products.count) Produkte"
             } catch {
                 importMessage = "Import fehlgeschlagen: \(error.localizedDescription)"
             }
