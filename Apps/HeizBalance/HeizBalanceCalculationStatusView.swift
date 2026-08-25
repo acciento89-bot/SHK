@@ -14,36 +14,41 @@ struct HeizBalanceCalculationStatusView: View {
 
     var body: some View {
         List {
-            Section("Aktive Vorberechnung") {
+            Section {
                 LabeledContent("Profil", value: previewProfile.displayName)
                 LabeledContent("Status", value: previewProfile.validationState.displayName)
                 LabeledContent("Normative Ausgabe") {
                     Label("Nein", systemImage: "xmark.shield")
                         .foregroundStyle(.secondary)
                 }
+            } header: {
+                Text("Aktive Vorberechnung")
             } footer: {
                 Text("Dieses Profil dient nur zur technischen Plausibilisierung der erfassten Projektdaten.")
             }
 
-            Section("Reserviertes Normprofil") {
+            Section {
                 LabeledContent("Profil", value: normativeProfile.displayName)
                 LabeledContent("Status", value: normativeProfile.validationState.displayName)
                 LabeledContent("Freigabe") {
-                    Label(
-                        readiness.canProduceNormativeOutput ? "Freigegeben" : "Gesperrt",
-                        systemImage: readiness.canProduceNormativeOutput ? "checkmark.seal.fill" : "lock.fill"
-                    )
-                    .foregroundStyle(readiness.canProduceNormativeOutput ? .primary : .secondary)
+                    if readiness.canProduceNormativeOutput {
+                        Label("Freigegeben", systemImage: "checkmark.seal.fill")
+                    } else {
+                        Label("Gesperrt", systemImage: "lock.fill")
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 ForEach(normativeProfile.sourceEditions, id: \.document) { source in
                     LabeledContent(source.document, value: source.edition)
                 }
+            } header: {
+                Text("Reserviertes Normprofil")
             } footer: {
                 Text("Die Freigabe bleibt technisch gesperrt, bis Spezifikation, Referenzfälle und explizites Release-Gate erfüllt sind.")
             }
 
-            Section("Validierungsbausteine") {
+            Section {
                 ForEach(requiredModules, id: \.self) { module in
                     HStack(alignment: .firstTextBaseline) {
                         Label(module.displayName, systemImage: "square.dashed")
@@ -53,6 +58,8 @@ struct HeizBalanceCalculationStatusView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+            } header: {
+                Text("Validierungsbausteine")
             } footer: {
                 Text("Die Liste beschreibt die getrennten Rechen- und Prüfmodule. Ihre konkrete normative Ausgestaltung wird erst nach verifizierter Fachspezifikation implementiert.")
             }
