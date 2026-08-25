@@ -38,6 +38,14 @@ struct HeizBalanceProjectListView: View {
         }
         .navigationTitle("HeizBalance")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                NavigationLink {
+                    HeizBalanceRadiatorDatasetManager()
+                } label: {
+                    Label("Heizkörperdaten", systemImage: "shippingbox")
+                }
+            }
+
 #if DEBUG
             ToolbarItem(placement: .topBarLeading) {
                 Menu {
