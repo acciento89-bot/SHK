@@ -38,6 +38,7 @@ struct HeizBalanceProjectListView: View {
         }
         .navigationTitle("HeizBalance")
         .toolbar {
+#if DEBUG
             ToolbarItem(placement: .topBarLeading) {
                 Menu {
                     Button {
@@ -49,6 +50,7 @@ struct HeizBalanceProjectListView: View {
                     Label("Entwicklung", systemImage: "ellipsis.circle")
                 }
             }
+#endif
 
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
