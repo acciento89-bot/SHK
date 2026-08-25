@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct HeizBalanceRetrofitTargetDashboardView: View {
-    let project: HeizBalanceProject
+    @Binding var project: HeizBalanceProject
 
     private var scenario: HeizBalanceTemperatureScenario? {
         guard let flow = project.retrofitTargetFlowTemperatureC,
@@ -77,7 +77,7 @@ struct HeizBalanceRetrofitTargetDashboardView: View {
                 }
 
                 NavigationLink {
-                    HeizBalanceRadiatorUpgradeMatchView(project: project)
+                    HeizBalanceRadiatorUpgradeMatchView(project: $project)
                 } label: {
                     Label("Heizkörperdaten & Upgrade prüfen", systemImage: "shippingbox.and.arrow.backward")
                         .font(.caption.weight(.semibold))
