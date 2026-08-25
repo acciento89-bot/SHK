@@ -9,6 +9,50 @@ struct HeizBalanceRoomPreviewState {
     }
 }
 
+struct HeizBalanceProjectRoomPreviewEntry: Identifiable {
+    var id: UUID
+    var floorName: String
+    var roomName: String
+    var result: HeizBalanceHeatLossPreviewCalculator.Result?
+    var missingInputs: [String]
+
+    var isReady: Bool {
+        result != nil && missingInputs.isEmpty
+    }
+}
+
+struct HeizBalanceProjectPreviewState {
+    var rooms: [HeizBalanceProjectRoomPreviewEntry]
+
+    var completeRoomCount: Int {
+        rooms.reduce(0) { $0 + ($1.isReady ? 1 : 0) }
+    }
+
+    var incompleteRoomCount: Int {
+        rooms.count - completeRoomCount
+    }
+
+    var allRoomsComplete: Bool {
+        !rooms.isEmpty && incompleteRoomCount == 0
+    }
+
+    var transmissionSubtotalW: Double {
+        rooms.compactMap(\.result).reduce(0) { $0 + $1.transmissionHeatLossW }
+    }
+
+    var ventilationSubtotalW: Double {
+        rooms.compactMap(\.result).reduce(0) { $0 + $1.ventilationHeatLossW }
+    }
+
+    var completedRoomsSubtotalW: Double {
+        rooms.compactMap(\.result).reduce(0) { $0 + $1.totalHeatLossW }
+    }
+
+    var buildingPreviewTotalW: Double? {
+        allRoomsComplete ? completedRoomsSubtotalW : nil
+    }
+}
+
 extension HeizBalanceRoom {
     func heatLossPreview(designOutdoorTemperatureC: Double?) -> HeizBalanceRoomPreviewState {
         var missingInputs: [String] = []
@@ -89,5 +133,26 @@ extension HeizBalanceRoom {
         )
 
         return HeizBalanceRoomPreviewState(result: result, missingInputs: [])
+    }
+}
+
+extension HeizBalanceProject {
+    func heatLossPreviewSummary() -> HeizBalanceProjectPreviewState {
+        let roomEntries = floors.flatMap { floor in
+            floor.rooms.map { room in
+                let preview = room.heatLossPreview(
+                    designOutdoorTemperatureC: designOutdoorTemperatureC
+                )
+                return HeizBalanceProjectRoomPreviewEntry(
+                    id: room.id,
+                    floorName: floor.name,
+                    roomName: room.name,
+                    result: preview.result,
+                    missingInputs: preview.missingInputs
+                )
+            }
+        }
+
+        return HeizBalanceProjectPreviewState(rooms: roomEntries)
     }
 }
