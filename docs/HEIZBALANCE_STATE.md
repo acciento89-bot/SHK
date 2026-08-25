@@ -15,10 +15,10 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Rechenverfahren werden eigenständig implementiert.
 - Keine DIN-Texte, Tabellen, Grafiken, VdZ-Formularlayouts oder ungeklärten Herstellerdaten werden in App oder Repository kopiert.
 - Rechenengine und Berichtsschemata werden versioniert.
-- Technische Vorberechnungen werden nicht als Norm-Heizlast, Verfahren-B-Nachweis, Wärmepumpenauslegung oder Herstellerfreigabe bezeichnet.
+- Technische Vorbereitungen werden nicht als Norm-Heizlast, Verfahren-B-Nachweis, Wärmepumpenauslegung oder Herstellerfreigabe bezeichnet.
 - Das reservierte Profil `de-room-heat-load-2017-2020` bleibt technisch gesperrt, bis Spezifikation und Referenzfälle vollständig fachlich verifiziert sind.
-- Aktueller Regelwerks-/Quellenstand: `docs/HEIZBALANCE_NORM_RESEARCH.md`.
-- Referenzstrategie: `docs/HEIZBALANCE_REFERENCE_CASES.md`.
+- Regelwerks-/Quellenstand: `docs/HEIZBALANCE_NORM_RESEARCH.md`.
+- Referenz- und Regressionstrategie: `docs/HEIZBALANCE_REFERENCE_CASES.md`.
 
 ## Qualitäts-Gates
 1. Keine proprietären Norminhalte im Repository.
@@ -31,7 +31,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 8. Hersteller-Voreinstellungen nur aus dokumentierten, rechtmäßig nutzbaren Produktdaten.
 9. Pumpen-Betriebspunkt nur bei vollständigen Verbraucherströmen und Kreis-Druckverlusten.
 10. System-Minimaltemperatur nur bei vollständig auswertbaren Heizflächen.
-11. Szenarioausgaben liefern benötigte Leistung/Faktor, aber erfinden kein Ersatzmodell.
+11. Szenarioausgaben liefern benötigte Leistung/Faktor, erfinden aber kein Ersatzmodell.
 
 ## Aktueller Stand – Foundation Pass 12
 
@@ -90,13 +90,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
   - erforderliche Nennleistung bei ΔT50,
   - Nennleistungsfaktor gegenüber der bestehenden Heizfläche.
 - Harte Eingabeprüfung: gültig nur bei `Vorlauf > Rücklauf > Raumtemperatur`, positiven Leistungen und positivem Exponenten.
-- Projekt-Matrix enthält:
-  - aktuelles Projekt-Temperaturniveau,
-  - 50/40 °C,
-  - 45/35 °C,
-  - 45/40 °C,
-  - 40/35 °C,
-  - zusätzlich frei einstellbares Szenario in der UI.
+- Projekt-Matrix enthält aktuelles Projekt-Temperaturniveau sowie 50/40, 45/35, 45/40 und 40/35 °C; zusätzlich frei einstellbares Szenario in der UI.
 - Doppelte Szenarien werden vermieden.
 - Pro Szenario: auswertbare Heizflächen, ausreichende Heizflächen, Systemstatus und thermisch schlechteste Heizfläche.
 - Detailansicht zeigt jede Heizfläche einzeln.
@@ -115,6 +109,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
   - Schlafzimmer ca. 583 W verfügbar bei 500 W Bedarf → ca. 117 %.
   - Bad ca. 500 W verfügbar bei 600 W Bedarf → ca. 83 %.
   - Bad benötigt bei diesem Szenario rund 2.639 W Nennleistung ΔT50 statt 2.200 W → Faktor rund ×1,20.
+- Beide technischen Regressionfälle und ihre Bedeutung sind in `docs/HEIZBALANCE_REFERENCE_CASES.md` dokumentiert.
 - Die Fälle sind technische Regressionen, keine DIN-/Norm-Referenzfälle.
 
 ### Bericht / PDF / Reproduzierbarkeit
@@ -123,10 +118,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Szenario-Snapshot `technical-temperature-scenarios-v1`, Profil `explicit-flow-return-emitter-sizing-v1`.
 - Jeder Snapshot bleibt eigenständig versioniert, damit alte Archive nicht still umdefiniert werden.
 - Ein Export erzeugt exakt einen gemeinsamen Zeitstempel für alle drei Snapshots.
-- PDF besteht aus drei zusammengeführten A4-Teilen:
-  1. technischer Hauptbericht,
-  2. Niedertemperatur-Supplement,
-  3. Temperatur-Szenario-Supplement.
+- PDF besteht aus drei zusammengeführten A4-Teilen: technischer Hauptbericht, Niedertemperatur-Supplement und Temperatur-Szenario-Supplement.
 - Zusammenführung über PDFKit.
 - Nach erfolgreichem PDF-Export werden die drei JSON-Snapshots getrennt archiviert; fehlgeschlagene/abgebrochene Exporte erzeugen keinen falschen Archivstand.
 - Archivbegrenzung: letzte 10 Exportstände je Projekt und Berichtstyp.
@@ -153,8 +145,8 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - #92 Niedertemperatur-Core, UI, Musterprojekt und Regression: komplette Matrix grün.
 - #96 Niedertemperatur-Snapshot, PDF-Supplement und PDFKit-Merger: HeizBalance grün.
 - #97 kombinierter Haupt-/Niedertemperatur-PDF-Export + Doppelarchiv: komplette Matrix grün.
-- #100 Release-Gate: HeizBalance Debug + echter Release-Build grün; Debug-Musterinhalt dadurch release-seitig abgesichert.
-- #104 / #109 / #110: während des Szenario-UI-Passes gefundene SwiftUI-Compilerprobleme; jeweils analysiert und behoben, nicht als Release-Checkpoint gewertet.
+- #100 Release-Gate: HeizBalance Debug + echter Release-Build grün; Debug-Musterinhalt release-seitig abgesichert.
+- #104 / #109 / #110: während des Szenario-UI-Passes gefundene SwiftUI-Compilerprobleme; analysiert und behoben, nicht als Release-Checkpoint gewertet.
 - #111: **Foundation Pass 12 vollständig grün** – Core-Tests, gesamte Debug-iOS-Matrix, HeizBalance Szenario-/3-PDF-Pfad und echter HeizBalance-Release-Build erfolgreich.
 
 ## Noch bewusst gesperrt / offen
