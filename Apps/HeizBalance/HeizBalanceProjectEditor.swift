@@ -239,6 +239,12 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 NavigationLink {
+                    HeizBalanceHydraulicFieldWorkspaceView(project: $draft)
+                } label: {
+                    Label("Hydraulik-Aufnahme & Einstellliste", systemImage: "wrench.and.screwdriver")
+                }
+
+                NavigationLink {
                     HeizBalancePumpProjectWorkspaceView(project: draft)
                 } label: {
                     Label("Pumpe & Betriebspunkt", systemImage: "arrow.triangle.2.circlepath")
