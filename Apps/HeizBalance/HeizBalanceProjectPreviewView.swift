@@ -53,18 +53,18 @@ struct HeizBalanceProjectPreviewView: View {
             }
 
             Section("Räume") {
-                ForEach(summary.rooms) { room in
-                    VStack(alignment: .leading, spacing: 6) {
+                ForEach(summary.rooms) { roomEntry in
+                    VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(room.roomName)
+                                Text(roomEntry.roomName)
                                     .font(.headline)
-                                Text(room.floorName)
+                                Text(roomEntry.floorName)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            if let result = room.result {
+                            if let result = roomEntry.result {
                                 Text(result.totalHeatLossW.formatted(.number.precision(.fractionLength(0))) + " W")
                                     .fontWeight(.semibold)
                             } else {
@@ -73,10 +73,21 @@ struct HeizBalanceProjectPreviewView: View {
                             }
                         }
 
-                        ForEach(room.missingInputs, id: \.self) { missing in
+                        ForEach(roomEntry.missingInputs, id: \.self) { missing in
                             Text("• \(missing)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                        }
+
+                        if let roomResult = roomEntry.result,
+                           let sourceRoom = project.room(id: roomEntry.id),
+                           let coverage = sourceRoom.heatingCoverage(
+                                requiredRoomPowerW: roomResult.totalHeatLossW,
+                                designFlowTemperatureC: project.designFlowTemperatureC,
+                                designReturnTemperatureC: project.designReturnTemperatureC
+                           ) {
+                            Divider()
+                            RoomHeatingCoverageSummaryView(state: coverage)
                         }
                     }
                     .padding(.vertical, 3)
@@ -85,5 +96,93 @@ struct HeizBalanceProjectPreviewView: View {
         }
         .navigationTitle("Vorberechnung")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct RoomHeatingCoverageSummaryView: View {
+    let state: HeizBalanceRoomHeatingCoverageState
+
+    private var result: HeizBalanceRoomHeatingCoverageCalculator.Result {
+        state.result
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Label("Heizflächenabdeckung", systemImage: "radiator")
+                .font(.subheadline.weight(.semibold))
+
+            if state.validAvailableSurfaceCount > 0 {
+                HStack {
+                    Text("Verfügbar")
+                    Spacer()
+                    Text(result.availablePowerW.formatted(.number.precision(.fractionLength(0))) + " W")
+                }
+                .font(.caption)
+
+                HStack {
+                    Text("Deckung Raum-Vorbereitung")
+                    Spacer()
+                    Text((result.availableCoverageRatio * 100).formatted(.number.precision(.fractionLength(0))) + " %")
+                }
+                .font(.caption)
+
+                if result.capacitySufficient {
+                    Text("Heizflächenleistung deckt die technische Raum-Vorbereitung.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Heizflächenleistung liegt unter der technischen Raum-Vorbereitung.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            } else {
+                Text("Die verfügbare Heizflächenleistung ist noch nicht berechenbar.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if state.assignedSurfaceCount > 0 {
+                HStack {
+                    Text("Zugeordnet")
+                    Spacer()
+                    Text(result.assignedPowerW.formatted(.number.precision(.fractionLength(0))) + " W")
+                }
+                .font(.caption)
+
+                HStack {
+                    Text("Differenz zur Raum-Vorbereitung")
+                    Spacer()
+                    Text(result.assignmentDifferenceW.formatted(.number.precision(.fractionLength(0))) + " W")
+                }
+                .font(.caption)
+            } else {
+                Text("Noch keine erforderliche Leistung auf Heizflächen verteilt.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if state.targetFlowSurfaceCount > 0 {
+                HStack {
+                    Text("Ziel-Volumenstrom gesamt")
+                    Spacer()
+                    Text(result.totalTargetVolumeFlowLPH.formatted(.number.precision(.fractionLength(0))) + " l/h")
+                        .fontWeight(.semibold)
+                }
+                .font(.caption)
+            }
+
+            if state.validAvailableSurfaceCount < state.totalSurfaceCount
+                || state.assignedSurfaceCount < state.totalSurfaceCount {
+                Text(
+                    "Heizflächen: \(state.validAvailableSurfaceCount)/\(state.totalSurfaceCount) leistungsseitig berechenbar, \(state.assignedSurfaceCount)/\(state.totalSurfaceCount) mit erforderlicher Leistung belegt."
+                )
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            }
+
+            Text("Vergleich mit der technischen Raum-Vorbereitung – kein Norm- oder Verfahren-B-Nachweis.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
     }
 }
