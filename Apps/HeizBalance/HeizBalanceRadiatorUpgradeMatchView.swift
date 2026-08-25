@@ -10,6 +10,7 @@ struct HeizBalanceRadiatorUpgradeContext: Identifiable {
     var requiredPowerW: Double?
     var currentNominalPowerDeltaT50W: Double?
     var scenarioResult: HeizBalanceTemperatureScenarioCalculator.Result?
+    var replacementSelection: HeizBalanceRadiatorReplacementSelection?
     var missingInputs: [String]
 
     var displayName: String {
@@ -67,6 +68,7 @@ extension HeizBalanceProject {
                                 requiredPowerW: surface.assignedRequiredPowerW,
                                 currentNominalPowerDeltaT50W: surface.nominalPowerDeltaT50W,
                                 scenarioResult: result,
+                                replacementSelection: surface.replacementSelection,
                                 missingInputs: missing
                             )
                         )
@@ -81,7 +83,7 @@ extension HeizBalanceProject {
 
 struct HeizBalanceRadiatorUpgradeMatchView: View {
     @Environment(HeizBalanceRadiatorDatasetStore.self) private var datasetStore
-    let project: HeizBalanceProject
+    @Binding var project: HeizBalanceProject
 
     private var targetTemperatureText: String? {
         guard let flow = project.retrofitTargetFlowTemperatureC,
@@ -134,6 +136,7 @@ struct HeizBalanceRadiatorUpgradeMatchView: View {
                                let returnTemperature = project.retrofitTargetReturnTemperatureC {
                                 NavigationLink {
                                     HeizBalanceRadiatorCandidateMatchDetailView(
+                                        project: $project,
                                         context: context,
                                         requiredPowerW: requiredPower,
                                         flowTemperatureC: flow,
@@ -155,6 +158,16 @@ struct HeizBalanceRadiatorUpgradeMatchView: View {
                                         )
                                         .font(.caption)
                                         .foregroundStyle(.orange)
+
+                                        if let selection = context.replacementSelection {
+                                            Label(
+                                                "Auswahl festgehalten: " + selection.displayName,
+                                                systemImage: "bookmark.fill"
+                                            )
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(2)
+                                        }
                                     }
                                 }
                             } else {
@@ -177,7 +190,7 @@ struct HeizBalanceRadiatorUpgradeMatchView: View {
                 } header: {
                     Text("Upgradebedarf")
                 } footer: {
-                    Text("Eine Kandidatenliste bedeutet nur, dass die dokumentierte Leistung und optionale Abmessungsfilter rechnerisch passen. Ein konkreter Einbau muss weiterhin fachlich und herstellerseitig geprüft werden.")
+                    Text("Eine Kandidatenliste bedeutet nur, dass dokumentierte Leistung und optionale Abmessungsfilter rechnerisch passen. Eine festgehaltene Auswahl ist eine Benutzerentscheidung, keine automatische Produktempfehlung oder Montagefreigabe.")
                 }
             }
         }
@@ -189,6 +202,7 @@ struct HeizBalanceRadiatorUpgradeMatchView: View {
 private struct HeizBalanceRadiatorCandidateMatchDetailView: View {
     @Environment(HeizBalanceRadiatorDatasetStore.self) private var datasetStore
 
+    @Binding var project: HeizBalanceProject
     let context: HeizBalanceRadiatorUpgradeContext
     let requiredPowerW: Double
     let flowTemperatureC: Double
@@ -197,6 +211,10 @@ private struct HeizBalanceRadiatorCandidateMatchDetailView: View {
     @State private var maximumWidthMM: Double?
     @State private var maximumHeightMM: Double?
     @State private var maximumDepthMM: Double?
+
+    private var currentSelection: HeizBalanceRadiatorReplacementSelection? {
+        project.radiatorReplacementSelection(surfaceID: context.surfaceID)
+    }
 
     private var matchResult: HeizBalanceRadiatorProductMatchingCalculator.Result? {
         let candidates = datasetStore.datasets.flatMap { dataset in
@@ -242,6 +260,44 @@ private struct HeizBalanceRadiatorCandidateMatchDetailView: View {
                 }
             }
 
+            if let selection = currentSelection {
+                Section {
+                    Label(selection.displayName, systemImage: "bookmark.fill")
+                        .font(.headline)
+                    LabeledContent("Datensatz") {
+                        Text(selection.datasetName + " · " + selection.datasetVersion)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    LabeledContent("Bei Auswahl bewertet") {
+                        Text(
+                            selection.targetFlowTemperatureC.formatted(.number.precision(.fractionLength(0...1)))
+                                + " / "
+                                + selection.targetReturnTemperatureC.formatted(.number.precision(.fractionLength(0...1)))
+                                + " °C"
+                        )
+                    }
+                    LabeledContent("Leistung am Ziel") {
+                        Text(selection.availablePowerW.formatted(.number.precision(.fractionLength(0))) + " W")
+                    }
+                    LabeledContent("Deckungsgrad") {
+                        Text((selection.capacityRatio * 100).formatted(.number.precision(.fractionLength(0))) + " %")
+                    }
+                    Text("Quelle: " + selection.sourceReference)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Button(role: .destructive) {
+                        project.setRadiatorReplacementSelection(nil, surfaceID: context.surfaceID)
+                    } label: {
+                        Label("Festgehaltene Auswahl löschen", systemImage: "bookmark.slash")
+                    }
+                } header: {
+                    Text("Festgehaltene Auswahl")
+                } footer: {
+                    Text("Der Snapshot bleibt unabhängig vom aktuell importierten Katalog nachvollziehbar. Eine spätere Änderung des Katalogs überschreibt diese Auswahl nicht.")
+                }
+            }
+
             Section {
                 OptionalDecimalField(title: "Max. Breite", value: $maximumWidthMM, unit: "mm")
                 OptionalDecimalField(title: "Max. Höhe", value: $maximumHeightMM, unit: "mm")
@@ -280,8 +336,16 @@ private struct HeizBalanceRadiatorCandidateMatchDetailView: View {
                                 HeizBalanceRadiatorCandidateRow(
                                     dataset: resolved.dataset,
                                     product: resolved.product,
-                                    result: candidate
-                                )
+                                    result: candidate,
+                                    isSelected: currentSelection?.datasetID == resolved.dataset.id
+                                        && currentSelection?.productID == resolved.product.id
+                                ) {
+                                    holdSelection(
+                                        dataset: resolved.dataset,
+                                        product: resolved.product,
+                                        result: candidate
+                                    )
+                                }
                             }
                         }
                     }
@@ -289,11 +353,29 @@ private struct HeizBalanceRadiatorCandidateMatchDetailView: View {
             } header: {
                 Text("Technisch passende Kandidaten")
             } footer: {
-                Text("Sortierung: ausreichende Leistung mit kleinster rechnerischer Leistungsreserve zuerst. Das ist keine automatische Produktempfehlung, keine Montagefreigabe und kein Ersatz für Herstellerunterlagen.")
+                Text("Sortierung: ausreichende Leistung mit kleinster rechnerischer Leistungsreserve zuerst. Nur ein ausdrücklicher Tap auf „Auswahl festhalten“ speichert einen Kandidaten; daraus entsteht keine automatische Produktempfehlung oder Montagefreigabe.")
             }
         }
         .navigationTitle(context.surfaceName)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func holdSelection(
+        dataset: HeizBalanceRadiatorProductDataset,
+        product: HeizBalanceRadiatorProductDataset.Product,
+        result: HeizBalanceRadiatorProductMatchingCalculator.CandidateResult
+    ) {
+        let selection = HeizBalanceRadiatorReplacementSelection(
+            targetFlowTemperatureC: flowTemperatureC,
+            targetReturnTemperatureC: returnTemperatureC,
+            roomTemperatureC: context.roomTemperatureC,
+            requiredPowerW: requiredPowerW,
+            availablePowerW: result.availablePowerW,
+            capacityRatio: result.capacityRatio,
+            dataset: dataset,
+            product: product
+        )
+        project.setRadiatorReplacementSelection(selection, surfaceID: context.surfaceID)
     }
 }
 
@@ -301,11 +383,19 @@ private struct HeizBalanceRadiatorCandidateRow: View {
     let dataset: HeizBalanceRadiatorProductDataset
     let product: HeizBalanceRadiatorProductDataset.Product
     let result: HeizBalanceRadiatorProductMatchingCalculator.CandidateResult
+    let isSelected: Bool
+    let onSelect: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(dataset.manufacturer + " · " + product.displayName)
-                .font(.headline)
+            HStack(alignment: .firstTextBaseline) {
+                Text(dataset.manufacturer + " · " + product.displayName)
+                    .font(.headline)
+                if isSelected {
+                    Image(systemName: "bookmark.fill")
+                        .foregroundStyle(Color.green)
+                }
+            }
 
             Text(dataset.datasetName + " · " + dataset.datasetVersion)
                 .font(.caption)
@@ -341,6 +431,16 @@ private struct HeizBalanceRadiatorCandidateRow: View {
             Text("Quelle: " + dataset.source.reference)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+
+            Button {
+                onSelect()
+            } label: {
+                Label(
+                    isSelected ? "Auswahl erneut festhalten" : "Auswahl festhalten",
+                    systemImage: isSelected ? "bookmark.fill" : "bookmark"
+                )
+            }
+            .buttonStyle(.bordered)
         }
         .padding(.vertical, 4)
     }
