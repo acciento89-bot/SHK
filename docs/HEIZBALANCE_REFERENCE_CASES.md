@@ -5,16 +5,15 @@ Referenzfälle sind das zentrale Freigabeinstrument für die spätere normative 
 
 ## Grundregeln
 1. Keine geschützten Normtexte, Tabellen oder Abbildungen werden als Testdaten in das Repository kopiert.
-2. Jeder Referenzfall erhält eine eigene ID und dokumentiert die Herkunft der Eingabedaten und der erwarteten Ergebnisse.
+2. Jeder Referenzfall erhält eine eigene ID und dokumentiert Herkunft und Status der Eingabedaten und erwarteten Ergebnisse.
 3. Erwartete Werte werden als einzelne benannte Messgrößen mit zulässiger absoluter Toleranz abgelegt.
-4. Zwischenergebnisse werden mitgeprüft, nicht nur die Endsumme. Dadurch lässt sich eine Abweichung einem Rechenbaustein zuordnen.
+4. Zwischenergebnisse werden mitgeprüft, nicht nur Endwerte.
 5. Fehlende, nicht-endliche oder außerhalb der Toleranz liegende Ergebnisse lassen den Referenzfall fehlschlagen.
-6. Für ein Normmodul muss mindestens ein fachlich belastbarer Referenzfall vorhanden sein; vor Release werden mehrere unterschiedliche Fälle angestrebt.
-7. Eine normative Ausgabe bleibt gesperrt, solange auch nur ein verpflichtender Rechenbaustein keine verifizierte Spezifikation oder keine vollständig bestandene Referenzabdeckung besitzt.
+6. Technische Regressionen und normative Referenzfälle werden strikt getrennt.
+7. Eine normative Ausgabe bleibt gesperrt, solange verpflichtende Rechenbausteine keine verifizierte Spezifikation und keine vollständig bestandene Referenzabdeckung besitzen.
 
-## Geplante Rechenbausteine
-Die aktuelle Architektur trennt folgende Bereiche technisch voneinander. Die konkrete normative Ausgestaltung und Anwendbarkeit wird erst aus der verifizierten Fachspezifikation übernommen:
-
+## Geplante normative Rechenbausteine
+Die Architektur trennt unter anderem:
 - Transmission Außenbauteile
 - Transmission zu angrenzenden Bereichen
 - Transmission Erdreich
@@ -26,8 +25,10 @@ Die aktuelle Architektur trennt folgende Bereiche technisch voneinander. Die kon
 - Raumaggregation
 - Gebäudeaggregation
 
-## Referenzmetriken
-Beispiel für die Struktur eines späteren Referenzfalls – ausschließlich synthetisch, nicht als Normbeispiel:
+Die konkrete normative Ausgestaltung wird erst aus rechtmäßig zugänglicher und fachlich verifizierter Spezifikation übernommen.
+
+## Normative Referenzmetriken – Strukturbeispiel
+Ausschließlich synthetisches Strukturbeispiel, kein Normbeispiel:
 
 ```text
 caseID: synthetic-room-001
@@ -37,59 +38,47 @@ metrics:
   room.totalW        = 1000 ± 1 W
 ```
 
-Der Core stellt dafür `HeizBalanceReferenceCaseValidator` bereit. Er vergleicht benannte Ist-Werte mit erwarteten Werten und absoluten Toleranzen.
+Der Core stellt dafür `HeizBalanceReferenceCaseValidator` bereit.
 
-## Technischer Regressionfall – Niedertemperatur
-Dieser Fall ist ausdrücklich **kein Norm-Referenzfall**. Er dient ausschließlich dazu, die eigenständig implementierte technische Heizflächen-/Niedertemperatur-Logik stabil zu halten und die End-to-End-Demo in der App zu prüfen.
+## Technische Regressionen
+Diese Fälle prüfen die Stabilität eigener technischer Funktionen. Sie sind ausdrücklich **keine DIN-/Norm-Referenzfälle** und dürfen keine normative Freigabe auslösen.
 
-Rahmenbedingungen:
-- konstante Wasserspreizung: 10 K
-- Vergleichssystem: 45/35 °C
-- Heizflächenkennwerte sind fiktive, produktunabhängige Testdaten
+### technical-low-temp-demo-001
+Fiktive Heizflächen des Entwicklungs-Musterprojekts, Wasserspreizung 10 K.
 
-Erwartete Werte:
+Erwartete minimale technische Systemtemperaturen:
+- Wohnzimmer: ca. 43,8 / 33,8 °C
+- Schlafzimmer: ca. 42,7 / 32,7 °C
+- Bad: ca. 47,4 / 37,4 °C
 
-```text
-caseID: technical-low-temp-demo-001
-Wohnzimmer:
-  Qn,ΔT50 = 2500 W
-  n = 1.3
-  Qrequired = 700 W
-  Raum = 20 °C
-  minimum VL/RL = 43.7805 / 33.7805 °C
-  45/35 °C = ausreichend
+Folgerung für diesen synthetischen Datensatz:
+- 45 / 35 °C deckt nicht alle Heizflächen.
+- Das Bad ist thermisch begrenzend.
 
-Schlafzimmer:
-  Qn,ΔT50 = 1800 W
-  n = 1.3
-  Qrequired = 500 W
-  Raum = 19 °C
-  minimum VL/RL = 42.6657 / 32.6657 °C
-  45/35 °C = ausreichend
+### technical-temperature-scenario-demo-001
+Explizites Szenario 45 / 35 °C auf demselben fiktiven Musterprojekt.
 
-Bad:
-  Qn,ΔT50 = 2200 W
-  n = 1.3
-  Qrequired = 600 W
-  Raum = 24 °C
-  minimum VL/RL = 47.4041 / 37.4041 °C
-  45/35 °C = nicht ausreichend
+Erwartete Heizflächenbewertung:
+- Wohnzimmer: ca. 760 W verfügbar bei 700 W zugeordneter Leistung → ca. 109 % Deckung, ausreichend.
+- Schlafzimmer: ca. 583 W verfügbar bei 500 W zugeordneter Leistung → ca. 117 % Deckung, ausreichend.
+- Bad: ca. 500 W verfügbar bei 600 W zugeordneter Leistung → ca. 83 % Deckung, nicht ausreichend.
+- Bad: erforderliche Nennleistung bei ΔT50 ca. 2.639 W statt 2.200 W → Nennleistungsfaktor ca. ×1,20.
 
-System:
-  begrenzende Heizfläche = Bad
-  minimum VL/RL = 47.4041 / 37.4041 °C
-  45/35 °C = nicht ausreichend
-```
+Der Fall prüft insbesondere:
+- Leistungsumrechnung für ein explizites VL/RL-Niveau,
+- Deckungsgrad,
+- harte ausreichend/nicht-ausreichend-Entscheidung,
+- Rückrechnung auf erforderliche ΔT50-Nennleistung,
+- Nennleistungsfaktor,
+- korrekte Identifikation der thermisch schlechtesten Heizfläche.
 
-Der Fall ist als Unit-Test in `HeizBalanceLowTemperatureCheckTests` hinterlegt. Er darf nicht als fachliche oder normative Validierung der DIN-Heizlast interpretiert werden.
-
-## Freigabekette
+## Freigabekette normative Module
 `developmentOnly` → `specificationVerified` → `referenceValidated` → `released`
 
-Zusätzlich existiert ein expliziter Release-Schalter im Rechenprofil. Selbst ein versehentlich auf `released` gesetzter Profilstatus reicht daher nicht aus: Alle verpflichtenden Module müssen Spezifikation und Referenzabdeckung vollständig bestanden haben.
+Zusätzlich existiert ein expliziter Release-Schalter im Rechenprofil. Ein Profilstatus allein reicht nicht: Alle verpflichtenden Module müssen Spezifikation und Referenzabdeckung bestanden haben.
 
 ## Noch offen
 - rechtmäßig zugängliche vollständige Fachspezifikation der relevanten Regelwerksausgaben
-- Auswahl geeigneter unabhängiger Referenzrechnungen/Fachsoftware
-- Definition zulässiger Toleranzen je Rechenbaustein
-- fachliche Review-Dokumentation je Referenzfall
+- Auswahl unabhängiger fachlicher Referenzrechnungen/Fachsoftware
+- Definition zulässiger Toleranzen je Normmodul
+- fachliche Review-Dokumentation je normativem Referenzfall
