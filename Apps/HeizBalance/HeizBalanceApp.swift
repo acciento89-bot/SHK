@@ -6,6 +6,7 @@ struct HeizBalanceApp: App {
     @State private var radiatorDatasetStore = HeizBalanceRadiatorDatasetStore()
     @State private var valveDatasetStore = HeizBalanceValveDatasetStore()
     @State private var pumpDatasetStore = HeizBalancePumpDatasetStore()
+    @State private var pumpSelectionStore = HeizBalancePumpSelectionStore.shared
 
     var body: some Scene {
         WindowGroup {
@@ -14,6 +15,7 @@ struct HeizBalanceApp: App {
                 .environment(radiatorDatasetStore)
                 .environment(valveDatasetStore)
                 .environment(pumpDatasetStore)
+                .environment(pumpSelectionStore)
                 .preferredColorScheme(.dark)
                 .shkKeyboardDismissal()
         }
