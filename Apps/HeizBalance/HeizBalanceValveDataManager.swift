@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HeizBalanceValveDataManager: View {
+    @Environment(HeizBalanceValveDatasetStore.self) private var valveDatasetStore
     @Binding var project: HeizBalanceProject
 
     private struct ValveEntry: Identifiable {
@@ -57,6 +58,23 @@ struct HeizBalanceValveDataManager: View {
                     .foregroundStyle(.secondary)
             } header: {
                 Text("Ventildaten")
+            }
+
+            Section {
+                NavigationLink {
+                    HeizBalanceValveDatasetManager()
+                } label: {
+                    Label("Ventilkataloge verwalten", systemImage: "shippingbox")
+                }
+                LabeledContent("Importierte Kataloge", value: "\(valveDatasetStore.datasets.count)")
+                LabeledContent(
+                    "Katalogprodukte",
+                    value: "\(valveDatasetStore.datasets.reduce(0) { $0 + $1.products.count })"
+                )
+            } header: {
+                Text("Herstellerdaten")
+            } footer: {
+                Text("Katalogdaten können nativ oder über ein dokumentiertes VDI-3805-Blatt-2-Mapping importiert werden. Ein Produkt muss anschließend ausdrücklich dem konkreten Projektventil zugeordnet werden.")
             }
 
             if valveEntries.isEmpty {
@@ -183,6 +201,7 @@ struct HeizBalanceValveDataManager: View {
 }
 
 struct HeizBalanceValveProductDataEditor: View {
+    @Environment(HeizBalanceValveDatasetStore.self) private var valveDatasetStore
     @Binding var component: HeizBalanceHydraulicLossComponent
     let requiredKvM3H: Double?
 
@@ -252,12 +271,47 @@ struct HeizBalanceValveProductDataEditor: View {
                 Text("Der Soll-kv wird aus dem Ziel-Volumenstrom, dem explizit erfassten Ventil-Druckverlust und der Projekt-Fluiddichte ermittelt.")
             }
 
+            Section {
+                NavigationLink {
+                    HeizBalanceValveCatalogPicker(
+                        component: $component,
+                        requiredKvM3H: requiredKvM3H
+                    )
+                } label: {
+                    Label("Produkt aus Katalog übernehmen", systemImage: "shippingbox")
+                }
+
+                NavigationLink {
+                    HeizBalanceValveDatasetManager()
+                } label: {
+                    Label("Ventilkataloge verwalten", systemImage: "square.and.arrow.down")
+                }
+
+                LabeledContent("Importierte Kataloge", value: "\(valveDatasetStore.datasets.count)")
+
+                if let data = component.valveProductData,
+                   let datasetID = data.datasetID {
+                    LabeledContent("Zuordnung aus Katalog") {
+                        Text(datasetID)
+                            .font(.caption)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    if let article = data.articleNumber, !article.isEmpty {
+                        LabeledContent("Artikelnummer", value: article)
+                    }
+                }
+            } header: {
+                Text("Produktkatalog")
+            } footer: {
+                Text("Die Produktübernahme kopiert den dokumentierten Datensatz in das Projekt. Eine Voreinstellung wird dabei nicht automatisch gesetzt.")
+            }
+
             if component.valveProductData == nil {
                 Section {
                     Button {
                         component.valveProductData = HeizBalanceValveProductData()
                     } label: {
-                        Label("Ventildatensatz anlegen", systemImage: "plus.circle")
+                        Label("Ventildatensatz manuell anlegen", systemImage: "plus.circle")
                     }
                 } footer: {
                     Text("Es werden keine Herstellerwerte automatisch ergänzt. Jeder Datenpunkt muss aus einer rechtmäßig nutzbaren und dokumentierten Quelle stammen.")
@@ -277,6 +331,21 @@ struct HeizBalanceValveProductDataEditor: View {
                         Label("Hersteller, Produkt, Datenstand und Quelle vollständig dokumentieren.", systemImage: "exclamationmark.triangle")
                             .font(.caption)
                             .foregroundStyle(.orange)
+                    }
+
+                    if let data = component.valveProductData,
+                       let usageBasis = data.usageBasis,
+                       !usageBasis.isEmpty {
+                        LabeledContent("Nutzungsgrundlage", value: usageBasis)
+                    }
+                    if let data = component.valveProductData,
+                       let rightsNote = data.rightsNote,
+                       !rightsNote.isEmpty {
+                        LabeledContent("Rechtehinweis") {
+                            Text(rightsNote)
+                                .font(.caption)
+                                .multilineTextAlignment(.trailing)
+                        }
                     }
                 } header: {
                     Text("Hersteller-Datensatz")
