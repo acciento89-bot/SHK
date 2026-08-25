@@ -8,6 +8,7 @@ private struct HeizBalancePumpOperatingPointContext: Hashable {
 
 struct HeizBalancePumpDatasetManager: View {
     @Environment(HeizBalancePumpDatasetStore.self) private var store
+    @Environment(HeizBalancePumpSelectionStore.self) private var selectionStore
     @State private var showingImporter = false
     @State private var importMessage: String?
 
@@ -27,6 +28,22 @@ struct HeizBalancePumpDatasetManager: View {
         }
 
         return .init(volumeFlowM3H: flowLPH / 1_000, requiredHeadM: headM)
+    }
+
+    private var heldSelection: HeizBalancePumpSelection? {
+        guard let project else { return nil }
+        return selectionStore.selection(projectID: project.id)
+    }
+
+    private var heldSelectionMatchesOperatingPoint: Bool {
+        guard let selection = heldSelection,
+              let operatingPoint else {
+            return false
+        }
+        return selection.matchesOperatingPoint(
+            volumeFlowM3H: operatingPoint.volumeFlowM3H,
+            requiredHeadM: operatingPoint.requiredHeadM
+        )
     }
 
     var body: some View {
@@ -56,6 +73,55 @@ struct HeizBalancePumpDatasetManager: View {
                 }
             }
 
+            if let selection = heldSelection {
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label(selection.displayName, systemImage: "checkmark.seal")
+                            .font(.headline)
+                        Text(selection.curveLabel)
+                            .font(.subheadline)
+                        Text(selection.datasetName + " · " + selection.datasetVersion)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    LabeledContent("Festgehalten am") {
+                        Text(selection.selectedAt.formatted(date: .abbreviated, time: .shortened))
+                    }
+                    LabeledContent("Betriebspunkt bei Auswahl") {
+                        Text(
+                            selection.operatingPointVolumeFlowM3H.formatted(.number.precision(.fractionLength(0...3)))
+                                + " m³/h · "
+                                + selection.requiredHeadM.formatted(.number.precision(.fractionLength(0...2)))
+                                + " m"
+                        )
+                        .multilineTextAlignment(.trailing)
+                    }
+                    LabeledContent("Förderhöhenreserve") {
+                        Text(selection.headReserveM.formatted(.number.precision(.fractionLength(0...2))) + " m")
+                    }
+
+                    if heldSelectionMatchesOperatingPoint {
+                        Label("Auswahl gehört zum aktuellen Projekt-Betriebspunkt.", systemImage: "checkmark.circle")
+                            .font(.caption)
+                    } else {
+                        Label("Projekt-Betriebspunkt wurde seit der Auswahl geändert oder ist unvollständig. Auswahl neu bewerten.", systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+
+                    Button(role: .destructive) {
+                        selectionStore.delete(projectID: selection.projectID)
+                    } label: {
+                        Label("Festgehaltene Auswahl entfernen", systemImage: "trash")
+                    }
+                } header: {
+                    Text("Festgehaltene Pumpenauswahl")
+                } footer: {
+                    Text("Die Auswahl ist ein eingefrorener Projektsnapshot. Sie bleibt dokumentierbar, auch wenn der globale Katalog später geändert oder gelöscht wird.")
+                }
+            }
+
             Section {
                 if store.datasets.isEmpty {
                     ContentUnavailableView(
@@ -70,6 +136,7 @@ struct HeizBalancePumpDatasetManager: View {
                         NavigationLink {
                             HeizBalancePumpDatasetDetailView(
                                 dataset: dataset,
+                                projectID: project?.id,
                                 operatingPoint: operatingPoint
                             )
                         } label: {
@@ -113,6 +180,12 @@ struct HeizBalancePumpDatasetManager: View {
                 }
 
                 if let error = store.persistenceError {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+
+                if let error = selectionStore.persistenceError {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .font(.caption)
                         .foregroundStyle(.orange)
@@ -169,6 +242,7 @@ struct HeizBalancePumpDatasetManager: View {
 
 private struct HeizBalancePumpDatasetDetailView: View {
     let dataset: HeizBalancePumpProductDataset
+    let projectID: UUID?
     let operatingPoint: HeizBalancePumpOperatingPointContext?
 
     var body: some View {
@@ -202,7 +276,10 @@ private struct HeizBalancePumpDatasetDetailView: View {
                     ForEach(product.curves) { curve in
                         NavigationLink {
                             HeizBalancePumpCurveDetailView(
+                                dataset: dataset,
+                                product: product,
                                 curve: curve,
+                                projectID: projectID,
                                 operatingPoint: operatingPoint
                             )
                         } label: {
@@ -259,7 +336,12 @@ private struct HeizBalancePumpDatasetDetailView: View {
 }
 
 private struct HeizBalancePumpCurveDetailView: View {
+    @Environment(HeizBalancePumpSelectionStore.self) private var selectionStore
+
+    let dataset: HeizBalancePumpProductDataset
+    let product: HeizBalancePumpProductDataset.Product
     let curve: HeizBalancePumpProductDataset.Curve
+    let projectID: UUID?
     let operatingPoint: HeizBalancePumpOperatingPointContext?
 
     private var sortedPoints: [HeizBalancePumpProductDataset.CurvePoint] {
@@ -277,8 +359,27 @@ private struct HeizBalancePumpCurveDetailView: View {
         )
     }
 
+    private var isHeldSelection: Bool {
+        guard let projectID,
+              let selection = selectionStore.selection(projectID: projectID) else {
+            return false
+        }
+        return selection.datasetID == dataset.id
+            && selection.productID == product.id
+            && selection.curveID == curve.id
+    }
+
     var body: some View {
         List {
+            Section("Produkt") {
+                LabeledContent("Hersteller", value: dataset.manufacturer)
+                LabeledContent("Produkt", value: product.displayName)
+                LabeledContent("Datenstand", value: dataset.datasetVersion)
+                if let article = product.articleNumber, !article.isEmpty {
+                    LabeledContent("Artikelnummer", value: article)
+                }
+            }
+
             Section("Kennlinie") {
                 LabeledContent("Bezeichnung", value: curve.label)
                 if let mode = curve.controlMode, !mode.isEmpty {
@@ -334,6 +435,34 @@ private struct HeizBalancePumpCurveDetailView: View {
                         )
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                        if let projectID, evaluation.technicallySufficient {
+                            Button {
+                                let selection = HeizBalancePumpSelection(
+                                    projectID: projectID,
+                                    dataset: dataset,
+                                    product: product,
+                                    curve: curve,
+                                    evaluation: evaluation
+                                )
+                                selectionStore.save(selection)
+                            } label: {
+                                Label(
+                                    isHeldSelection ? "Auswahl erneut festhalten" : "Diese Pumpe/Kennlinie festhalten",
+                                    systemImage: isHeldSelection ? "checkmark.seal.fill" : "checkmark.seal"
+                                )
+                            }
+
+                            if isHeldSelection {
+                                Text("Dieses Produkt und diese Kennlinie sind aktuell als ausdrückliche Projektauswahl gespeichert.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else if projectID != nil && !evaluation.technicallySufficient {
+                            Label("Nicht festhaltbar: Die Kennlinie deckt den aktuellen technischen Betriebspunkt nicht ab.", systemImage: "xmark.circle")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
                     } else {
                         Label("Betriebspunkt nicht bewertbar: Volumenstrom liegt außerhalb des dokumentierten Kennlinienbereichs. Keine Extrapolation.", systemImage: "exclamationmark.triangle")
                             .font(.caption)
@@ -342,7 +471,7 @@ private struct HeizBalancePumpCurveDetailView: View {
                 } header: {
                     Text("Projektvergleich")
                 } footer: {
-                    Text("Der Vergleich bewertet ausschließlich die dokumentierte Kennlinie am technischen Projekt-Betriebspunkt. Er ist keine automatische Pumpenauswahl, Effizienzbewertung oder Herstellerfreigabe.")
+                    Text("Nur eine technisch ausreichende Kennlinie kann ausdrücklich festgehalten werden. Auch diese Benutzerauswahl ist keine automatische Pumpenempfehlung, Effizienzbewertung oder Herstellerfreigabe.")
                 }
             }
 
