@@ -33,11 +33,11 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 10. System-Minimaltemperatur nur bei vollständig auswertbaren Heizflächen.
 11. Szenarioausgaben liefern benötigte Leistung/Faktor, erfinden aber kein Ersatzmodell.
 
-## Aktueller Stand – Foundation Pass 12
+## Aktueller Stand – Foundation Pass 13
 
 ### Projekt- und Gebäudeaufnahme
 - Persistente lokale Struktur Projekt → Geschoss → Raum → Bauteil.
-- Projekt: Kunde, Adresse, Baujahr, Auslegungs-Außentemperatur, System-VL/RL, Quellen, Hydraulik-Fluidwerte und Notizen.
+- Projekt: Kunde, Adresse, Baujahr, Auslegungs-Außentemperatur, System-VL/RL, Quellen, Hydraulik-Fluidwerte, persistentes Sanierungsziel und Notizen.
 - Raum: Geometrie, Solltemperatur, Luftwechsel, Quelle, thermische Bauteile und Heizflächen.
 - Bauteile: Art, Fläche, U-Wert, Quelle und thermische Randbedingung.
 - Außenluft oder explizite Gegenseitentemperatur werden unterstützt; keine versteckten Pauschalwerte für angrenzende Bereiche.
@@ -81,7 +81,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Keine Wärmepumpenauslegung, COP-/Bivalenzbewertung oder Norm-Heizlast.
 
 ### Temperatur-Szenarien / Sanierungsbewertung
-- Neuer Core: `HeizBalanceTemperatureScenarioCalculator`.
+- Core: `HeizBalanceTemperatureScenarioCalculator`.
 - Für ein explizites VL/RL-Szenario werden je Heizfläche berechnet:
   - mittlere Übertemperatur,
   - verfügbare Leistung,
@@ -90,8 +90,13 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
   - erforderliche Nennleistung bei ΔT50,
   - Nennleistungsfaktor gegenüber der bestehenden Heizfläche.
 - Harte Eingabeprüfung: gültig nur bei `Vorlauf > Rücklauf > Raumtemperatur`, positiven Leistungen und positivem Exponenten.
-- Projekt-Matrix enthält aktuelles Projekt-Temperaturniveau sowie 50/40, 45/35, 45/40 und 40/35 °C; zusätzlich frei einstellbares Szenario in der UI.
-- Doppelte Szenarien werden vermieden.
+- Projekt-Matrix enthält persistentes Sanierungsziel, aktuelles Projekt-Temperaturniveau sowie 50/40, 45/35, 45/40 und 40/35 °C.
+- Die UI erlaubt ein frei eingegebenes Ziel-VL/RL einschließlich dokumentierter Quelle und kann dieses explizit als Sanierungsziel speichern oder löschen.
+- Persistiert werden optional `retrofitTargetFlowTemperatureC`, `retrofitTargetReturnTemperatureC` und `retrofitTargetTemperatureSource`; ältere Projektdateien ohne diese Keys bleiben decodierbar.
+- Ein gespeichertes Sanierungsziel wird beim erneuten Öffnen wieder geladen und im Projekt-Dashboard angezeigt.
+- Die zentrale Szenario-Snapshot-Erzeugung priorisiert das gespeicherte Sanierungsziel. Dadurch nutzen UI, PDF und Archiv denselben Datenpfad und es gibt keine separate Export-Sonderlogik.
+- Wenn Zieltemperaturen identisch mit einem Standard-/Projektszenario sind, wird das Szenario nicht doppelt ausgegeben.
+- Die Quelle des gespeicherten Sanierungsziels wird im Szenariotitel des Report-Snapshots dokumentiert, sofern angegeben.
 - Pro Szenario: auswertbare Heizflächen, ausreichende Heizflächen, Systemstatus und thermisch schlechteste Heizfläche.
 - Detailansicht zeigt jede Heizfläche einzeln.
 - Keine konkrete Ersatzheizfläche oder Herstellerdimension wird erfunden; bei Unterdeckung wird stattdessen die mindestens benötigte ΔT50-Nennleistung und der Faktor ausgegeben.
@@ -120,6 +125,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Ein Export erzeugt exakt einen gemeinsamen Zeitstempel für alle drei Snapshots.
 - PDF besteht aus drei zusammengeführten A4-Teilen: technischer Hauptbericht, Niedertemperatur-Supplement und Temperatur-Szenario-Supplement.
 - Zusammenführung über PDFKit.
+- Das gespeicherte Sanierungsziel fließt ohne Schemaänderung als priorisiertes Szenario in den bestehenden Szenario-Snapshot und damit in PDF und Archiv ein.
 - Nach erfolgreichem PDF-Export werden die drei JSON-Snapshots getrennt archiviert; fehlgeschlagene/abgebrochene Exporte erzeugen keinen falschen Archivstand.
 - Archivbegrenzung: letzte 10 Exportstände je Projekt und Berichtstyp.
 - Szenario-PDF dokumentiert pro Szenario den Systemstatus sowie je Heizfläche verfügbare Leistung, Deckungsgrad und bei Unterdeckung erforderliche ΔT50-Nennleistung/Faktor.
@@ -147,7 +153,8 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - #97 kombinierter Haupt-/Niedertemperatur-PDF-Export + Doppelarchiv: komplette Matrix grün.
 - #100 Release-Gate: HeizBalance Debug + echter Release-Build grün; Debug-Musterinhalt release-seitig abgesichert.
 - #104 / #109 / #110: während des Szenario-UI-Passes gefundene SwiftUI-Compilerprobleme; analysiert und behoben, nicht als Release-Checkpoint gewertet.
-- #111: **Foundation Pass 12 vollständig grün** – Core-Tests, gesamte Debug-iOS-Matrix, HeizBalance Szenario-/3-PDF-Pfad und echter HeizBalance-Release-Build erfolgreich.
+- #111: Foundation Pass 12 vollständig grün – Core-Tests, gesamte Debug-iOS-Matrix, HeizBalance Szenario-/3-PDF-Pfad und echter HeizBalance-Release-Build erfolgreich.
+- #120: **Foundation Pass 13 Code-Gate grün** – persistentes Sanierungsziel, zentrale Report-Szenariointegration, Core-Tests, gesamte Debug-iOS-Matrix und echter HeizBalance-Release-Build erfolgreich.
 
 ## Noch bewusst gesperrt / offen
 - Norm-Heizlast nach DIN EN 12831-1 + deutschem Ergänzungsregelwerk.
@@ -160,7 +167,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 ## Nächste Entwicklungsschritte
 1. Herstellerdaten-Strategie für Heizkörper und Ventile definieren: ausschließlich autorisierte/legale strukturierte Daten; VDI-3805-kompatible Quellen prüfen.
 2. Auf Basis echter Heizkörperdaten konkrete Ersatz-/Upgradevorschläge aus der bereits berechneten erforderlichen ΔT50-Leistung ableiten.
-3. Szenarioauswahl als projektpersistente Sanierungsziel-Temperatur modellieren, damit ein frei gewähltes Ziel ebenfalls reproduzierbar in Snapshot/PDF landet.
-4. PDF-Ausgabe mit größeren realistischen Projekten visuell und auf Seitenumbrüche testen.
+3. PDF-Ausgabe mit größeren realistischen Projekten visuell und auf Seitenumbrüche testen.
+4. Projektseitig einen klaren Sanierungsziel-Status ergänzen: Ziel vollständig / alle Heizflächen ausreichend / Upgradebedarf und begrenzende Heizfläche direkt im Dashboard sichtbar machen.
 5. Parallel die fachliche Spezifikation der späteren Norm-Heizlastmodule anhand rechtmäßig zugänglicher Regelwerksunterlagen und belastbarer Referenzfälle aufbauen.
 6. Erst nach echter fachlicher Referenzvalidierung normative Gates schrittweise freigeben.
