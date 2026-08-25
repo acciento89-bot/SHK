@@ -1,5 +1,56 @@
 import SwiftUI
 
+extension HeizBalanceHeatingSurface {
+    func technicalPreview(
+        flowTemperatureC: Double?,
+        returnTemperatureC: Double?,
+        roomTemperatureC: Double
+    ) -> HeizBalanceHeatingSurfacePreviewCalculator.Result? {
+        guard let nominalPowerDeltaT50W,
+              let exponent,
+              let flowTemperatureC,
+              let returnTemperatureC else {
+            return nil
+        }
+
+        return HeizBalanceHeatingSurfacePreviewCalculator.calculate(
+            .init(
+                nominalPowerDeltaT50W: nominalPowerDeltaT50W,
+                exponent: exponent,
+                flowTemperatureC: flowTemperatureC,
+                returnTemperatureC: returnTemperatureC,
+                roomTemperatureC: roomTemperatureC
+            )
+        )
+    }
+
+    func hydronicPreparation(
+        flowTemperatureC: Double?,
+        returnTemperatureC: Double?,
+        roomTemperatureC: Double
+    ) -> HeizBalanceHydronicPreparationCalculator.Result? {
+        guard let assignedRequiredPowerW,
+              let flowTemperatureC,
+              let returnTemperatureC,
+              let preview = technicalPreview(
+                flowTemperatureC: flowTemperatureC,
+                returnTemperatureC: returnTemperatureC,
+                roomTemperatureC: roomTemperatureC
+              ) else {
+            return nil
+        }
+
+        return HeizBalanceHydronicPreparationCalculator.calculate(
+            .init(
+                requiredPowerW: assignedRequiredPowerW,
+                availablePowerW: preview.availablePowerW,
+                flowTemperatureC: flowTemperatureC,
+                returnTemperatureC: returnTemperatureC
+            )
+        )
+    }
+}
+
 struct HeizBalanceHeatingSurfaceEditor: View {
     @Binding var surface: HeizBalanceHeatingSurface
     let designFlowTemperatureC: Double?
@@ -7,21 +58,18 @@ struct HeizBalanceHeatingSurfaceEditor: View {
     let roomTemperatureC: Double
 
     private var preview: HeizBalanceHeatingSurfacePreviewCalculator.Result? {
-        guard let nominalPower = surface.nominalPowerDeltaT50W,
-              let exponent = surface.exponent,
-              let flow = designFlowTemperatureC,
-              let returnTemperature = designReturnTemperatureC else {
-            return nil
-        }
+        surface.technicalPreview(
+            flowTemperatureC: designFlowTemperatureC,
+            returnTemperatureC: designReturnTemperatureC,
+            roomTemperatureC: roomTemperatureC
+        )
+    }
 
-        return HeizBalanceHeatingSurfacePreviewCalculator.calculate(
-            .init(
-                nominalPowerDeltaT50W: nominalPower,
-                exponent: exponent,
-                flowTemperatureC: flow,
-                returnTemperatureC: returnTemperature,
-                roomTemperatureC: roomTemperatureC
-            )
+    private var hydronicPreparation: HeizBalanceHydronicPreparationCalculator.Result? {
+        surface.hydronicPreparation(
+            flowTemperatureC: designFlowTemperatureC,
+            returnTemperatureC: designReturnTemperatureC,
+            roomTemperatureC: roomTemperatureC
         )
     }
 
@@ -66,6 +114,18 @@ struct HeizBalanceHeatingSurfaceEditor: View {
             }
 
             Section {
+                OptionalDecimalField(
+                    title: "Zugeordnete erforderliche Leistung",
+                    value: $surface.assignedRequiredPowerW,
+                    unit: "W"
+                )
+            } header: {
+                Text("Leistungszuordnung")
+            } footer: {
+                Text("Dieser Wert ist die Leistung, die diese konkrete Heizfläche im späteren Abgleich bereitstellen soll. Er wird bewusst getrennt von der maximal verfügbaren Heizflächenleistung gespeichert.")
+            }
+
+            Section {
                 if let flow = designFlowTemperatureC, let returnTemperature = designReturnTemperatureC {
                     LabeledContent("Systemtemperaturen") {
                         Text("\(flow.formatted(.number.precision(.fractionLength(0...1)))) / \(returnTemperature.formatted(.number.precision(.fractionLength(0...1)))) °C")
@@ -76,16 +136,15 @@ struct HeizBalanceHeatingSurfaceEditor: View {
                 }
 
                 if let preview {
-                    LabeledContent("Leistung bei Auslegung") {
+                    LabeledContent("Verfügbare Leistung") {
                         Text(preview.availablePowerW.formatted(.number.precision(.fractionLength(0))) + " W")
                             .fontWeight(.semibold)
                     }
                     LabeledContent("Wasserspreizung") {
                         Text(preview.waterTemperatureDifferenceK.formatted(.number.precision(.fractionLength(0...1))) + " K")
                     }
-                    LabeledContent("Technischer Volumenstrom") {
+                    LabeledContent("Volumenstrom bei verfügbarer Leistung") {
                         Text(preview.volumeFlowLPH.formatted(.number.precision(.fractionLength(0))) + " l/h")
-                            .fontWeight(.semibold)
                     }
                 } else if missingPreviewInputs.isEmpty {
                     Label("Temperatur- oder Leistungsdaten ergeben keine gültige technische Vorberechnung.", systemImage: "exclamationmark.triangle")
@@ -101,7 +160,47 @@ struct HeizBalanceHeatingSurfaceEditor: View {
             } header: {
                 Text("Technische Heizflächen-Vorbereitung")
             } footer: {
-                Text("Leistung und Volumenstrom sind eine technische Vorberechnung aus den eingegebenen Kennwerten. Sie sind noch kein freigegebener hydraulischer Abgleich oder Normnachweis.")
+                Text("Die verfügbare Leistung beschreibt die Heizfläche bei den eingegebenen Systemtemperaturen. Sie ist nicht automatisch die für den hydraulischen Abgleich benötigte Leistung.")
+            }
+
+            Section {
+                if let hydronicPreparation {
+                    LabeledContent("Erforderliche Leistung") {
+                        Text(hydronicPreparation.requiredPowerW.formatted(.number.precision(.fractionLength(0))) + " W")
+                    }
+                    LabeledContent("Leistungsreserve") {
+                        Text(hydronicPreparation.capacityMarginW.formatted(.number.precision(.fractionLength(0))) + " W")
+                            .foregroundStyle(hydronicPreparation.capacitySufficient ? .secondary : .orange)
+                    }
+                    LabeledContent("Deckung") {
+                        Text((hydronicPreparation.capacityRatio * 100).formatted(.number.precision(.fractionLength(0))) + " %")
+                    }
+                    LabeledContent("Ziel-Volumenstrom technisch") {
+                        Text(hydronicPreparation.targetVolumeFlowLPH.formatted(.number.precision(.fractionLength(0))) + " l/h")
+                            .fontWeight(.semibold)
+                    }
+
+                    if hydronicPreparation.capacitySufficient {
+                        Label("Heizflächenleistung deckt die zugeordnete Leistung in dieser Vorberechnung.", systemImage: "checkmark.circle")
+                            .font(.caption)
+                    } else {
+                        Label("Heizflächenleistung reicht für die zugeordnete Leistung bei diesen Temperaturen nicht aus.", systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                } else if surface.assignedRequiredPowerW == nil {
+                    Label("Noch keine erforderliche Leistung dieser Heizfläche zugeordnet.", systemImage: "circle.dashed")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Label("Für den Ziel-Volumenstrom fehlen gültige Heizflächen- oder Systemdaten.", systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Hydraulische Vorbereitung")
+            } footer: {
+                Text("Der Ziel-Volumenstrom wird aus der zugeordneten erforderlichen Leistung und der Wasserspreizung berechnet. Er ist noch keine freigegebene Ventilvoreinstellung oder Verfahren-B-Dokumentation.")
             }
 
             Section("Notiz") {

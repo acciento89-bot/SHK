@@ -162,6 +162,7 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
     var nominalPowerDeltaT50W: Double?
     var exponent: Double?
     var powerSource: HeizBalanceInputSource?
+    var assignedRequiredPowerW: Double?
     var note: String
 
     init(
@@ -173,6 +174,7 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
         nominalPowerDeltaT50W: Double? = nil,
         exponent: Double? = nil,
         powerSource: HeizBalanceInputSource? = nil,
+        assignedRequiredPowerW: Double? = nil,
         note: String = ""
     ) {
         self.id = id
@@ -183,6 +185,7 @@ struct HeizBalanceHeatingSurface: Identifiable, Codable, Hashable {
         self.nominalPowerDeltaT50W = nominalPowerDeltaT50W
         self.exponent = exponent
         self.powerSource = powerSource
+        self.assignedRequiredPowerW = assignedRequiredPowerW
         self.note = note
     }
 
