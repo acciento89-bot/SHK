@@ -40,8 +40,11 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 16. Eine festgehaltene Pumpenauswahl wird eingefroren und bei geändertem/unvollständigem Betriebspunkt als neu zu bewerten markiert.
 17. Hydraulische Pumpen-Leistungskennzahlen sind technische Rechengrößen; insbesondere `Pₕ,erf/P₁` ist kein EEI-/ErP-/Hersteller-Wirkungsgradnachweis.
 18. Eine katalogübergreifende Sortierung technisch ausreichender Kennlinien darf nicht als Produktempfehlungs-Ranking ausgegeben werden.
+19. Aufnahme-Schnellvorlagen dürfen keine versteckten normativen U-Werte, Luftwechselwerte oder thermischen Randtemperaturen einführen.
+20. Beim Duplizieren werden neue IDs erzeugt; hydraulische Entscheidungen, Lastzuordnungen und Ersatzprodukt-Auswahlen werden nicht still mitkopiert.
+21. Eigene Bauteilvorlagen speichern keine Fläche und keine raumspezifische Gegenseitentemperatur; beim Anwenden wird die thermische Randbedingung erneut prüfpflichtig.
 
-## Aktueller Stand – Foundation Batch 21–24
+## Aktueller Stand – Foundation Batch 21–25
 
 ### 1. Projekt- und Gebäudeaufnahme
 - Persistente lokale Struktur Projekt → Geschoss → Raum → Bauteil.
@@ -151,7 +154,21 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - PDF zeigt diese Werte zusammen mit Katalog-/Quellen-/Kennlinienprovenienz und einer ggf. festgehaltenen Pumpenentscheidung.
 - PDF-Hinweis stellt klar: technische Verhältniskennzahl ≠ Effizienz-/ErP-/Herstellerfreigabe.
 
-### 15. Berichte / Reproduzierbarkeit gesamt
+### 15. Schnelle Vor-Ort-Aufnahme – Batch 25
+- Geschosse können per Wischgeste oder Kontextmenü dupliziert werden; Räume erhalten neue IDs.
+- Räume können innerhalb eines Geschosses dupliziert werden und erhalten automatisch eindeutige Kopienamen.
+- Raum-Schnellvorlagen für Wohnzimmer, Schlafzimmer, Bad, Küche, Flur und Arbeitszimmer legen nur einen Start-Raumtyp an; Maße, Luftwechsel, Quellen und normative Werte werden nicht erfunden.
+- Bauteilsätze `Außenraum-Basis`, `Dachraum-Basis` und `Raum über unbeheiztem Bereich` legen ausschließlich Bauteilarten ohne Fläche/U-Wert an.
+- Einzelne Bauteile können dupliziert werden; U-Wert/Quelle/Notiz dürfen dabei übernommen werden, die ID wird erneuert.
+- Heizflächen können als physische Aufnahme dupliziert werden; Hersteller/Modell/Nennleistung/Exponent dürfen übernommen werden, aber zugeordnete Last, Rohrnetz, Bauteilverluste, Vollständigkeitsstatus und Ersatzproduktentscheidung werden zurückgesetzt.
+- Neues persistentes Schema `component-favorite-v1` für eigene Bauteil-/U-Wert-Vorlagen.
+- `HeizBalanceComponentFavoriteStore` speichert Vorlagen lokal/transaktional, ersetzt gleichnamige Vorlagen bewusst und validiert U-Werte.
+- Gespeichert werden Art, Bezeichnung, U-Wert, U-Wert-Quelle und Notiz; niemals Fläche oder raumspezifische Gegenseitentemperatur.
+- Eigene Bauteilvorlagen können direkt aus dem Raum-Menü als neues Bauteil angelegt oder im Bauteil-Editor auf das aktuelle Bauteil angewendet werden.
+- Beim Anwenden bleibt die bestehende Fläche erhalten; die thermische Randbedingung wird auf den Standard der neuen Bauteilart gesetzt und muss anschließend projektspezifisch geprüft werden.
+- Zentrale Verwaltung `Bauteilvorlagen` im Menü `Daten & Vorlagen` erlaubt Kontrolle und Löschen gespeicherter Favoriten.
+
+### 16. Berichte / Reproduzierbarkeit gesamt
 Aktive Snapshots:
 - `technical-report-v1`
 - `technical-low-temperature-v1`
@@ -172,7 +189,8 @@ Eigenschaften:
 - Niedertemperatur-Musterprojekt mit begrenzendem Bad,
 - 45/35-Szenario mit bewusstem Heizflächen-Upgradebedarf,
 - Pumpenkennlinien-Interpolation mit harter No-Extrapolation-Regel,
-- Pumpen-Leistungskennzahlen: 1,5 m³/h, H_erf 3,2 m, H_verfügbar 4,0 m, ρ 998 kg/m³, P₁ 34 W → Pₕ,erf ≈ 13,05 W, H-Reserve 25 %, `Pₕ,erf/P₁` ≈ 38,4 %, Q-Bereichsposition 75 %.
+- Pumpen-Leistungskennzahlen: 1,5 m³/h, H_erf 3,2 m, H_verfügbar 4,0 m, ρ 998 kg/m³, P₁ 34 W → Pₕ,erf ≈ 13,05 W, H-Reserve 25 %, `Pₕ,erf/P₁` ≈ 38,4 %, Q-Bereichsposition 75 %,
+- Aufnahme-Invarianten für Geschoss-/Raum-/Heizflächenkopien und Bauteilfavoriten.
 
 ## Release-Härtung
 - Entwicklungs-Musterprojekt durch `#if DEBUG` vollständig aus Release entfernt.
@@ -195,6 +213,7 @@ Eigenschaften:
 - #202/#203: explizite Pumpen-/Kennlinienauswahl, Stale-Erkennung, PDF-Auswahlnachweis und Release grün.
 - #212: großer Batch-Unterbau mit Pumpen-Cockpit, Kennlinienvergleich, technischen Leistungskennzahlen, Report/PDF und Regressionstests: Core + HeizBalance Debug/Release sowie Matrix grün.
 - #213: finaler Code-Head einschließlich Statuschips in der Projektliste: Core-Tests, komplette Debug-iOS-Matrix und HeizBalance Debug/Release grün.
+- Batch 25 wird als gemeinsamer Code-/Dokumentations-Head erneut durch Core, komplette Debug-iOS-Matrix sowie HeizBalance Debug/Release validiert.
 
 ## Noch bewusst gesperrt / offen
 - Norm-Heizlast nach DIN EN 12831-1 + deutschem Ergänzungsregelwerk.
@@ -209,12 +228,12 @@ Eigenschaften:
 - Flächenheizung nach DIN EN 1264 als eigener Fachblock.
 
 ## Nächste größere Entwicklungsblöcke
-1. Vor-Ort-Aufnahme beschleunigen: Bauteil-/Raumvorlagen, Kopieren von Räumen/Geschossen, wiederverwendbare U-Wert-/Bauteilfavoriten und deutlich weniger Tipparbeit.
-2. Hydraulik produktionsnäher machen: Rohrnetz-Erfassung vereinfachen, vollständige Kreise schneller duplizieren, Ventil-/Rücklaufdaten als echte Projektentscheidungen versioniert festhalten.
+1. Hydraulik-Aufnahme beschleunigen: komplette Heizflächenkreise bzw. Rohrabschnittsgruppen sicher duplizieren, ohne alte Last-/Druckverlustentscheidungen unbemerkt mitzunehmen.
+2. Ventil-/Rücklaufentscheidungen als explizite versionierte Projektentscheidungen festhalten und Änderungen wie bei der Pumpenauswahl als veraltet markieren.
 3. Bericht für reale Baustellen härten: große Projekte, Seitenumbrüche, kompakte Ergebniszusammenfassung, Unterschrift/Techniker/Projektstatus und druckbare Einstelllisten.
 4. Erste echte Hersteller-/Lizenzquellen für Heizkörper-, Ventil- und Pumpendaten rechtlich klären und über die Mappingprofile als Referenzdaten validieren.
 5. Parallel normative Heizlast-Spezifikation und belastbare Referenzfälle aufbauen; Freigabe erst nach echter fachlicher Validierung.
 
 ## Batch-Verifikation
-- CI #213 hat den vollständigen Code-Head des Batches mit Core-Tests, kompletter Debug-iOS-Matrix sowie HeizBalance Debug- und echtem Release-Simulator-Build erfolgreich validiert.
-- Nachgelagerte reine Dokumentations-Commits ändern keine Rechen- oder App-Logik; der abschließende Dokumentations-Head wird zusätzlich durch dieselbe PR-CI geprüft.
+- CI #213 hat den vollständigen Code-Head des Pumpen-/Cockpit-Batches mit Core-Tests, kompletter Debug-iOS-Matrix sowie HeizBalance Debug- und echtem Release-Simulator-Build erfolgreich validiert.
+- Batch 25 wird nach Abschluss sämtlicher Aufnahme-Änderungen als ein gemeinsamer Head validiert; erst dieser Lauf gilt für den neuen Vor-Ort-Aufnahme-Stand.
