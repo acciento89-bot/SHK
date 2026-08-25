@@ -5,6 +5,7 @@ struct HeizBalancePumpCurveReportSnapshot: Codable, Hashable {
 
     var schema: String
     var calculationProfile: String
+    var technicalMetricsProfile: String?
     var generatedAt: Date
     var projectID: UUID
     var projectName: String
@@ -18,6 +19,8 @@ struct HeizBalancePumpCurveReportSnapshot: Codable, Hashable {
     struct OperatingPointData: Codable, Hashable {
         var volumeFlowM3H: Double
         var requiredHeadM: Double
+        var fluidDensityKGPerM3: Double?
+        var requiredHydraulicPowerW: Double?
     }
 
     struct DatasetData: Codable, Hashable, Identifiable {
@@ -74,6 +77,11 @@ struct HeizBalancePumpCurveReportSnapshot: Codable, Hashable {
         var lowerPointID: String
         var upperPointID: String
         var exactDocumentedPoint: Bool
+        var requiredHydraulicPowerW: Double?
+        var availableHydraulicPowerW: Double?
+        var headReservePercent: Double?
+        var requiredHydraulicToElectricalRatio: Double?
+        var documentedFlowPosition: Double?
     }
 
     struct PointData: Codable, Hashable, Identifiable {
@@ -97,9 +105,29 @@ extension HeizBalanceProject {
            hydraulic.pumpOperatingPointReady,
            let volumeFlowLPH = hydraulic.designTotalVolumeFlowLPH,
            let requiredHeadM = hydraulic.designNetworkHeadMeters {
+            let volumeFlowM3H = volumeFlowLPH / 1_000
+            let requiredHydraulicPowerW: Double?
+            if let density = hydraulicFluidDensityKGPerM3 {
+                requiredHydraulicPowerW = HeizBalancePumpTechnicalMetricsCalculator.calculate(
+                    .init(
+                        volumeFlowM3H: volumeFlowM3H,
+                        requiredHeadM: requiredHeadM,
+                        availableHeadM: requiredHeadM,
+                        fluidDensityKGPerM3: density,
+                        electricalInputPowerW: nil,
+                        documentedMinimumFlowM3H: nil,
+                        documentedMaximumFlowM3H: nil
+                    )
+                )?.requiredHydraulicPowerW
+            } else {
+                requiredHydraulicPowerW = nil
+            }
+
             operatingPoint = .init(
-                volumeFlowM3H: volumeFlowLPH / 1_000,
-                requiredHeadM: requiredHeadM
+                volumeFlowM3H: volumeFlowM3H,
+                requiredHeadM: requiredHeadM,
+                fluidDensityKGPerM3: hydraulicFluidDensityKGPerM3,
+                requiredHydraulicPowerW: requiredHydraulicPowerW
             )
         } else {
             operatingPoint = nil
@@ -148,12 +176,13 @@ extension HeizBalanceProject {
         return .init(
             schema: HeizBalancePumpCurveReportSnapshot.schemaVersion,
             calculationProfile: HeizBalancePumpCurveOperatingPointCalculator.profileVersion,
+            technicalMetricsProfile: HeizBalancePumpTechnicalMetricsCalculator.profileVersion,
             generatedAt: generatedAt,
             projectID: id,
             projectName: name,
             operatingPoint: operatingPoint,
             automaticPumpSelectionReleased: false,
-            notice: "Technischer Pumpenkennlinienvergleich. Eine ausdrücklich festgehaltene Benutzerauswahl ist keine automatische Pumpenempfehlung. Keine Extrapolation außerhalb dokumentierter Kennlinienbereiche und keine Herstellerfreigabe.",
+            notice: "Technischer Pumpenkennlinienvergleich mit hydraulischen Leistungskennzahlen. Eine ausdrücklich festgehaltene Benutzerauswahl ist keine automatische Pumpenempfehlung. Pₕ,erf/P₁ ist eine technische Verhältniskennzahl und ausdrücklich keine ErP-/Hersteller-Effizienzfreigabe. Keine Extrapolation außerhalb dokumentierter Kennlinienbereiche.",
             datasets: datasetData,
             selectedPump: heldSelection,
             selectedPumpMatchesOperatingPoint: heldSelectionMatchesOperatingPoint
@@ -181,6 +210,26 @@ extension HeizBalanceProject {
             status = .operatingPointUnavailable
         }
 
+        let metrics: HeizBalancePumpTechnicalMetricsCalculator.Result?
+        if let evaluation,
+           let operatingPoint,
+           let density = operatingPoint.fluidDensityKGPerM3 {
+            let flows = curve.points.map(\.volumeFlowM3H)
+            metrics = HeizBalancePumpTechnicalMetricsCalculator.calculate(
+                .init(
+                    volumeFlowM3H: operatingPoint.volumeFlowM3H,
+                    requiredHeadM: operatingPoint.requiredHeadM,
+                    availableHeadM: evaluation.availableHeadM,
+                    fluidDensityKGPerM3: density,
+                    electricalInputPowerW: evaluation.interpolatedElectricalInputPowerW,
+                    documentedMinimumFlowM3H: flows.min(),
+                    documentedMaximumFlowM3H: flows.max()
+                )
+            )
+        } else {
+            metrics = nil
+        }
+
         return .init(
             id: curve.id,
             label: curve.label,
@@ -197,7 +246,12 @@ extension HeizBalanceProject {
                     electricalInputPowerW: $0.interpolatedElectricalInputPowerW,
                     lowerPointID: $0.lowerPointID,
                     upperPointID: $0.upperPointID,
-                    exactDocumentedPoint: $0.exactDocumentedPoint
+                    exactDocumentedPoint: $0.exactDocumentedPoint,
+                    requiredHydraulicPowerW: metrics?.requiredHydraulicPowerW,
+                    availableHydraulicPowerW: metrics?.availableHydraulicPowerW,
+                    headReservePercent: metrics?.headReservePercent,
+                    requiredHydraulicToElectricalRatio: metrics?.requiredHydraulicToElectricalRatio,
+                    documentedFlowPosition: metrics?.documentedFlowPosition
                 )
             },
             points: curve.points.map {
