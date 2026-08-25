@@ -147,17 +147,14 @@ struct HeizBalanceHydraulicNetworkView: View {
             } header: {
                 Text("Gemeinsame Rohrabschnitte")
             } footer: {
-                Text("Ein verknüpfter Rohrabschnitt erhält seinen Abschnitts-Q aus dem Netzbaum. Ohne Verknüpfung bleibt der bisherige manuell erfasste Summenstrom gültig.")
+                Text("Beim Verknüpfen wird ein bereits vollständig berechenbarer Netz-Q sofort auf den Rohrabschnitt übernommen. Ohne Verknüpfung bleibt der bisherige manuell erfasste Summenstrom gültig.")
             }
 
             Section {
                 Button {
-                    let count = project.applyHydraulicNetworkFlows()
-                    message = count == 0
-                        ? "Keine vollständigen Netz-Q zum Übernehmen vorhanden oder alle Werte bereits aktuell."
-                        : "\(count) Rohrabschnitt(e) auf aktuellen Netzbaum-Q gesetzt."
+                    synchronize(messagePrefix: nil)
                 } label: {
-                    Label("Netz-Q auf Rohrabschnitte anwenden", systemImage: "arrow.triangle.branch")
+                    Label("Netz-Q erneut synchronisieren", systemImage: "arrow.triangle.branch")
                 }
                 .disabled(state.result == nil || state.linkedPipes.isEmpty)
 
@@ -169,11 +166,18 @@ struct HeizBalanceHydraulicNetworkView: View {
             } header: {
                 Text("Synchronisieren")
             } footer: {
-                Text("HeizBalance überschreibt dabei ausschließlich den Q verknüpfter gemeinsamer Rohrabschnitte. Rohrmaße, ζ-Werte und Verbraucher-Zielströme werden nicht verändert. Ändert sich später eine Heizflächenlast, wird der alte Abschnitts-Q als veraltet erkannt und der Pumpen-Betriebspunkt bis zur erneuten Synchronisierung nicht als vollständig freigegeben.")
+                Text("Baum- und Verbraucheränderungen synchronisieren vollständige Netz-Q automatisch. Der manuelle Knopf bleibt für den Fall, dass sich Heizflächen-Zielströme außerhalb dieser Ansicht geändert haben. Veraltete Werte blockieren bis dahin den vollständigen Pumpen-Betriebspunkt.")
             }
         }
         .navigationTitle("Hydraulischer Netzbaum")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            let normalized = project.normalizeHydraulicNetworkReferences()
+            let updated = project.applyHydraulicNetworkFlows()
+            if normalized + updated > 0 {
+                message = "Netzreferenzen bereinigt / aktualisiert: \(normalized + updated) Änderung(en)."
+            }
+        }
     }
 
     @ViewBuilder
@@ -211,14 +215,26 @@ struct HeizBalanceHydraulicNetworkView: View {
             network.segments[index].parentSegmentID = nil
         }
         project.hydraulicNetwork = network
-        _ = project.detachMissingHydraulicNetworkLinks()
+        _ = project.normalizeHydraulicNetworkReferences()
+        synchronize(messagePrefix: "Segment entfernt.")
     }
 
     private func networkSegmentBinding(pipeID: UUID) -> Binding<UUID?> {
         Binding(
             get: { project.networkSegmentID(pipeID: pipeID) },
-            set: { project.setNetworkSegmentID($0, pipeID: pipeID) }
+            set: {
+                project.setNetworkSegmentID($0, pipeID: pipeID)
+                synchronize(messagePrefix: "Rohrverknüpfung aktualisiert.")
+            }
         )
+    }
+
+    private func synchronize(messagePrefix: String?) {
+        let count = project.applyHydraulicNetworkFlows()
+        let tail = count == 0
+            ? "Keine zusätzlichen vollständigen Netz-Q zu übernehmen."
+            : "\(count) Rohrabschnitt(e) aktualisiert."
+        message = [messagePrefix, tail].compactMap { $0 }.joined(separator: " ")
     }
 
     private struct SharedPipeEntry: Identifiable {
@@ -240,7 +256,10 @@ private struct HeizBalanceHydraulicNetworkSegmentEditor: View {
         guard let index = project.hydraulicNetwork?.segments.firstIndex(where: { $0.id == segmentID }) else { return nil }
         return Binding(
             get: { project.hydraulicNetwork!.segments[index] },
-            set: { project.hydraulicNetwork!.segments[index] = $0 }
+            set: {
+                project.hydraulicNetwork!.segments[index] = $0
+                _ = project.applyHydraulicNetworkFlows()
+            }
         )
     }
 
@@ -321,6 +340,7 @@ private struct HeizBalanceHydraulicNetworkSegmentEditor: View {
                     network.segments[index].directConsumerSurfaceIDs.append(consumerID)
                 }
                 project.hydraulicNetwork = network
+                _ = project.applyHydraulicNetworkFlows()
             }
         )
     }
