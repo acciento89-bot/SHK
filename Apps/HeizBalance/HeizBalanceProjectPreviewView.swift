@@ -7,6 +7,10 @@ struct HeizBalanceProjectPreviewView: View {
         project.heatLossPreviewSummary()
     }
 
+    private var hydraulicSystem: HeizBalanceHydraulicSystemPreviewState {
+        project.hydraulicSystemPreparationState()
+    }
+
     var body: some View {
         List {
             Section("Vollständigkeit") {
@@ -49,6 +53,58 @@ struct HeizBalanceProjectPreviewView: View {
                     } else {
                         Text("Die Zwischensumme enthält ausschließlich vollständig erfasste Räume und wird nicht als Gebäudewert ausgegeben.")
                     }
+                }
+            }
+
+            hydraulicSystemSection
+
+            if !hydraulicSystem.circuits.isEmpty {
+                Section {
+                    ForEach(hydraulicSystem.circuits) { circuit in
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(circuit.displayName)
+                                        .font(.subheadline.weight(.semibold))
+                                    Text(circuit.floorName)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+
+                                if circuit.targetVolumeFlowLPH != nil,
+                                   circuit.completePressureLossKPa != nil {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                } else {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+
+                            HStack(spacing: 12) {
+                                if let flow = circuit.targetVolumeFlowLPH {
+                                    Text("\(flow.formatted(.number.precision(.fractionLength(0)))) l/h")
+                                } else {
+                                    Text("Volumenstrom fehlt")
+                                        .foregroundStyle(.orange)
+                                }
+
+                                if let pressureLoss = circuit.completePressureLossKPa {
+                                    Text("Δp \(pressureLoss.formatted(.number.precision(.fractionLength(0...2)))) kPa")
+                                } else {
+                                    Text("Δp unvollständig")
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+                            .font(.caption)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                } header: {
+                    Text("Hydraulikkreise")
+                } footer: {
+                    Text("Ein Kreis gilt erst als vollständig, wenn Ziel-Volumenstrom, Rohrweg einschließlich Einzelwiderständen und die erforderlichen Bauteilverluste vollständig erfasst sind.")
                 }
             }
 
@@ -96,6 +152,97 @@ struct HeizBalanceProjectPreviewView: View {
         }
         .navigationTitle("Vorberechnung")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private var hydraulicSystemSection: some View {
+        Section {
+            if hydraulicSystem.circuits.isEmpty {
+                Text("Noch keine Heizflächenkreise für die hydraulische Systemvorbereitung vorhanden.")
+                    .foregroundStyle(.secondary)
+            } else if let result = hydraulicSystem.result {
+                LabeledContent("Heizflächenkreise") {
+                    Text("\(result.circuitCount)")
+                }
+                LabeledContent("Volumenstrom bekannt") {
+                    Text("\(result.knownFlowCircuitCount) / \(result.circuitCount)")
+                }
+                LabeledContent("Kreis-Δp vollständig") {
+                    Text("\(result.completePressureCircuitCount) / \(result.circuitCount)")
+                }
+
+                if let designTotalFlow = result.designTotalVolumeFlowLPH {
+                    LabeledContent("Gesamt-Volumenstrom") {
+                        Text(designTotalFlow.formatted(.number.precision(.fractionLength(0))) + " l/h")
+                            .fontWeight(.semibold)
+                    }
+                } else if result.knownFlowCircuitCount > 0 {
+                    LabeledContent("Bekannter Volumenstrom") {
+                        Text(result.knownTotalVolumeFlowLPH.formatted(.number.precision(.fractionLength(0))) + " l/h")
+                    }
+                }
+
+                if result.pumpOperatingPointReady,
+                   let designTotalFlow = result.designTotalVolumeFlowLPH,
+                   let pressureLoss = result.designNetworkPressureLossKPa,
+                   let unfavorable = result.designUnfavorableCircuit {
+                    Divider()
+
+                    LabeledContent("Hydraulisch ungünstigster Kreis") {
+                        Text(unfavorable.name)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    LabeledContent("Erforderliches Netz-Δp") {
+                        Text(pressureLoss.formatted(.number.precision(.fractionLength(0...2))) + " kPa")
+                            .fontWeight(.semibold)
+                    }
+                    if let head = result.designNetworkHeadMeters {
+                        LabeledContent("Äquivalente Förderhöhe") {
+                            Text(head.formatted(.number.precision(.fractionLength(0...2))) + " m")
+                                .fontWeight(.semibold)
+                        }
+                    }
+
+                    Label(
+                        "Technischer Betriebspunkt: \(designTotalFlow.formatted(.number.precision(.fractionLength(0)))) l/h bei \(pressureLoss.formatted(.number.precision(.fractionLength(0...2)))) kPa.",
+                        systemImage: "checkmark.circle.fill"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.green)
+                } else {
+                    Divider()
+
+                    if let highestKnown = result.highestKnownPressureCircuit {
+                        LabeledContent("Höchster bekannter Kreis-Δp") {
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(highestKnown.pressureLossKPa.formatted(.number.precision(.fractionLength(0...2))) + " kPa")
+                                Text(highestKnown.name)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
+                    Label(
+                        "Kein vollständiger Pumpen-Betriebspunkt: Erst wenn alle Verbraucherströme und alle Kreis-Druckverluste vollständig sind, werden Gesamtvolumenstrom und maßgebender Netz-Druckverlust als Betriebspunkt ausgegeben.",
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                }
+            } else {
+                Label(
+                    "Die hydraulische Systemvorbereitung kann mit den aktuellen Eingaben nicht berechnet werden.",
+                    systemImage: "exclamationmark.triangle"
+                )
+                .font(.caption)
+                .foregroundStyle(.orange)
+            }
+        } header: {
+            Text("Hydrauliksystem – technische Vorbereitung")
+        } footer: {
+            Text("Gesamtvolumenstrom ist die Summe der Verbraucherströme. Der erforderliche Netz-Druckverlust entspricht dem hydraulisch ungünstigsten vollständigen Kreis; Druckverluste paralleler Kreise werden nicht addiert. Dies ist noch keine freigegebene Pumpenauslegung oder Verfahren-B-Dokumentation.")
+        }
     }
 }
 
