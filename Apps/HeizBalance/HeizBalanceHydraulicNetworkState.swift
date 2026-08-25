@@ -133,11 +133,9 @@ extension HeizBalanceProject {
 
         for floorIndex in floors.indices {
             for roomIndex in floors[floorIndex].rooms.indices {
-                let surfaces = floors[floorIndex].rooms[roomIndex].heatingSurfaces ?? []
-                var updatedSurfaces = surfaces
-
-                for surfaceIndex in updatedSurfaces.indices {
-                    var pipes = updatedSurfaces[surfaceIndex].pipeSections ?? []
+                var surfaces = floors[floorIndex].rooms[roomIndex].heatingSurfaces ?? []
+                for surfaceIndex in surfaces.indices {
+                    var pipes = surfaces[surfaceIndex].pipeSections ?? []
                     for pipeIndex in pipes.indices {
                         guard pipes[pipeIndex].effectiveRole == .sharedDistribution,
                               let segmentID = pipes[pipeIndex].networkSegmentID,
@@ -150,27 +148,51 @@ extension HeizBalanceProject {
                             updated += 1
                         }
                     }
-                    updatedSurfaces[surfaceIndex].pipeSections = pipes
+                    surfaces[surfaceIndex].pipeSections = pipes
                 }
-                floors[floorIndex].rooms[roomIndex].heatingSurfaces = updatedSurfaces
+                floors[floorIndex].rooms[roomIndex].heatingSurfaces = surfaces
             }
         }
         return updated
     }
 
-    mutating func detachMissingHydraulicNetworkLinks() -> Int {
+    @discardableResult
+    mutating func normalizeHydraulicNetworkReferences() -> Int {
+        var changes = 0
+        let validConsumerIDs = Set(
+            floors.flatMap { floor in
+                floor.rooms.flatMap { room in
+                    (room.heatingSurfaces ?? []).map(\.id)
+                }
+            }
+        )
         let validSegmentIDs = Set((hydraulicNetwork?.segments ?? []).map(\.id))
-        var detached = 0
+
+        if var network = hydraulicNetwork {
+            for index in network.segments.indices {
+                let before = network.segments[index].directConsumerSurfaceIDs.count
+                network.segments[index].directConsumerSurfaceIDs.removeAll { !validConsumerIDs.contains($0) }
+                changes += before - network.segments[index].directConsumerSurfaceIDs.count
+
+                if let parent = network.segments[index].parentSegmentID,
+                   !validSegmentIDs.contains(parent) {
+                    network.segments[index].parentSegmentID = nil
+                    changes += 1
+                }
+            }
+            hydraulicNetwork = network
+        }
+
         for floorIndex in floors.indices {
             for roomIndex in floors[floorIndex].rooms.indices {
                 var surfaces = floors[floorIndex].rooms[roomIndex].heatingSurfaces ?? []
                 for surfaceIndex in surfaces.indices {
                     var pipes = surfaces[surfaceIndex].pipeSections ?? []
                     for pipeIndex in pipes.indices {
-                        if let segmentID = pipes[pipeIndex].networkSegmentID,
-                           !validSegmentIDs.contains(segmentID) {
+                        guard let segmentID = pipes[pipeIndex].networkSegmentID else { continue }
+                        if pipes[pipeIndex].effectiveRole != .sharedDistribution || !validSegmentIDs.contains(segmentID) {
                             pipes[pipeIndex].networkSegmentID = nil
-                            detached += 1
+                            changes += 1
                         }
                     }
                     surfaces[surfaceIndex].pipeSections = pipes
@@ -178,6 +200,10 @@ extension HeizBalanceProject {
                 floors[floorIndex].rooms[roomIndex].heatingSurfaces = surfaces
             }
         }
-        return detached
+        return changes
+    }
+
+    mutating func detachMissingHydraulicNetworkLinks() -> Int {
+        normalizeHydraulicNetworkReferences()
     }
 }
