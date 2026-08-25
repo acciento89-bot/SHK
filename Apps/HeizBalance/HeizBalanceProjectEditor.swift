@@ -141,6 +141,21 @@ struct HeizBalanceProjectEditor: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            duplicateFloor(floor)
+                        } label: {
+                            Label("Duplizieren", systemImage: "plus.square.on.square")
+                        }
+                        .tint(.blue)
+                    }
+                    .contextMenu {
+                        Button {
+                            duplicateFloor(floor)
+                        } label: {
+                            Label("Geschoss duplizieren", systemImage: "plus.square.on.square")
+                        }
+                    }
                 }
                 .onDelete { offsets in
                     draft.floors.remove(atOffsets: offsets)
@@ -154,7 +169,7 @@ struct HeizBalanceProjectEditor: View {
             } header: {
                 Text("Gebäude")
             } footer: {
-                Text("Räume, Bauteile, Heizflächen und thermische Randbedingungen werden geschossweise aufgenommen.")
+                Text("Geschosse können für wiederkehrende Grundrisse dupliziert werden. Raum- und Bauteil-IDs werden erneuert; hydraulische Entscheidungen und Ersatzprodukt-Auswahlen werden in den Kopien bewusst zurückgesetzt.")
             }
 
             Section("Notizen") {
@@ -280,5 +295,26 @@ struct HeizBalanceProjectEditor: View {
         default: suggestedName = "Geschoss \(draft.floors.count + 1)"
         }
         draft.floors.append(HeizBalanceFloor(name: suggestedName))
+    }
+
+    private func duplicateFloor(_ floor: HeizBalanceFloor) {
+        let copy = floor.duplicatedForCapture(suggestedName: nextFloorCopyName(for: floor.name))
+        if let index = draft.floors.firstIndex(where: { $0.id == floor.id }) {
+            draft.floors.insert(copy, at: index + 1)
+        } else {
+            draft.floors.append(copy)
+        }
+    }
+
+    private func nextFloorCopyName(for sourceName: String) -> String {
+        let base = sourceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Geschoss" : sourceName
+        var candidate = base + " Kopie"
+        var number = 2
+        let existing = Set(draft.floors.map { $0.name })
+        while existing.contains(candidate) {
+            candidate = base + " Kopie \(number)"
+            number += 1
+        }
+        return candidate
     }
 }
