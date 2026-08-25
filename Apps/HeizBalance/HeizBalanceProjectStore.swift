@@ -29,6 +29,8 @@ final class HeizBalanceProjectStore {
 
     func save(_ project: HeizBalanceProject) {
         var updatedProject = project
+        _ = updatedProject.normalizeHydraulicNetworkReferences()
+        _ = updatedProject.applyHydraulicNetworkFlows()
         updatedProject.modifiedAt = Date()
 
         if let index = projects.firstIndex(where: { $0.id == updatedProject.id }) {
