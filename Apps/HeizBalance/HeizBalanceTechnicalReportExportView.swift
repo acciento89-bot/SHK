@@ -4,11 +4,14 @@ import UniformTypeIdentifiers
 struct HeizBalanceTechnicalReportExportView: View {
     let project: HeizBalanceProject
 
+    @Environment(HeizBalancePumpDatasetStore.self) private var pumpDatasetStore
+
     @State private var exportDocument = HeizBalancePDFDocument(data: Data())
     @State private var pendingSnapshot: HeizBalanceTechnicalReportSnapshot?
     @State private var pendingLowTemperatureSnapshot: HeizBalanceLowTemperatureReportSnapshot?
     @State private var pendingTemperatureScenarioSnapshot: HeizBalanceTemperatureScenarioReportSnapshot?
     @State private var pendingRadiatorReplacementSnapshot: HeizBalanceRadiatorReplacementReportSnapshot?
+    @State private var pendingPumpCurveSnapshot: HeizBalancePumpCurveReportSnapshot?
     @State private var archiveEntries: [HeizBalanceReportArchiveStore.ArchiveEntry] = []
     @State private var showingExporter = false
     @State private var exportMessage: String?
@@ -29,6 +32,10 @@ struct HeizBalanceTechnicalReportExportView: View {
         HeizBalanceRadiatorReplacementReportArchiveStore()
     }
 
+    private var pumpCurveArchiveStore: HeizBalancePumpCurveReportArchiveStore {
+        HeizBalancePumpCurveReportArchiveStore()
+    }
+
     private var snapshot: HeizBalanceTechnicalReportSnapshot {
         project.technicalReportSnapshot()
     }
@@ -45,6 +52,34 @@ struct HeizBalanceTechnicalReportExportView: View {
 
     private var radiatorReplacementSnapshot: HeizBalanceRadiatorReplacementReportSnapshot {
         project.radiatorReplacementReportSnapshot()
+    }
+
+    private var pumpCurveSnapshot: HeizBalancePumpCurveReportSnapshot {
+        project.pumpCurveReportSnapshot(datasets: pumpDatasetStore.datasets)
+    }
+
+    private var pumpCurveCount: Int {
+        pumpCurveSnapshot.datasets.reduce(0) { datasetTotal, dataset in
+            datasetTotal + dataset.products.reduce(0) { productTotal, product in
+                productTotal + product.curves.count
+            }
+        }
+    }
+
+    private var evaluatedPumpCurveCount: Int {
+        pumpCurveSnapshot.datasets.reduce(0) { datasetTotal, dataset in
+            datasetTotal + dataset.products.reduce(0) { productTotal, product in
+                productTotal + product.curves.filter { $0.status == .evaluated }.count
+            }
+        }
+    }
+
+    private var sufficientPumpCurveCount: Int {
+        pumpCurveSnapshot.datasets.reduce(0) { datasetTotal, dataset in
+            datasetTotal + dataset.products.reduce(0) { productTotal, product in
+                productTotal + product.curves.filter { $0.evaluation?.technicallySufficient == true }.count
+            }
+        }
     }
 
     private var roomCount: Int {
@@ -264,6 +299,41 @@ struct HeizBalanceTechnicalReportExportView: View {
             }
 
             Section {
+                LabeledContent("Importierte Pumpenkataloge") {
+                    Text("\(pumpCurveSnapshot.datasets.count)")
+                }
+                LabeledContent("Dokumentierte Kennlinien") {
+                    Text("\(pumpCurveCount)")
+                }
+
+                if let operatingPoint = pumpCurveSnapshot.operatingPoint {
+                    LabeledContent("Projekt-Betriebspunkt") {
+                        Text(
+                            operatingPoint.volumeFlowM3H.formatted(.number.precision(.fractionLength(0...3)))
+                                + " m³/h · "
+                                + operatingPoint.requiredHeadM.formatted(.number.precision(.fractionLength(0...2)))
+                                + " m"
+                        )
+                        .multilineTextAlignment(.trailing)
+                    }
+                    LabeledContent("Kennlinien auswertbar") {
+                        Text("\(evaluatedPumpCurveCount) / \(pumpCurveCount)")
+                    }
+                    LabeledContent("Hydraulisch ausreichend") {
+                        Text("\(sufficientPumpCurveCount)")
+                    }
+                } else {
+                    Label("Pumpenkennlinien können ohne vollständigen Projekt-Betriebspunkt noch nicht bewertet werden.", systemImage: "circle.dashed")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Pumpenkennlinien")
+            } footer: {
+                Text("Der Pumpenbericht verwendet \(HeizBalancePumpCurveOperatingPointCalculator.profileVersion): exakt dokumentierte Punkte oder lineare Zwischenwerte innerhalb des Kennlinienbereichs. Keine Extrapolation und keine automatische Pumpenauswahl.")
+            }
+
+            Section {
                 Button {
                     preparePDFExport()
                 } label: {
@@ -278,7 +348,7 @@ struct HeizBalanceTechnicalReportExportView: View {
             } header: {
                 Text("Export")
             } footer: {
-                Text("Das gemeinsame PDF enthält Hauptbericht, Niedertemperatur-, Szenario- und Heizkörper-Auswahl-Supplement. Nach erfolgreichem Export werden alle vier versionierten Snapshots mit demselben Zeitstempel lokal archiviert.")
+                Text("Das gemeinsame PDF enthält Hauptbericht, Niedertemperatur-, Szenario-, Heizkörper-Auswahl- und Pumpenkennlinien-Supplement. Nach erfolgreichem Export werden alle fünf versionierten Snapshots mit demselben Zeitstempel lokal archiviert.")
             }
 
             Section {
@@ -300,7 +370,7 @@ struct HeizBalanceTechnicalReportExportView: View {
                             )
                             .font(.subheadline.weight(.semibold))
 
-                            Text(entry.snapshot.schema + " + technical-low-temperature-v1 + technical-temperature-scenarios-v1 + technical-radiator-replacements-v1")
+                            Text(entry.snapshot.schema + " + technical-low-temperature-v1 + technical-temperature-scenarios-v1 + technical-radiator-replacements-v1 + technical-pump-curves-v1")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
@@ -324,7 +394,7 @@ struct HeizBalanceTechnicalReportExportView: View {
             } header: {
                 Text("Berichtsarchiv")
             } footer: {
-                Text("Das Archiv speichert die letzten 10 erfolgreichen Exportstände je Projekt. Alle vier Berichtssnapshots werden getrennt versioniert; die PDF-Datei bleibt am vom Benutzer gewählten Exportort.")
+                Text("Das Archiv speichert die letzten 10 erfolgreichen Exportstände je Projekt. Alle fünf Berichtssnapshots werden getrennt versioniert; die PDF-Datei bleibt am vom Benutzer gewählten Exportort.")
             }
         }
         .navigationTitle("Technischer Bericht")
@@ -355,11 +425,16 @@ struct HeizBalanceTechnicalReportExportView: View {
         let freshRadiatorReplacementSnapshot = project.radiatorReplacementReportSnapshot(
             generatedAt: generatedAt
         )
+        let freshPumpCurveSnapshot = project.pumpCurveReportSnapshot(
+            datasets: pumpDatasetStore.datasets,
+            generatedAt: generatedAt
+        )
 
         pendingSnapshot = freshSnapshot
         pendingLowTemperatureSnapshot = freshLowTemperatureSnapshot
         pendingTemperatureScenarioSnapshot = freshTemperatureScenarioSnapshot
         pendingRadiatorReplacementSnapshot = freshRadiatorReplacementSnapshot
+        pendingPumpCurveSnapshot = freshPumpCurveSnapshot
 
         let mainReport = HeizBalanceTechnicalReportPDFRenderer.render(freshSnapshot)
         let lowTemperatureReport = HeizBalanceLowTemperatureReportPDFRenderer.render(
@@ -371,11 +446,15 @@ struct HeizBalanceTechnicalReportExportView: View {
         let radiatorReplacementReport = HeizBalanceRadiatorReplacementReportPDFRenderer.render(
             freshRadiatorReplacementSnapshot
         )
+        let pumpCurveReport = HeizBalancePumpCurveReportPDFRenderer.render(
+            freshPumpCurveSnapshot
+        )
         let combinedReport = HeizBalancePDFMerger.merge([
             mainReport,
             lowTemperatureReport,
             temperatureScenarioReport,
-            radiatorReplacementReport
+            radiatorReplacementReport,
+            pumpCurveReport
         ]) ?? mainReport
 
         exportDocument = HeizBalancePDFDocument(data: combinedReport)
@@ -389,7 +468,8 @@ struct HeizBalanceTechnicalReportExportView: View {
             guard let pendingSnapshot,
                   let pendingLowTemperatureSnapshot,
                   let pendingTemperatureScenarioSnapshot,
-                  let pendingRadiatorReplacementSnapshot else {
+                  let pendingRadiatorReplacementSnapshot,
+                  let pendingPumpCurveSnapshot else {
                 exportMessage = "PDF-Bericht exportiert; Berichtssnapshots waren nicht mehr vollständig verfügbar."
                 clearPendingSnapshots()
                 return
@@ -400,9 +480,10 @@ struct HeizBalanceTechnicalReportExportView: View {
                 _ = try lowTemperatureArchiveStore.archive(pendingLowTemperatureSnapshot)
                 _ = try temperatureScenarioArchiveStore.archive(pendingTemperatureScenarioSnapshot)
                 _ = try radiatorReplacementArchiveStore.archive(pendingRadiatorReplacementSnapshot)
+                _ = try pumpCurveArchiveStore.archive(pendingPumpCurveSnapshot)
                 clearPendingSnapshots()
                 reloadArchive()
-                exportMessage = "PDF-Bericht exportiert; alle vier versionierten Snapshots archiviert."
+                exportMessage = "PDF-Bericht exportiert; alle fünf versionierten Snapshots archiviert."
             } catch {
                 clearPendingSnapshots()
                 exportMessage = "PDF-Bericht exportiert; Snapshot-Archivierung fehlgeschlagen: \(error.localizedDescription)"
@@ -419,6 +500,7 @@ struct HeizBalanceTechnicalReportExportView: View {
         pendingLowTemperatureSnapshot = nil
         pendingTemperatureScenarioSnapshot = nil
         pendingRadiatorReplacementSnapshot = nil
+        pendingPumpCurveSnapshot = nil
     }
 
     private func reloadArchive() {
