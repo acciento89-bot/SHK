@@ -39,6 +39,7 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
     var hydraulicFluidDensityKGPerM3: Double?
     var hydraulicKinematicViscosityMM2S: Double?
     var hydraulicFluidSource: HeizBalanceInputSource?
+    var hydraulicNetwork: HeizBalanceHydraulicNetwork?
     var notes: String
     var floors: [HeizBalanceFloor]
     var createdAt: Date
@@ -63,6 +64,7 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         hydraulicFluidDensityKGPerM3: Double? = nil,
         hydraulicKinematicViscosityMM2S: Double? = nil,
         hydraulicFluidSource: HeizBalanceInputSource? = nil,
+        hydraulicNetwork: HeizBalanceHydraulicNetwork? = nil,
         notes: String = "",
         floors: [HeizBalanceFloor] = [],
         createdAt: Date = Date(),
@@ -86,6 +88,7 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         self.hydraulicFluidDensityKGPerM3 = hydraulicFluidDensityKGPerM3
         self.hydraulicKinematicViscosityMM2S = hydraulicKinematicViscosityMM2S
         self.hydraulicFluidSource = hydraulicFluidSource
+        self.hydraulicNetwork = hydraulicNetwork
         self.notes = notes
         self.floors = floors
         self.createdAt = createdAt
@@ -103,6 +106,40 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         return [street, location]
             .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             .joined(separator: ", ")
+    }
+}
+
+struct HeizBalanceHydraulicNetwork: Codable, Hashable {
+    static let schemaVersion = "hydraulic-network-v1"
+
+    var schema: String
+    var segments: [Segment]
+
+    init(schema: String = Self.schemaVersion, segments: [Segment] = []) {
+        self.schema = schema
+        self.segments = segments
+    }
+
+    struct Segment: Identifiable, Codable, Hashable {
+        var id: UUID
+        var name: String
+        var parentSegmentID: UUID?
+        var directConsumerSurfaceIDs: [UUID]
+        var note: String
+
+        init(
+            id: UUID = UUID(),
+            name: String = "Netzsegment",
+            parentSegmentID: UUID? = nil,
+            directConsumerSurfaceIDs: [UUID] = [],
+            note: String = ""
+        ) {
+            self.id = id
+            self.name = name
+            self.parentSegmentID = parentSegmentID
+            self.directConsumerSurfaceIDs = directConsumerSurfaceIDs
+            self.note = note
+        }
     }
 }
 
@@ -262,6 +299,7 @@ struct HeizBalancePipeSection: Identifiable, Codable, Hashable {
     var role: Role?
     var explicitDesignVolumeFlowLPH: Double?
     var volumeFlowSource: HeizBalanceInputSource?
+    var networkSegmentID: UUID?
     var innerDiameterMM: Double?
     var lengthM: Double?
     var roughnessMM: Double?
@@ -274,6 +312,7 @@ struct HeizBalancePipeSection: Identifiable, Codable, Hashable {
         role: Role? = nil,
         explicitDesignVolumeFlowLPH: Double? = nil,
         volumeFlowSource: HeizBalanceInputSource? = nil,
+        networkSegmentID: UUID? = nil,
         innerDiameterMM: Double? = nil,
         lengthM: Double? = nil,
         roughnessMM: Double? = nil,
@@ -285,6 +324,7 @@ struct HeizBalancePipeSection: Identifiable, Codable, Hashable {
         self.role = role
         self.explicitDesignVolumeFlowLPH = explicitDesignVolumeFlowLPH
         self.volumeFlowSource = volumeFlowSource
+        self.networkSegmentID = networkSegmentID
         self.innerDiameterMM = innerDiameterMM
         self.lengthM = lengthM
         self.roughnessMM = roughnessMM
