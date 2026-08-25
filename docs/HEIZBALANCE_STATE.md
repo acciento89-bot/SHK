@@ -3,140 +3,172 @@
 ## Ziel
 Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niedertemperaturbewertung und hydraulischen Abgleich mit nachvollziehbarer Projektdokumentation.
 
-## Produktname
+## Produkt
 - App Store: HeizBalance
-- Technischer Target-Name: HeizBalance
+- Target: `HeizBalance`
 - Bundle Identifier: `de.kamilunavo.heizbalance`
 - App Store Connect: angelegt am 25.08.2026
+- Branch: `feature/heizbalance-foundation`
+- Draft-PR: #12
 
-## Normstrategie
+## Norm- und Compliance-Strategie
 - Rechenverfahren werden eigenständig implementiert.
-- Keine DIN-Texte, Tabellen, Grafiken oder sonstigen geschützten Norminhalte werden in die App kopiert.
-- Rechenengine und Berichtsschemata werden versioniert, damit Regelwerks- und Ausgabeänderungen später getrennt gepflegt werden können.
-- Referenzfälle und Regressionstests sind vor einer fachlichen Release-Freigabe verpflichtend.
-- Eine technische Vorberechnung darf nicht als Norm-Heizlast oder Verfahren-B-Nachweis bezeichnet werden, solange die normative Engine und Referenzvalidierung nicht vollständig sind.
-- Aktueller Rechts-/Regelwerksbezug und öffentliche Quellen sind in `docs/HEIZBALANCE_NORM_RESEARCH.md` dokumentiert.
-
-## Geplanter Funktionsumfang
-### Phase 1 – Heizlast
-- Projekte, Gebäude, Nutzungseinheiten und Räume
-- Geometrie und Bauteilflächen
-- U-Werte und Randbedingungen
-- Transmissions- und Lüftungswärmeverluste
-- Raumweise Heizlast und Gebäudeübersicht
-- Eingabeherkunft kennzeichnen: Mess-/Nachweiswert / Plan / Hersteller / fachlich ermittelt / geschätzt
-- Projektbericht / PDF
-
-### Phase 2 – Hydraulischer Abgleich
-- Vorhandene Heizflächen erfassen
-- Heizflächenleistung bei gewählten Systemtemperaturen prüfen
-- Soll-Volumenströme je Heizfläche
-- Rohrnetz und Druckverluste
-- Ventilauslegung / Soll-kv bzw. Durchfluss
-- Pumpenanforderung und Anlagen-Gesamtvolumenstrom
-- Dokumentation der Einstellwerte
-
-### Phase 3 – Herstellerdaten & Wärmepumpen-Optimierung
-- Freigegebene Hersteller-/Produktdatensätze
-- Ventilvoreinstellungen ausschließlich aus autorisierten und dokumentierten Produktdaten
-- Niedertemperatur-Check und minimale technisch ausreichende Vorlauftemperatur
-- Später getrennt davon: echte Wärmepumpenauslegung, Leistungs-/Bivalenz- und Effizienzbewertung
-
-### Phase 4 – Flächenheizung
-- Fußboden-, Wand- und Deckenheizung als separates Fachmodul
+- Keine DIN-Texte, Tabellen, Grafiken, VdZ-Formularlayouts oder ungeklärten Herstellerdaten werden in App oder Repository kopiert.
+- Rechenengine und Berichtsschemata werden versioniert.
+- Technische Vorberechnungen werden nicht als Norm-Heizlast, Verfahren-B-Nachweis, Wärmepumpenauslegung oder Herstellerfreigabe bezeichnet.
+- Das reservierte Profil `de-room-heat-load-2017-2020` bleibt technisch gesperrt, bis Spezifikation und Referenzfälle vollständig fachlich verifiziert sind.
+- Aktueller Regelwerks-/Quellenstand: `docs/HEIZBALANCE_NORM_RESEARCH.md`.
+- Referenzstrategie: `docs/HEIZBALANCE_REFERENCE_CASES.md`.
 
 ## Qualitäts-Gates
 1. Keine proprietären Norminhalte im Repository.
-2. Jede normative Rechenfunktion erhält Unit Tests.
-3. Referenzgebäude mit erwarteten Zwischenergebnissen.
-4. Ergebnisse werden gegen etablierte Fachsoftware bzw. fachlich geprüfte Referenzrechnungen gegengeprüft.
-5. Rechenweg, Eingabeherkunft und Annahmen müssen im Projektbericht nachvollziehbar sein.
-6. Keine GEG-/BEG-Konformitätsaussage ohne fachliche Prüfung des vollständigen Verfahrens.
-7. Nicht normative Vorbereitungen werden in UI, Code und Bericht eindeutig als solche gekennzeichnet.
-8. Normative Ausgaben bleiben technisch gesperrt, bis alle Validierungsgates erfüllt sind.
-9. Ein einzelner Profil-/Release-Schalter darf die normative Ausgabe nicht freigeben; alle verpflichtenden Module müssen Spezifikation und Referenzabdeckung erfüllen.
-10. Eine Ventilvoreinstellung darf nur aus einem dokumentierten Produktdatensatz stammen; ein mathematisch nächster kv-Datenpunkt ist keine automatische Empfehlung.
-11. Ein Pumpen-Betriebspunkt darf nur bei vollständig bekannten Verbraucherströmen und vollständigen Kreis-Druckverlusten ausgegeben werden.
-12. Eine minimale Systemtemperatur darf nur ausgegeben werden, wenn jede erfasste Heizfläche mit Nennleistung, Exponent und zugeordneter erforderlicher Leistung auswertbar ist.
-13. Der Niedertemperatur-Check ist eine Heizflächenbewertung und darf nicht als Wärmepumpenauslegung, COP-/Bivalenznachweis oder Norm-Heizlast ausgegeben werden.
+2. Rechenfunktionen mit Unit-/Regressionstests absichern.
+3. Normative Module benötigen verifizierte Spezifikation und Referenzabdeckung.
+4. Ergebnisse später gegen etablierte Fachsoftware bzw. fachlich geprüfte Referenzrechnungen gegenprüfen.
+5. Eingabeherkunft, Rechenprofil, Annahmen und Ergebnisse im Bericht nachvollziehbar halten.
+6. Keine GEG-/BEG-Konformitätsaussage ohne vollständige fachliche Prüfung.
+7. Normative Ausgabe bleibt bis zur echten Freigabe technisch gesperrt.
+8. Hersteller-Voreinstellungen nur aus dokumentierten, rechtmäßig nutzbaren Produktdaten.
+9. Pumpen-Betriebspunkt nur bei vollständigen Verbraucherströmen und Kreis-Druckverlusten.
+10. System-Minimaltemperatur nur bei vollständig auswertbaren Heizflächen.
+11. Szenarioausgaben liefern benötigte Leistung/Faktor, aber erfinden kein Ersatzmodell.
 
-## Aktueller Stand – Foundation Pass 11
-- Branch `feature/heizbalance-foundation` und Draft-PR #12 aktiv.
-- XcodeGen-Target `HeizBalance` mit Bundle-ID `de.kamilunavo.heizbalance` eingebunden.
-- Persistente lokale Projektstruktur Projekt → Geschoss → Raum → Bauteil vorhanden.
-- Projektaufnahme: Kunde, Adresse, Baujahr, Auslegungs-Außentemperatur, Quellenangaben, System-Vorlauf/Rücklauf, explizite Hydraulik-Fluidwerte und Notizen.
-- Raumaufnahme: Geometrie, Solltemperatur, Luftwechsel, Quellenangabe und optionale Heizflächen.
-- Bauteilaufnahme: Art, Fläche, U-Wert, U-Wert-Quelle und thermische Randbedingung.
-- Randbedingungen unterstützen Außenluft oder explizite Gegenseitentemperatur; für Boden/Decke/unbeheizte Bereiche werden keine erfundenen Pauschalwerte eingesetzt.
-- `HeizBalanceHeatLossPreviewCalculator` berechnet technische Transmission und Lüftung aus expliziten Eingaben.
-- Vorberechnung je Raum zeigt Transmission, Lüftung, Summe und W/m²; eine Gebäudesumme wird nur ausgegeben, wenn alle Räume vollständig sind.
-- Versionierte Rechenprofile im SHKCore vorhanden; `technical-preview-v1` ist ausdrücklich nicht normativ.
-- `de-room-heat-load-2017-2020` ist als reserviertes Profil für DIN EN 12831-1:2017-09 + DIN/TS 12831-1:2020-04 angelegt; normative Ausgabe ist technisch gesperrt.
-- Normative Validierung ist in Pflichtmodule aufgeteilt; `HeizBalanceNormativeReadiness` verlangt verifizierte Spezifikation, vollständige Referenzabdeckung, Profil-Lifecycle und explizite Release-Freigabe.
-- Heizflächenaufnahme pro Raum: Art, Bezeichnung, Hersteller, Modell, Nennleistung ΔT50, Exponent, Datenquelle, zugeordnete erforderliche Leistung und Notiz.
-- Heizflächenleistung und erforderliche Leistung sind getrennt. Der technische Ziel-Volumenstrom entsteht aus zugeordneter erforderlicher Leistung und Wasserspreizung.
-- Raumübersicht vergleicht technische Raum-Vorbereitung, verfügbare Heizflächenleistung, zugeordnete Leistungen und aufsummierte Ziel-Volumenströme.
-- Hydraulik-Fluidwerte werden explizit erfasst: Dichte in kg/m³ und kinematische Viskosität in mm²/s. Keine versteckten Wasser-/Glykolannahmen.
-- Pro Heizfläche können Rohrabschnitte mit Innendurchmesser, hydraulischer Länge, absoluter Rauheit und optionaler ζ-Summe erfasst werden.
-- Rohrabschnitte unterscheiden `Heizflächen-Anbindung` und `Gemeinsame Verteilung`. Anbindeleitungen verwenden den Heizflächen-Zielvolumenstrom; gemeinsame Verteilrohre benötigen ihren tatsächlichen Abschnitts-Volumenstrom.
-- `HeizBalanceHydronicCircuitCalculator` berechnet je Abschnitt Volumenstrom, Geschwindigkeit, Reynolds-Zahl, Rohrreibung und bekannte Einzelwiderstandsverluste.
-- Ein vollständiger Rohrkreis-Druckverlust wird nur ausgegeben, wenn die ζ-Abdeckung vollständig ist; sonst bleibt die Ausgabe eine klar bezeichnete Teilsumme.
-- Hydraulische Bauteilverluste werden getrennt erfasst: Thermostatventil, Rücklaufverschraubung, Heizfläche, Verteiler/Sammler und sonstige Bauteile mit explizitem Δp und Quelle.
-- Ein vollständiger Heizflächenkreis wird nur ausgegeben, wenn Rohrweg, Bauteilwerte und die explizite Bauteil-Vollständigkeitsbestätigung vorliegen.
-- `HeizBalanceValveSizingPreparationCalculator` berechnet aus Ziel-Volumenstrom, Ventil-Δp und Fluiddichte den technischen erforderlichen kv-Wert.
-- Die kv-Berechnung wurde mit einem öffentlich dokumentierten Referenzfall 0,6 m³/h bei 12 kPa gegengeprüft; Ergebnis rund kv 1,73 m³/h.
-- Projektaggregation bestimmt Gesamt-Verbrauchervolumenstrom und hydraulisch ungünstigsten vollständigen Kreis. Druckverluste paralleler Kreise werden nicht addiert.
-- Ein technischer Pumpen-Betriebspunkt wird nur ausgegeben, wenn alle Verbraucherströme und alle Kreis-Druckverluste vollständig sind.
-- Projekt-Dashboard zeigt Hydraulikkreis-Abdeckung, Gesamtvolumenstrom, ungünstigsten Kreis, erforderliches Netz-Δp und äquivalente Förderhöhe bzw. klare Sperrhinweise bei unvollständigen Daten.
-- Optionale Ventil-Produktdatensätze sind vorhanden: Hersteller, Produkt, Datenstand, Quelle/Referenz sowie diskrete Punkte `Voreinstellung → kv`.
-- `HeizBalanceValvePresetComparisonCalculator` prüft den Soll-kv gegen einen expliziten Datensatz und zeigt unteren/oberen sowie mathematisch nächstliegenden Datenpunkt, Bereichsstatus und Abweichung. Dies ist ausdrücklich keine automatische Voreinstellung.
-- Projektweiter `Ventildaten & Kennlinien`-Manager findet Thermostat-/Rücklaufventile, zeigt Soll-kv und erlaubt die dokumentierte Pflege echter Produktdaten.
-- Neue Ventil-/Reportfelder sind optional angelegt, damit bestehende gespeicherte Projekte ohne diese Schlüssel weiterhin decodierbar bleiben.
+## Aktueller Stand – Foundation Pass 12
 
-### Niedertemperatur-/Wärmepumpen-Vorbereitung
-- `HeizBalanceLowTemperatureCheckCalculator` berechnet aus Nennleistung ΔT50, Exponent, zugeordneter erforderlicher Leistung, Raumtemperatur und expliziter Wasserspreizung die technisch minimal erforderliche mittlere Übertemperatur sowie die daraus resultierende minimale Vorlauf-/Rücklauftemperatur.
-- Der Projektcheck hält aktuell bewusst die im Projekt hinterlegte Wasserspreizung konstant; es wird keine neue Spreizung versteckt angenommen.
-- Eine System-Minimaltemperatur wird nur ausgegeben, wenn jede erfasste Heizfläche vollständig auswertbar ist.
-- Der hydraulisch bzw. thermisch begrenzende Heizkörper wird als die Heizfläche mit der höchsten erforderlichen Vorlauftemperatur ausgewiesen.
-- Eine frei änderbare Vergleichs-Vorlauftemperatur zeigt in der UI je Heizfläche und für das Gesamtprojekt, ob die zugeordnete Leistung bei dieser Temperatur und gleicher Spreizung erreicht wird.
-- Die Funktion wird ausdrücklich als Heizflächen-/Niedertemperatur-Check bezeichnet, nicht als Wärmepumpenauslegung.
-- Ein fiktives End-to-End-Musterprojekt mit drei Räumen kann über das Entwicklungsmenü angelegt werden. Es ist klar als technischer Testdatensatz gekennzeichnet und darf vor Produktionsfreigabe nicht als normales Benutzerfeature sichtbar bleiben.
-- Technischer Regressionfall `technical-low-temp-demo-001`: bei 10 K Spreizung ergibt sich im Muster ca. 43,8/33,8 °C für Wohnzimmer, 42,7/32,7 °C für Schlafzimmer und 47,4/37,4 °C für das Bad. Damit reicht 45/35 °C bewusst nicht für das gesamte Musterprojekt; begrenzend ist das Bad.
-- Die exakten Erwartungswerte sind als Unit-Test und in `docs/HEIZBALANCE_REFERENCE_CASES.md` festgehalten. Der Fall ist ausdrücklich kein DIN-/Norm-Referenzfall.
+### Projekt- und Gebäudeaufnahme
+- Persistente lokale Struktur Projekt → Geschoss → Raum → Bauteil.
+- Projekt: Kunde, Adresse, Baujahr, Auslegungs-Außentemperatur, System-VL/RL, Quellen, Hydraulik-Fluidwerte und Notizen.
+- Raum: Geometrie, Solltemperatur, Luftwechsel, Quelle, thermische Bauteile und Heizflächen.
+- Bauteile: Art, Fläche, U-Wert, Quelle und thermische Randbedingung.
+- Außenluft oder explizite Gegenseitentemperatur werden unterstützt; keine versteckten Pauschalwerte für angrenzende Bereiche.
 
-### Bericht, PDF und Reproduzierbarkeit
-- `HeizBalanceTechnicalReportSnapshot` mit Schema `technical-report-v1` friert den technischen Projektstand reproduzierbar ein: Projekt-/Quellendaten, Räume, Wärmeverluste, Heizflächen, Rohrabschnitte, Hydraulikbauteile, Soll-kv, Ventildatensätze, Kreissummen und Systembetriebspunkt.
-- Der Haupt-Report-Snapshot enthält harte Statusflags: Norm-Heizlast nicht freigegeben, Verfahren B nicht freigegeben, automatische Ventilvoreinstellung nicht freigegeben, Pumpenauswahl nicht freigegeben.
-- Ein eigener A4-Mehrseiten-PDF-Renderer erzeugt aus dem Hauptsnapshot einen technischen Projektbericht mit Seitenkopf/-fuß und vollständiger Kennzeichnung als technische Vorbereitung.
-- Erfolgreiche PDF-Exporte archivieren den exakt verwendeten `technical-report-v1`-JSON-Snapshot lokal, projektweise auf die letzten 10 Exporte begrenzt. Abgebrochene/fehlgeschlagene PDF-Exporte erzeugen keinen falschen Archivstand.
-- Für den Niedertemperaturteil existiert zusätzlich der getrennt versionierte Begleit-Snapshot `technical-low-temperature-v1` mit Rechenprofil `fixed-spread-emitter-check-v1`.
-- Hauptbericht und Niedertemperatur-Supplement werden zu einem gemeinsamen PDF zusammengeführt. Beide Snapshots erhalten beim Export denselben Zeitstempel und werden nach erfolgreichem Export getrennt archiviert.
-- Durch die getrennten Schemata bleiben bereits archivierte ältere `technical-report-v1`-Dateien unverändert lesbar; der Niedertemperaturteil kann unabhängig weiterentwickelt/versioniert werden.
-- `Technischer Bericht & PDF` ist im Projekt verlinkt. Unvollständige Werte bleiben als fehlend erkennbar und werden nicht durch Annahmen ersetzt.
-- Keine Hersteller-Typentabellen, Ventilkennlinien oder Voreinstellwerte werden erfunden oder ungeprüft hinterlegt.
+### Technische Wärmeverlust-Vorbereitung
+- `HeizBalanceHeatLossPreviewCalculator` berechnet technische Transmission und Lüftung ausschließlich aus expliziten Eingaben.
+- Raumübersicht zeigt Transmission, Lüftung, Summe und W/m².
+- Eine Gebäudesumme wird nur bei vollständigen Räumen gezeigt.
+- `technical-preview-v1` bleibt ausdrücklich nicht normativ.
+
+### Heizflächen
+- Heizflächen pro Raum: Art, Bezeichnung, Hersteller/Modell optional, Nennleistung ΔT50, Exponent, Quelle, zugeordnete erforderliche Leistung und Notiz.
+- Verfügbare Heizflächenleistung und erforderliche Leistung sind getrennt.
+- Ziel-Volumenstrom wird aus zugeordneter erforderlicher Leistung und Wasserspreizung berechnet.
+- Raumebene aggregiert Heizflächenleistung, Leistungszuordnung und Ziel-Volumenströme.
+
+### Hydraulik
+- Explizite Fluiddichte und kinematische Viskosität; keine versteckten Wasser-/Glykolannahmen.
+- Rohrabschnitte mit Rolle, Innendurchmesser, hydraulischer Länge, Rauheit, ζ-Summe und ggf. explizitem Abschnittsvolumenstrom.
+- Trennung zwischen Heizflächen-Anbindung und gemeinsamer Verteilung.
+- Berechnung von Geschwindigkeit, Reynolds-Zahl, Rohrreibung, geradem und lokalem Druckverlust.
+- Hydraulische Bauteile getrennt erfassbar: Thermostatventil, Rücklaufverschraubung, Heizfläche, Verteiler/Sammler, Armatur/Sonstiges.
+- Vollständiger Kreis-Δp nur bei vollständigem Rohrweg, vollständigen Bauteilverlusten und expliziter Vollständigkeitsbestätigung.
+- Projektaggregation bildet Verbraucher-Gesamtvolumenstrom und hydraulisch ungünstigsten Parallelkreis; parallele Kreisverluste werden nicht addiert.
+- Technischer Pumpen-Betriebspunkt nur bei vollständiger Abdeckung.
+
+### Ventile
+- `HeizBalanceValveSizingPreparationCalculator` berechnet den erforderlichen technischen kv aus Zielvolumenstrom, Ventil-Δp und Fluiddichte.
+- Referenzfall 0,6 m³/h bei 12 kPa ergibt rund kv 1,73 m³/h.
+- Optionale Produktdatensätze: Hersteller, Produkt, Datenstand, Quelle/Referenz und diskrete `Voreinstellung → kv`-Punkte.
+- `HeizBalanceValvePresetComparisonCalculator` zeigt unteren/oberen und mathematisch nächstliegenden Punkt, Bereichsstatus und Abweichung.
+- Mathematische Nähe wird ausdrücklich nicht als automatische Hersteller-Voreinstellung ausgegeben.
+- Projektweiter Manager `Ventildaten & Kennlinien` ist vorhanden.
+
+### Niedertemperatur-Minimalcheck
+- `HeizBalanceLowTemperatureCheckCalculator` bestimmt bei fester expliziter Wasserspreizung die minimal technisch ausreichende VL/RL-Kombination je Heizfläche.
+- Eingaben: Nennleistung ΔT50, Exponent, zugeordnete erforderliche Leistung und Raumtemperatur.
+- Projektweit wird die Heizfläche mit der höchsten erforderlichen Vorlauftemperatur als begrenzend ausgewiesen.
+- Systemwert wird gesperrt, solange mindestens eine Heizfläche nicht auswertbar ist.
+- Vergleich einer frei wählbaren Vorlauftemperatur gegen alle Heizflächen ist vorhanden.
+- Keine Wärmepumpenauslegung, COP-/Bivalenzbewertung oder Norm-Heizlast.
+
+### Temperatur-Szenarien / Sanierungsbewertung
+- Neuer Core: `HeizBalanceTemperatureScenarioCalculator`.
+- Für ein explizites VL/RL-Szenario werden je Heizfläche berechnet:
+  - mittlere Übertemperatur,
+  - verfügbare Leistung,
+  - Deckungsgrad,
+  - ausreichend / nicht ausreichend,
+  - erforderliche Nennleistung bei ΔT50,
+  - Nennleistungsfaktor gegenüber der bestehenden Heizfläche.
+- Harte Eingabeprüfung: gültig nur bei `Vorlauf > Rücklauf > Raumtemperatur`, positiven Leistungen und positivem Exponenten.
+- Projekt-Matrix enthält:
+  - aktuelles Projekt-Temperaturniveau,
+  - 50/40 °C,
+  - 45/35 °C,
+  - 45/40 °C,
+  - 40/35 °C,
+  - zusätzlich frei einstellbares Szenario in der UI.
+- Doppelte Szenarien werden vermieden.
+- Pro Szenario: auswertbare Heizflächen, ausreichende Heizflächen, Systemstatus und thermisch schlechteste Heizfläche.
+- Detailansicht zeigt jede Heizfläche einzeln.
+- Keine konkrete Ersatzheizfläche oder Herstellerdimension wird erfunden; bei Unterdeckung wird stattdessen die mindestens benötigte ΔT50-Nennleistung und der Faktor ausgegeben.
+
+### Technisches Musterprojekt / Regression
+- Fiktives Entwicklungsprojekt mit drei Räumen und vollständiger technischer Heizflächen-/Hydraulikkette.
+- Entwicklungsmenü ist mit `#if DEBUG` gekapselt und existiert nicht im Release-Build.
+- Fixed-spread Regression bei 10 K:
+  - Wohnzimmer ca. 43,8/33,8 °C,
+  - Schlafzimmer ca. 42,7/32,7 °C,
+  - Bad ca. 47,4/37,4 °C.
+- Damit reicht 45/35 °C bewusst nicht; das Bad ist begrenzend.
+- Szenario 45/35 °C im Muster:
+  - Wohnzimmer ca. 760 W verfügbar bei 700 W Bedarf → ca. 109 %.
+  - Schlafzimmer ca. 583 W verfügbar bei 500 W Bedarf → ca. 117 %.
+  - Bad ca. 500 W verfügbar bei 600 W Bedarf → ca. 83 %.
+  - Bad benötigt bei diesem Szenario rund 2.639 W Nennleistung ΔT50 statt 2.200 W → Faktor rund ×1,20.
+- Die Fälle sind technische Regressionen, keine DIN-/Norm-Referenzfälle.
+
+### Bericht / PDF / Reproduzierbarkeit
+- Hauptsnapshot `technical-report-v1`.
+- Niedertemperatur-Snapshot `technical-low-temperature-v1`, Profil `fixed-spread-emitter-check-v1`.
+- Szenario-Snapshot `technical-temperature-scenarios-v1`, Profil `explicit-flow-return-emitter-sizing-v1`.
+- Jeder Snapshot bleibt eigenständig versioniert, damit alte Archive nicht still umdefiniert werden.
+- Ein Export erzeugt exakt einen gemeinsamen Zeitstempel für alle drei Snapshots.
+- PDF besteht aus drei zusammengeführten A4-Teilen:
+  1. technischer Hauptbericht,
+  2. Niedertemperatur-Supplement,
+  3. Temperatur-Szenario-Supplement.
+- Zusammenführung über PDFKit.
+- Nach erfolgreichem PDF-Export werden die drei JSON-Snapshots getrennt archiviert; fehlgeschlagene/abgebrochene Exporte erzeugen keinen falschen Archivstand.
+- Archivbegrenzung: letzte 10 Exportstände je Projekt und Berichtstyp.
+- Szenario-PDF dokumentiert pro Szenario den Systemstatus sowie je Heizfläche verfügbare Leistung, Deckungsgrad und bei Unterdeckung erforderliche ΔT50-Nennleistung/Faktor.
+
+### Release-Härtung
+- Entwicklungs-Musterprojekt im Release-Build durch `#if DEBUG` vollständig entfernt.
+- CI baut die komplette App-Matrix in Debug.
+- Für HeizBalance existiert zusätzlich ein echter Release-Simulator-Build-Gate.
+- Export-Compliance und Buildnummer werden in CI geprüft.
 
 ## Validierte CI-Checkpoints
-- #50 Heizflächenaufnahme/Leistungs- und Volumenstrom-Vorbereitung: komplett grün.
-- #53 Trennung erforderliche/verfügbare Leistung und technischer Ziel-Volumenstrom: komplett grün.
-- #55 Raum-Heizflächenabdeckung nach Dateinamen-Fix: komplett grün.
-- #57 Rohrnetz-/Druckverlust-Vorbereitung: komplett grün.
-- #61 explizite Bauteilverluste und harte Kreis-Vollständigkeit: komplett grün.
-- #62 Soll-kv-Engine und Referenzfall: komplett grün.
-- #66 abschnittsspezifische Volumenströme / gemeinsame Verteilung + kv-Anzeige: komplett grün.
-- #68 hydraulische Projektaggregation: komplett grün.
-- #73 Ventil-Datensatzvergleich und optionale Produktdatenmodelle: komplett grün inklusive Core-Tests und kompletter iOS-Matrix.
-- #78 PDF-Renderer und Exportansicht: komplette iOS-Matrix grün.
-- #79 Link-Stand `Technischer Bericht & PDF`: HeizBalance und iOS-Builds grün.
-- #82 Report-Snapshot-Archiv nach erfolgreichem PDF-Export: komplett grün inklusive Core-Tests und kompletter iOS-Matrix.
-- #92 Niedertemperatur-Core, Projektcheck, Musterprojekt und technischer Regressionfall: komplett grün inklusive Core-Tests und kompletter iOS-Matrix.
-- #96 Niedertemperatur-Snapshot, Zusatzrenderer und PDFKit-Merger: HeizBalance-Build grün.
-- #97 vollständige Verdrahtung Hauptbericht + Niedertemperatur-PDF + Doppelarchiv: komplett grün inklusive Core-Tests und kompletter iOS-Matrix.
+- #50 Heizflächenaufnahme/Leistungs- und Volumenstrom-Vorbereitung: grün.
+- #53 erforderliche vs. verfügbare Leistung + Zielvolumenstrom: grün.
+- #55 Raum-Heizflächenabdeckung: grün.
+- #57 Rohrnetz-/Druckverlust-Vorbereitung: grün.
+- #61 Bauteilverluste + harte Kreis-Vollständigkeit: grün.
+- #62 Soll-kv-Engine + Referenzfall: grün.
+- #66 abschnittsspezifische Volumenströme / gemeinsame Verteilung: grün.
+- #68 hydraulische Projektaggregation: grün.
+- #73 Ventil-Datensatzvergleich + Produktdatenmodelle: komplette Matrix grün.
+- #78 PDF-Renderer/Export: komplette Matrix grün.
+- #82 Berichtssnapshot-Archiv: komplette Matrix grün.
+- #92 Niedertemperatur-Core, UI, Musterprojekt und Regression: komplette Matrix grün.
+- #96 Niedertemperatur-Snapshot, PDF-Supplement und PDFKit-Merger: HeizBalance grün.
+- #97 kombinierter Haupt-/Niedertemperatur-PDF-Export + Doppelarchiv: komplette Matrix grün.
+- #100 Release-Gate: HeizBalance Debug + echter Release-Build grün; Debug-Musterinhalt dadurch release-seitig abgesichert.
+- #104 / #109 / #110: während des Szenario-UI-Passes gefundene SwiftUI-Compilerprobleme; jeweils analysiert und behoben, nicht als Release-Checkpoint gewertet.
+- #111: **Foundation Pass 12 vollständig grün** – Core-Tests, gesamte Debug-iOS-Matrix, HeizBalance Szenario-/3-PDF-Pfad und echter HeizBalance-Release-Build erfolgreich.
 
-## Nächster Entwicklungsschritt
-1. Entwicklungsmenü/Musterprojekt vor einem Produktionsbuild hinter `DEBUG` bzw. einen expliziten internen Testschalter legen.
-2. PDF-Bericht mit größeren Musterprojekten (mehrere Geschosse, viele Heizflächen, lange Notizen) auf Seitenumbrüche und Lesbarkeit härten; keine fremden Formularlayouts kopieren.
-3. Herstellerdaten-Importstrategie definieren: nur rechtmäßig nutzbare/autorisiert bereitgestellte Daten, idealerweise strukturierte Produktdaten statt manueller Copy/Paste-Tabellen.
-4. Niedertemperatur-Szenarien erweitern: alternative explizite Spreizungen als Szenario statt versteckter Annahme; weiterhin klare Trennung von Wärmepumpenauslegung und Heizflächencheck.
-5. Fachliche Spezifikation der einzelnen Norm-Heizlastbausteine anhand rechtmäßig zugänglicher Regelwerksunterlagen und verifizierter Referenzfälle erstellen.
-6. Referenzfälle je Normmodul sammeln und den Norm-Gate-Status erst nach echter Prüfung füllen.
-7. Erst nach diesen fachlichen Gates Verfahren-B-Ausgabe und normative Heizlast schrittweise freigeben.
+## Noch bewusst gesperrt / offen
+- Norm-Heizlast nach DIN EN 12831-1 + deutschem Ergänzungsregelwerk.
+- Verfahren-B-Freigabe / GEG-/BEG-Konformitätsaussage.
+- Automatische Ventilvoreinstellung aus echten Herstellerdaten.
+- Automatische Auswahl konkreter Ersatzheizkörper.
+- Echte Wärmepumpenauslegung, COP-/Bivalenz- und Betriebspunktbewertung der Wärmepumpe.
+- Flächenheizung nach DIN EN 1264 als eigener Fachblock.
+
+## Nächste Entwicklungsschritte
+1. Herstellerdaten-Strategie für Heizkörper und Ventile definieren: ausschließlich autorisierte/legale strukturierte Daten; VDI-3805-kompatible Quellen prüfen.
+2. Auf Basis echter Heizkörperdaten konkrete Ersatz-/Upgradevorschläge aus der bereits berechneten erforderlichen ΔT50-Leistung ableiten.
+3. Szenarioauswahl als projektpersistente Sanierungsziel-Temperatur modellieren, damit ein frei gewähltes Ziel ebenfalls reproduzierbar in Snapshot/PDF landet.
+4. PDF-Ausgabe mit größeren realistischen Projekten visuell und auf Seitenumbrüche testen.
+5. Parallel die fachliche Spezifikation der späteren Norm-Heizlastmodule anhand rechtmäßig zugänglicher Regelwerksunterlagen und belastbarer Referenzfälle aufbauen.
+6. Erst nach echter fachlicher Referenzvalidierung normative Gates schrittweise freigeben.
