@@ -202,6 +202,12 @@ struct HeizBalanceProjectEditor: View {
                     Label("Ventildaten & Kennlinien", systemImage: "slider.horizontal.3")
                 }
 
+                NavigationLink {
+                    HeizBalanceTechnicalReportExportView(project: draft)
+                } label: {
+                    Label("Technischer Bericht & PDF", systemImage: "doc.richtext")
+                }
+
                 LabeledContent("Hydraulischer Abgleich") {
                     Text("Heizflächen + Rohrnetz in Vorbereitung")
                         .foregroundStyle(.secondary)
@@ -209,7 +215,7 @@ struct HeizBalanceProjectEditor: View {
             } header: {
                 Text("Berechnungsstatus")
             } footer: {
-                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Die aktuelle Wärme-, Heizflächen-, Rohrnetz- und Ventilberechnung bleibt eine technische Vorbereitung.")
+                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Wärme-, Heizflächen-, Rohrnetz-, Ventil- und Berichtsausgaben bleiben bis zur fachlichen Freigabe technische Vorbereitung.")
             }
         }
         .navigationTitle(isNewProject ? "Neues Projekt" : draft.name)
