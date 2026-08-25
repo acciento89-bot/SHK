@@ -37,6 +37,8 @@ final class HeizBalanceRadiatorDatasetStore {
             throw ImportError.validationFailed(message)
         }
 
+        let previousDatasets = datasets
+
         if let index = datasets.firstIndex(where: { $0.id == dataset.id }) {
             datasets[index] = dataset
         } else {
@@ -44,17 +46,27 @@ final class HeizBalanceRadiatorDatasetStore {
         }
 
         sortDatasets()
-        try persistThrowing()
-        persistenceError = nil
-        return dataset
+
+        do {
+            try persistThrowing()
+            persistenceError = nil
+            return dataset
+        } catch {
+            datasets = previousDatasets
+            persistenceError = "Heizkörper-Datensatz konnte nicht gespeichert werden: \(error.localizedDescription)"
+            throw error
+        }
     }
 
     func delete(id: String) {
+        let previousDatasets = datasets
         datasets.removeAll { $0.id == id }
+
         do {
             try persistThrowing()
             persistenceError = nil
         } catch {
+            datasets = previousDatasets
             persistenceError = "Heizkörper-Datensätze konnten nicht gespeichert werden: \(error.localizedDescription)"
         }
     }
