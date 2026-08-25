@@ -1,13 +1,61 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+private struct HeizBalancePumpOperatingPointContext: Hashable {
+    var volumeFlowM3H: Double
+    var requiredHeadM: Double
+}
+
 struct HeizBalancePumpDatasetManager: View {
     @Environment(HeizBalancePumpDatasetStore.self) private var store
     @State private var showingImporter = false
     @State private var importMessage: String?
 
+    private let project: HeizBalanceProject?
+
+    init(project: HeizBalanceProject? = nil) {
+        self.project = project
+    }
+
+    private var operatingPoint: HeizBalancePumpOperatingPointContext? {
+        guard let project,
+              let result = project.hydraulicSystemPreparationState().result,
+              result.pumpOperatingPointReady,
+              let flowLPH = result.designTotalVolumeFlowLPH,
+              let headM = result.designNetworkHeadMeters else {
+            return nil
+        }
+
+        return .init(volumeFlowM3H: flowLPH / 1_000, requiredHeadM: headM)
+    }
+
     var body: some View {
         List {
+            if let operatingPoint {
+                Section {
+                    LabeledContent("Auslegungs-Volumenstrom") {
+                        Text(operatingPoint.volumeFlowM3H.formatted(.number.precision(.fractionLength(0...3))) + " m³/h")
+                    }
+                    LabeledContent("Erforderliche Förderhöhe") {
+                        Text(operatingPoint.requiredHeadM.formatted(.number.precision(.fractionLength(0...2))) + " m")
+                    }
+                    Label("Kennlinien werden nur innerhalb ihres dokumentierten Volumenstrombereichs linear ausgewertet. Es wird nicht extrapoliert.", systemImage: "checkmark.shield")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } header: {
+                    Text("Projekt-Betriebspunkt")
+                } footer: {
+                    Text("Dieser Vergleich ist eine technische Vorbereitung und noch keine automatische Pumpenauswahl oder Herstellerfreigabe.")
+                }
+            } else if project != nil {
+                Section {
+                    Label("Projekt-Betriebspunkt noch nicht vollständig berechenbar.", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                } footer: {
+                    Text("Für den Pumpenvergleich müssen Gesamtvolumenstrom und hydraulisch ungünstigster vollständiger Kreis vorliegen.")
+                }
+            }
+
             Section {
                 if store.datasets.isEmpty {
                     ContentUnavailableView(
@@ -20,7 +68,10 @@ struct HeizBalancePumpDatasetManager: View {
                 } else {
                     ForEach(store.datasets) { dataset in
                         NavigationLink {
-                            HeizBalancePumpDatasetDetailView(dataset: dataset)
+                            HeizBalancePumpDatasetDetailView(
+                                dataset: dataset,
+                                operatingPoint: operatingPoint
+                            )
                         } label: {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(dataset.manufacturer)
@@ -75,7 +126,7 @@ struct HeizBalancePumpDatasetManager: View {
             Section {
                 LabeledContent("VDI-Bezug", value: "VDI 3805 Blatt 4")
                 LabeledContent("Mapping-Schema", value: HeizBalanceVDI3805PumpMappedDataset.schemaVersion)
-                Text("Kennlinienpunkte werden dokumentiert gespeichert. HeizBalance leitet daraus in diesem Entwicklungsstand noch keine automatische Pumpenauswahl oder Herstellerfreigabe ab.")
+                Text("Kennlinienpunkte werden dokumentiert gespeichert. HeizBalance wertet Zwischenwerte nur linear zwischen dokumentierten Punkten aus und extrapoliert nicht außerhalb des Katalogbereichs.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
@@ -118,6 +169,7 @@ struct HeizBalancePumpDatasetManager: View {
 
 private struct HeizBalancePumpDatasetDetailView: View {
     let dataset: HeizBalancePumpProductDataset
+    let operatingPoint: HeizBalancePumpOperatingPointContext?
 
     var body: some View {
         List {
@@ -149,7 +201,10 @@ private struct HeizBalancePumpDatasetDetailView: View {
 
                     ForEach(product.curves) { curve in
                         NavigationLink {
-                            HeizBalancePumpCurveDetailView(curve: curve)
+                            HeizBalancePumpCurveDetailView(
+                                curve: curve,
+                                operatingPoint: operatingPoint
+                            )
                         } label: {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(curve.label)
@@ -162,6 +217,23 @@ private struct HeizBalancePumpDatasetDetailView: View {
                                 Text("\(curve.points.count) dokumentierte Punkte")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
+
+                                if let operatingPoint {
+                                    let evaluation = evaluate(curve, at: operatingPoint)
+                                    if let evaluation {
+                                        Text(
+                                            evaluation.technicallySufficient
+                                                ? "Betriebspunkt technisch abgedeckt"
+                                                : "Förderhöhe am Betriebspunkt nicht ausreichend"
+                                        )
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(evaluation.technicallySufficient ? Color.primary : Color.orange)
+                                    } else {
+                                        Text("Betriebspunkt außerhalb Kennlinienbereich")
+                                            .font(.caption2)
+                                            .foregroundStyle(.orange)
+                                    }
+                                }
                             }
                         }
                     }
@@ -171,13 +243,38 @@ private struct HeizBalancePumpDatasetDetailView: View {
         .navigationTitle(dataset.manufacturer)
         .navigationBarTitleDisplayMode(.inline)
     }
+
+    private func evaluate(
+        _ curve: HeizBalancePumpProductDataset.Curve,
+        at operatingPoint: HeizBalancePumpOperatingPointContext
+    ) -> HeizBalancePumpCurveOperatingPointCalculator.Result? {
+        HeizBalancePumpCurveOperatingPointCalculator.calculate(
+            .init(
+                targetVolumeFlowM3H: operatingPoint.volumeFlowM3H,
+                requiredHeadM: operatingPoint.requiredHeadM,
+                points: curve.points
+            )
+        )
+    }
 }
 
 private struct HeizBalancePumpCurveDetailView: View {
     let curve: HeizBalancePumpProductDataset.Curve
+    let operatingPoint: HeizBalancePumpOperatingPointContext?
 
     private var sortedPoints: [HeizBalancePumpProductDataset.CurvePoint] {
         curve.points.sorted { $0.volumeFlowM3H < $1.volumeFlowM3H }
+    }
+
+    private var evaluation: HeizBalancePumpCurveOperatingPointCalculator.Result? {
+        guard let operatingPoint else { return nil }
+        return HeizBalancePumpCurveOperatingPointCalculator.calculate(
+            .init(
+                targetVolumeFlowM3H: operatingPoint.volumeFlowM3H,
+                requiredHeadM: operatingPoint.requiredHeadM,
+                points: curve.points
+            )
+        )
     }
 
     var body: some View {
@@ -197,6 +294,55 @@ private struct HeizBalancePumpCurveDetailView: View {
                         Text(source)
                             .multilineTextAlignment(.trailing)
                     }
+                }
+            }
+
+            if let operatingPoint {
+                Section {
+                    LabeledContent("Projekt-Volumenstrom") {
+                        Text(operatingPoint.volumeFlowM3H.formatted(.number.precision(.fractionLength(0...3))) + " m³/h")
+                    }
+                    LabeledContent("Erforderliche Förderhöhe") {
+                        Text(operatingPoint.requiredHeadM.formatted(.number.precision(.fractionLength(0...2))) + " m")
+                    }
+
+                    if let evaluation {
+                        LabeledContent("Kennlinien-Förderhöhe") {
+                            Text(evaluation.availableHeadM.formatted(.number.precision(.fractionLength(0...2))) + " m")
+                                .fontWeight(.semibold)
+                        }
+                        LabeledContent("Förderhöhenreserve") {
+                            Text(evaluation.headReserveM.formatted(.number.precision(.fractionLength(0...2))) + " m")
+                        }
+                        if let power = evaluation.interpolatedElectricalInputPowerW {
+                            LabeledContent("Elektrische Aufnahme") {
+                                Text(power.formatted(.number.precision(.fractionLength(0...1))) + " W")
+                            }
+                        }
+                        Label(
+                            evaluation.technicallySufficient
+                                ? "Kennlinie deckt den technischen Betriebspunkt ab."
+                                : "Kennlinie erreicht die erforderliche Förderhöhe am Betriebspunkt nicht.",
+                            systemImage: evaluation.technicallySufficient ? "checkmark.circle" : "exclamationmark.triangle"
+                        )
+                        .foregroundStyle(evaluation.technicallySufficient ? Color.primary : Color.orange)
+
+                        Text(
+                            evaluation.exactDocumentedPoint
+                                ? "Auswertung an einem exakt dokumentierten Kennlinienpunkt."
+                                : "Linear interpoliert zwischen den dokumentierten Punkten \(evaluation.lowerPointID) und \(evaluation.upperPointID)."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    } else {
+                        Label("Betriebspunkt nicht bewertbar: Volumenstrom liegt außerhalb des dokumentierten Kennlinienbereichs. Keine Extrapolation.", systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                } header: {
+                    Text("Projektvergleich")
+                } footer: {
+                    Text("Der Vergleich bewertet ausschließlich die dokumentierte Kennlinie am technischen Projekt-Betriebspunkt. Er ist keine automatische Pumpenauswahl, Effizienzbewertung oder Herstellerfreigabe.")
                 }
             }
 
@@ -221,7 +367,7 @@ private struct HeizBalancePumpCurveDetailView: View {
             } header: {
                 Text("Dokumentierte Kennlinienpunkte")
             } footer: {
-                Text("Die Punkte werden unverändert als Produktdaten dokumentiert. Zwischenwerte und eine automatische Betriebspunkt-/Pumpenauswahl sind noch nicht freigegeben.")
+                Text("Zwischenwerte werden ausschließlich linear zwischen zwei dokumentierten Kennlinienpunkten berechnet. Außerhalb des dokumentierten Bereichs wird nicht extrapoliert.")
             }
         }
         .navigationTitle(curve.label)
