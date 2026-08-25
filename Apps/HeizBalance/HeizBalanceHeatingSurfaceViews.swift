@@ -169,8 +169,13 @@ struct HeizBalanceHeatingSurfaceEditor: View {
                         Text(hydronicPreparation.requiredPowerW.formatted(.number.precision(.fractionLength(0))) + " W")
                     }
                     LabeledContent("Leistungsreserve") {
-                        Text(hydronicPreparation.capacityMarginW.formatted(.number.precision(.fractionLength(0))) + " W")
-                            .foregroundStyle(hydronicPreparation.capacitySufficient ? .secondary : .orange)
+                        if hydronicPreparation.capacitySufficient {
+                            Text(hydronicPreparation.capacityMarginW.formatted(.number.precision(.fractionLength(0))) + " W")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(hydronicPreparation.capacityMarginW.formatted(.number.precision(.fractionLength(0))) + " W")
+                                .foregroundStyle(.orange)
+                        }
                     }
                     LabeledContent("Deckung") {
                         Text((hydronicPreparation.capacityRatio * 100).formatted(.number.precision(.fractionLength(0))) + " %")
