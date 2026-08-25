@@ -16,6 +16,10 @@ struct HeizBalanceProjectEditor: View {
         draft.heatLossPreviewSummary()
     }
 
+    private var hydraulicSystemResult: HeizBalanceHydraulicSystemPreparationCalculator.Result? {
+        draft.hydraulicSystemPreparationState().result
+    }
+
     private var systemTemperatureInvalid: Bool {
         guard let flow = draft.designFlowTemperatureC,
               let returnTemperature = draft.designReturnTemperatureC else {
@@ -159,6 +163,9 @@ struct HeizBalanceProjectEditor: View {
             }
 
             Section {
+                HeizBalanceProjectTechnicalStatusView(project: draft)
+                Divider()
+
                 if draft.roomCount == 0 {
                     Text("Noch keine Räume für eine Vorberechnung vorhanden.")
                         .foregroundStyle(.secondary)
@@ -181,7 +188,7 @@ struct HeizBalanceProjectEditor: View {
                     NavigationLink {
                         HeizBalanceProjectPreviewView(project: draft)
                     } label: {
-                        Label("Vorberechnung je Raum", systemImage: "chart.bar.doc.horizontal")
+                        Label("Vorberechnung je Raum & Hydraulik", systemImage: "chart.bar.doc.horizontal")
                     }
                 }
 
@@ -217,9 +224,9 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 NavigationLink {
-                    HeizBalancePumpDatasetManager(project: draft)
+                    HeizBalancePumpProjectWorkspaceView(project: draft)
                 } label: {
-                    Label("Pumpenkennlinien & Betriebspunkt", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Pumpe & Betriebspunkt", systemImage: "arrow.triangle.2.circlepath")
                 }
 
                 NavigationLink {
@@ -229,13 +236,18 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 LabeledContent("Hydraulischer Abgleich") {
-                    Text("Heizflächen + Rohrnetz in Vorbereitung")
-                        .foregroundStyle(.secondary)
+                    if hydraulicSystemResult?.pumpOperatingPointReady == true {
+                        Text("Technischer Betriebspunkt vollständig")
+                            .foregroundStyle(.green)
+                    } else {
+                        Text("Kreise / Druckverluste ergänzen")
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } header: {
                 Text("Berechnungsstatus")
             } footer: {
-                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Wärme-, Heizflächen-, Niedertemperatur-, Szenario-, Rohrnetz-, Ventil-, Pumpenkennlinien- und Berichtsausgaben bleiben bis zur fachlichen Freigabe technische Vorbereitung.")
+                Text("Eine Gebäudesumme wird nur angezeigt, wenn alle Räume vollständig sind. Wärme-, Heizflächen-, Niedertemperatur-, Szenario-, Rohrnetz-, Ventil-, Pumpen- und Berichtsausgaben bleiben bis zur fachlichen Freigabe technische Vorbereitung.")
             }
         }
         .navigationTitle(isNewProject ? "Neues Projekt" : draft.name)
