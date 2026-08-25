@@ -28,7 +28,16 @@ final class HeizBalanceComponentFavoriteStore {
 
     func save(title: String, component: HeizBalanceComponent) {
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanTitle.isEmpty else { return }
+        guard !cleanTitle.isEmpty else {
+            persistenceError = "Die Bauteilvorlage benötigt einen Namen."
+            return
+        }
+
+        if let uValue = component.uValue,
+           (!uValue.isFinite || uValue <= 0) {
+            persistenceError = "Der U-Wert der Bauteilvorlage muss größer als 0 sein."
+            return
+        }
 
         let previous = favorites
         favorites.removeAll { $0.title.localizedCaseInsensitiveCompare(cleanTitle) == .orderedSame }
@@ -66,6 +75,7 @@ final class HeizBalanceComponentFavoriteStore {
             decoder.dateDecodingStrategy = .iso8601
             favorites = try decoder.decode([HeizBalanceComponentFavorite].self, from: data)
                 .filter { $0.schema == HeizBalanceComponentFavorite.schemaVersion }
+                .filter { $0.uValue.map { $0.isFinite && $0 > 0 } ?? true }
                 .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
             persistenceError = nil
         } catch {
