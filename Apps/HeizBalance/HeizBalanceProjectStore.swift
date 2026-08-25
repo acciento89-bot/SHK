@@ -47,7 +47,9 @@ final class HeizBalanceProjectStore {
     }
 
     func delete(at offsets: IndexSet) {
-        projects.remove(atOffsets: offsets)
+        for index in offsets.sorted(by: >) {
+            projects.remove(at: index)
+        }
         persist()
     }
 
