@@ -31,7 +31,7 @@ struct HeizBalanceProjectListView: View {
                     } header: {
                         Text("Projekte")
                     } footer: {
-                        Text("Alle Projektdaten werden derzeit lokal auf diesem Gerät gespeichert.")
+                        Text("Alle Projektdaten werden derzeit lokal auf diesem Gerät gespeichert. Die Statuschips zeigen nur den technischen Arbeitsstand, keine normative Freigabe.")
                     }
                 }
             }
@@ -109,10 +109,45 @@ struct HeizBalanceProjectListView: View {
 }
 
 private struct HeizBalanceProjectRow: View {
+    @Environment(HeizBalancePumpSelectionStore.self) private var pumpSelectionStore
+
     let project: HeizBalanceProject
 
+    private var preview: HeizBalanceProjectPreviewState {
+        project.heatLossPreviewSummary()
+    }
+
+    private var hydraulic: HeizBalanceHydraulicSystemPreparationCalculator.Result? {
+        project.hydraulicSystemPreparationState().result
+    }
+
+    private var operatingPoint: (flowM3H: Double, headM: Double)? {
+        guard let hydraulic,
+              hydraulic.pumpOperatingPointReady,
+              let flowLPH = hydraulic.designTotalVolumeFlowLPH,
+              let headM = hydraulic.designNetworkHeadMeters else {
+            return nil
+        }
+        return (flowLPH / 1_000, headM)
+    }
+
+    private var pumpSelection: HeizBalancePumpSelection? {
+        pumpSelectionStore.selection(projectID: project.id)
+    }
+
+    private var pumpSelectionIsCurrent: Bool {
+        guard let pumpSelection,
+              let operatingPoint else {
+            return false
+        }
+        return pumpSelection.matchesOperatingPoint(
+            volumeFlowM3H: operatingPoint.flowM3H,
+            requiredHeadM: operatingPoint.headM
+        )
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Text(project.name)
                     .font(.headline)
@@ -134,7 +169,35 @@ private struct HeizBalanceProjectRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+
+            HStack(spacing: 8) {
+                statusChip(
+                    title: "Räume",
+                    symbol: preview.allRoomsComplete && !preview.rooms.isEmpty ? "checkmark.circle.fill" : "circle.dashed",
+                    color: preview.allRoomsComplete && !preview.rooms.isEmpty ? .green : .secondary
+                )
+                statusChip(
+                    title: "Hydraulik",
+                    symbol: operatingPoint != nil ? "checkmark.circle.fill" : "circle.dashed",
+                    color: operatingPoint != nil ? .green : .secondary
+                )
+                statusChip(
+                    title: "Pumpe",
+                    symbol: pumpSelection == nil
+                        ? "circle.dashed"
+                        : (pumpSelectionIsCurrent ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"),
+                    color: pumpSelection == nil
+                        ? .secondary
+                        : (pumpSelectionIsCurrent ? .green : .orange)
+                )
+            }
         }
         .padding(.vertical, 3)
+    }
+
+    private func statusChip(title: String, symbol: String, color: Color) -> some View {
+        Label(title, systemImage: symbol)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(color)
     }
 }
