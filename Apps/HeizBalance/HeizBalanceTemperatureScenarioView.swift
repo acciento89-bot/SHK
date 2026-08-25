@@ -199,7 +199,7 @@ struct HeizBalanceTemperatureScenarioView: View {
                 Text("Jedes Temperaturniveau wird direkt gegen die zugeordnete erforderliche Leistung jeder Heizfläche geprüft. Es werden keine Herstellerabmessungen oder Ersatzmodelle erfunden.")
             }
 
-            ForEach(summaries) { summary in
+            ForEach(summaries, id: \.id) { summary in
                 Section {
                     scenarioSummary(summary)
 
@@ -288,57 +288,70 @@ struct HeizBalanceTemperatureScenarioDetailView: View {
             }
 
             Section("Heizflächen") {
-                ForEach(summary.entries) { entry in
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(entry.displayName)
-                            .font(.headline)
-                        Text(entry.floorName)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        if let result = entry.result {
-                            LabeledContent("Verfügbar") {
-                                Text(scenarioWattText(result.availablePowerW))
-                            }
-                            .font(.caption)
-
-                            LabeledContent("Deckungsgrad") {
-                                Text(scenarioPercentText(result.capacityRatio))
-                                    .foregroundStyle(result.sufficient ? .secondary : .orange)
-                            }
-                            .font(.caption)
-
-                            if result.sufficient {
-                                Label("Heizfläche ausreichend", systemImage: "checkmark.circle")
-                                    .font(.caption)
-                                    .foregroundStyle(.green)
-                            } else {
-                                LabeledContent("Erforderlich bei ΔT50") {
-                                    Text(scenarioWattText(result.requiredNominalPowerDeltaT50W))
-                                        .fontWeight(.semibold)
-                                }
-                                .font(.caption)
-
-                                LabeledContent("Faktor zur aktuellen Nennleistung") {
-                                    Text(scenarioFactorText(result.nominalPowerFactor))
-                                        .fontWeight(.semibold)
-                                }
-                                .font(.caption)
-                            }
-                        } else {
-                            ForEach(entry.missingInputs, id: \.self) { missing in
-                                Text("• \(missing)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 3)
+                ForEach(summary.entries, id: \.id) { entry in
+                    HeizBalanceTemperatureScenarioSurfaceRow(entry: entry)
                 }
             }
         }
         .navigationTitle(summary.scenario.title)
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct HeizBalanceTemperatureScenarioSurfaceRow: View {
+    let entry: HeizBalanceTemperatureScenarioSurfaceResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(entry.displayName)
+                .font(.headline)
+            Text(entry.floorName)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if let result = entry.result {
+                resultContent(result)
+            } else {
+                ForEach(entry.missingInputs, id: \.self) { missing in
+                    Text("• \(missing)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(.vertical, 3)
+    }
+
+    @ViewBuilder
+    private func resultContent(_ result: HeizBalanceTemperatureScenarioCalculator.Result) -> some View {
+        LabeledContent("Verfügbar") {
+            Text(scenarioWattText(result.availablePowerW))
+        }
+        .font(.caption)
+
+        LabeledContent("Deckungsgrad") {
+            Text(scenarioPercentText(result.capacityRatio))
+                .foregroundStyle(result.sufficient ? .secondary : .orange)
+        }
+        .font(.caption)
+
+        if result.sufficient {
+            Label("Heizfläche ausreichend", systemImage: "checkmark.circle")
+                .font(.caption)
+                .foregroundStyle(.green)
+        } else {
+            LabeledContent("Erforderlich bei ΔT50") {
+                Text(scenarioWattText(result.requiredNominalPowerDeltaT50W))
+                    .fontWeight(.semibold)
+            }
+            .font(.caption)
+
+            LabeledContent("Faktor zur aktuellen Nennleistung") {
+                Text(scenarioFactorText(result.nominalPowerFactor))
+                    .fontWeight(.semibold)
+            }
+            .font(.caption)
+        }
     }
 }
 
