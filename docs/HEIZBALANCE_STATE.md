@@ -141,15 +141,8 @@ Die Core-Regressionen prüfen zusätzlich fehlende Verbraucher-Q, Doppelzuordnun
 - Neues Schema `technical-hydraulic-network-v1`.
 - Friert Segmenthierarchie, Verbraucherzuordnung, bekannte/vollständige Q, unresolved Verbraucher und verknüpfte Rohrabschnitte samt stored/calculated/current ein.
 - Eigener A4-PDF-Teil und separates 10er-Projektarchiv.
-- Produktionsbericht wurde von 7 auf **8 gemeinsam datierte Snapshots** erweitert:
-  1. `technical-handover-v1`
-  2. `technical-report-v1`
-  3. `technical-hydraulic-network-v1`
-  4. `technical-low-temperature-v1`
-  5. `technical-temperature-scenarios-v1`
-  6. `technical-radiator-replacements-v1`
-  7. `technical-pump-curves-v1`
-  8. `technical-adjustment-list-v1`
+- Produktionsbericht = **8 gemeinsam datierte Snapshots**: Übergabe, Hauptbericht, Netzbaum, Niedertemperatur, Szenarien, Heizkörperauswahl, Pumpenkennlinien, Einstellliste.
+- Separater `Technischer Bericht & PDF` = **6 gemeinsam datierte Snapshots**: Hauptbericht, Netzbaum, Niedertemperatur, Szenarien, Heizkörperauswahl, Pumpenkennlinien.
 
 ## Aktive versionierte Schemata
 Berichte/Snapshots:
