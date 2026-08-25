@@ -58,9 +58,48 @@ struct HeizBalancePumpCurveReportPDFRenderer {
                 paragraph("Projekt-Betriebspunkt ist noch nicht vollständig berechenbar. Pumpenkennlinien werden deshalb nur dokumentiert, nicht bewertet.")
             }
 
+            section("Festgehaltene Benutzerauswahl")
+            if let selection = snapshot.selectedPump {
+                keyValue("Auswahl-Snapshot", selection.schema)
+                keyValue("Festgehalten", DateFormatter.pumpReportDate.string(from: selection.selectedAt))
+                keyValue("Hersteller / Produkt", selection.displayName, bold: true)
+                keyValue("Kennlinie", selection.curveLabel)
+                if let mode = selection.controlMode, !mode.isEmpty {
+                    keyValue("Regel-/Betriebsart", mode)
+                }
+                if let speed = selection.speedRPM {
+                    keyValue("Drehzahl", number(speed, 0) + " 1/min")
+                }
+                if let article = selection.articleNumber, !article.isEmpty {
+                    keyValue("Artikelnummer", article)
+                }
+                keyValue("Katalog / Datenstand", selection.datasetName + " · " + selection.datasetVersion)
+                keyValue("Quelle", selection.sourceReference)
+                keyValue("Nutzungsgrundlage", selection.usageBasis.title)
+                keyValue("Rechenprofil bei Auswahl", selection.calculationProfile)
+                keyValue("Volumenstrom bei Auswahl", number(selection.operatingPointVolumeFlowM3H, 3) + " m³/h")
+                keyValue("Erforderliche Förderhöhe", number(selection.requiredHeadM, 2) + " m")
+                keyValue("Kennlinien-Förderhöhe", number(selection.availableHeadM, 2) + " m")
+                keyValue("Reserve bei Auswahl", number(selection.headReserveM, 2) + " m")
+                if let power = selection.electricalInputPowerW {
+                    keyValue("Elektrische Aufnahme", number(power, 1) + " W")
+                }
+                keyValue("Dokumentierte Kennlinienpunkte", "\(selection.documentedPoints.count)")
+                keyValue(
+                    "Bezug zum aktuellen Betriebspunkt",
+                    snapshot.selectedPumpMatchesOperatingPoint == true
+                        ? "Unverändert"
+                        : "Neu zu bewerten – Betriebspunkt geändert oder unvollständig",
+                    bold: true
+                )
+                paragraph("Diese Pumpe/Kennlinie wurde ausdrücklich durch den Benutzer festgehalten. Der Snapshot dokumentiert die damalige technische Bewertung; er ist keine automatische Empfehlung, Effizienzfreigabe oder Herstellerfreigabe.", font: smallFont, after: 8)
+            } else {
+                paragraph("Zum Exportzeitpunkt ist keine Pumpe/Kennlinie ausdrücklich als Projektauswahl festgehalten.")
+            }
+
             if snapshot.datasets.isEmpty {
                 section("Pumpenkataloge")
-                paragraph("Keine Pumpenkataloge zum Exportzeitpunkt importiert.")
+                paragraph("Keine Pumpenkataloge zum Exportzeitpunkt importiert. Eine oben dokumentierte festgehaltene Auswahl bleibt als eigener Projektsnapshot erhalten.")
                 return
             }
 
@@ -138,7 +177,7 @@ struct HeizBalancePumpCurveReportPDFRenderer {
             y = margin
             draw("HeizBalance · Pumpenkennlinien", font: smallFont, rect: CGRect(x: margin, y: 18, width: width, height: 12), color: .darkGray)
             draw("Seite \(page)", font: smallFont, rect: CGRect(x: margin, y: bounds.height - 25, width: width, height: 12), alignment: .right, color: .darkGray)
-            draw("Technischer Vergleich · keine automatische Pumpenauswahl", font: smallFont, rect: CGRect(x: margin, y: bounds.height - 25, width: width - 60, height: 12), color: .darkGray)
+            draw("Technischer Vergleich · explizite Auswahl ≠ Empfehlung", font: smallFont, rect: CGRect(x: margin, y: bounds.height - 25, width: width - 60, height: 12), color: .darkGray)
         }
 
         private func ensure(_ height: CGFloat) {
