@@ -40,25 +40,35 @@ struct HeizBalanceProjectListView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Menu {
-                    NavigationLink {
-                        HeizBalanceRadiatorDatasetManager()
-                    } label: {
-                        Label("Heizkörperdaten", systemImage: "radiator")
+                    Section("Aufnahme") {
+                        NavigationLink {
+                            HeizBalanceComponentFavoriteManager()
+                        } label: {
+                            Label("Bauteilvorlagen", systemImage: "square.stack.3d.up")
+                        }
                     }
 
-                    NavigationLink {
-                        HeizBalanceValveDatasetManager()
-                    } label: {
-                        Label("Ventildaten", systemImage: "slider.horizontal.3")
-                    }
+                    Section("Produktdaten") {
+                        NavigationLink {
+                            HeizBalanceRadiatorDatasetManager()
+                        } label: {
+                            Label("Heizkörperdaten", systemImage: "radiator")
+                        }
 
-                    NavigationLink {
-                        HeizBalancePumpDatasetManager()
-                    } label: {
-                        Label("Pumpendaten", systemImage: "arrow.triangle.2.circlepath")
+                        NavigationLink {
+                            HeizBalanceValveDatasetManager()
+                        } label: {
+                            Label("Ventildaten", systemImage: "slider.horizontal.3")
+                        }
+
+                        NavigationLink {
+                            HeizBalancePumpDatasetManager()
+                        } label: {
+                            Label("Pumpendaten", systemImage: "arrow.triangle.2.circlepath")
+                        }
                     }
                 } label: {
-                    Label("Produktdaten", systemImage: "shippingbox")
+                    Label("Daten & Vorlagen", systemImage: "shippingbox.and.arrow.backward")
                 }
             }
 
