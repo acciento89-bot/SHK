@@ -7,6 +7,7 @@ struct HeizBalanceHydraulicSystemCircuitEntry: Identifiable {
     var surfaceName: String
     var targetVolumeFlowLPH: Double?
     var completePressureLossKPa: Double?
+    var hydraulicNetworkCurrent: Bool
 
     var displayName: String {
         "\(roomName) · \(surfaceName)"
@@ -16,11 +17,14 @@ struct HeizBalanceHydraulicSystemCircuitEntry: Identifiable {
 struct HeizBalanceHydraulicSystemPreviewState {
     var circuits: [HeizBalanceHydraulicSystemCircuitEntry]
     var result: HeizBalanceHydraulicSystemPreparationCalculator.Result?
+    var networkState: HeizBalanceHydraulicNetworkProjectState
 }
 
 extension HeizBalanceProject {
     func hydraulicSystemPreparationState() -> HeizBalanceHydraulicSystemPreviewState {
         var entries: [HeizBalanceHydraulicSystemCircuitEntry] = []
+        let networkState = hydraulicNetworkState()
+        let staleSurfaceIDs = Set(networkState.linkedPipes.filter { !$0.isCurrent }.map(\.surfaceID))
 
         for floor in floors {
             for room in floor.rooms {
@@ -37,6 +41,7 @@ extension HeizBalanceProject {
                         densityKGPerM3: hydraulicFluidDensityKGPerM3,
                         kinematicViscosityMM2S: hydraulicKinematicViscosityMM2S
                     )
+                    let networkCurrent = !staleSurfaceIDs.contains(surface.id)
 
                     entries.append(
                         HeizBalanceHydraulicSystemCircuitEntry(
@@ -45,7 +50,8 @@ extension HeizBalanceProject {
                             roomName: room.name,
                             surfaceName: surface.name,
                             targetVolumeFlowLPH: hydronic?.targetVolumeFlowLPH,
-                            completePressureLossKPa: circuit?.completeCircuitPressureLossKPa
+                            completePressureLossKPa: networkCurrent ? circuit?.completeCircuitPressureLossKPa : nil,
+                            hydraulicNetworkCurrent: networkCurrent
                         )
                     )
                 }
@@ -70,7 +76,8 @@ extension HeizBalanceProject {
 
         return HeizBalanceHydraulicSystemPreviewState(
             circuits: entries,
-            result: result
+            result: result,
+            networkState: networkState
         )
     }
 }
