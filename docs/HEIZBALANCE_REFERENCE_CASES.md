@@ -251,3 +251,8 @@ Projektweit kann zusätzlich die ausdrücklich festgehaltene Pumpen-/Kennliniene
 - Erst nach erfolgreichem PDF-Export wird exakt derselbe `technical-adjustment-list-v1`-Snapshot archiviert.
 - Abgebrochene/fehlgeschlagene Exporte erzeugen keinen falschen Archivstand.
 - Pro Projekt werden maximal die letzten 10 Einstelllisten-Snapshots gehalten.
+
+## Verifikationsstand Batch 26–29
+- CI #249 hat einen reinen Swift-Syntaxfehler im failable Initializer der neuen Ventilauswahl erkannt; die fachliche Logik war nicht betroffen.
+- Der Fehler wurde zu `init?(...)` korrigiert.
+- **CI #250 hat den vollständigen Code-Head anschließend grün validiert: Core-Tests, komplette iOS-Debug-Matrix, HeizBalance Debug und echter HeizBalance-Release-Simulator-Build.**
