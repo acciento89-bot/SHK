@@ -305,6 +305,7 @@ struct HeizBalanceHydraulicLossComponent: Identifiable, Codable, Hashable {
     var name: String
     var pressureLossKPa: Double?
     var source: HeizBalanceInputSource?
+    var valveProductData: HeizBalanceValveProductData?
     var note: String
 
     init(
@@ -313,6 +314,7 @@ struct HeizBalanceHydraulicLossComponent: Identifiable, Codable, Hashable {
         name: String = "",
         pressureLossKPa: Double? = nil,
         source: HeizBalanceInputSource? = nil,
+        valveProductData: HeizBalanceValveProductData? = nil,
         note: String = ""
     ) {
         self.id = id
@@ -320,7 +322,12 @@ struct HeizBalanceHydraulicLossComponent: Identifiable, Codable, Hashable {
         self.name = name.isEmpty ? kind.title : name
         self.pressureLossKPa = pressureLossKPa
         self.source = source
+        self.valveProductData = valveProductData
         self.note = note
+    }
+
+    var supportsValveProductData: Bool {
+        kind == .thermostaticValve || kind == .returnValve
     }
 
     enum Kind: String, Codable, CaseIterable, Identifiable {
