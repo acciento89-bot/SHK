@@ -55,11 +55,11 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung und hydra
 8. Normative Ausgaben bleiben im Rechenprofil technisch gesperrt, bis die Validierungsgates erfüllt sind.
 9. Ein einzelner Profil-/Release-Schalter darf die normative Ausgabe nicht freigeben; alle verpflichtenden Module müssen Spezifikation und Referenzabdeckung erfüllen.
 
-## Aktueller Stand – Foundation Pass 6
+## Aktueller Stand – Foundation Pass 8
 - Branch `feature/heizbalance-foundation` und Draft-PR #12 aktiv.
 - XcodeGen-Target `HeizBalance` mit Bundle-ID `de.kamilunavo.heizbalance` eingebunden.
 - Persistente lokale Projektstruktur Projekt → Geschoss → Raum → Bauteil vorhanden.
-- Projektaufnahme: Kunde, Adresse, Baujahr, Auslegungs-Außentemperatur, Quellenangaben, System-Vorlauf/Rücklauf und Notizen.
+- Projektaufnahme: Kunde, Adresse, Baujahr, Auslegungs-Außentemperatur, Quellenangaben, System-Vorlauf/Rücklauf, explizite Hydraulik-Fluidwerte und Notizen.
 - Raumaufnahme: Geometrie, Solltemperatur, Luftwechsel, Quellenangabe und optionale Heizflächen.
 - Bauteilaufnahme: Art, Fläche, U-Wert, U-Wert-Quelle und thermische Randbedingung.
 - Randbedingungen unterstützen Außenluft oder explizite Gegenseitentemperatur; für Boden/Decke/unbeheizte Bereiche werden keine erfundenen Pauschalwerte eingesetzt.
@@ -75,18 +75,28 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung und hydra
 - `HeizBalanceReferenceCaseValidator` prüft benannte Zwischen-/Endmetriken mit Toleranzen und schlägt bei fehlenden, nicht-endlichen oder abweichenden Ergebnissen fehl.
 - In der App ist der Rechenprofil-/Validierungsstatus sichtbar; das Normprofil wird aktuell ausdrücklich als gesperrt angezeigt.
 - `docs/HEIZBALANCE_REFERENCE_CASES.md` dokumentiert Referenzfall- und Freigabestrategie.
-- Heizflächenaufnahme ist pro Raum vorhanden: Art, Bezeichnung, Hersteller, Modell, Nennleistung ΔT50, Exponent, Datenquelle und Notiz.
-- `HeizBalanceHeatingSurfacePreviewCalculator` berechnet aus expliziten Heizkörperkennwerten und Projekt-Systemtemperaturen die technische Heizflächenleistung und den zu dieser Leistung gehörenden Volumenstrom.
-- Heizflächen- und neue Systemtemperaturfelder sind optional angelegt, damit bestehende gespeicherte Projekte ohne diese Schlüssel weiterhin decodierbar bleiben.
+- Heizflächenaufnahme ist pro Raum vorhanden: Art, Bezeichnung, Hersteller, Modell, Nennleistung ΔT50, Exponent, Datenquelle, zugeordnete erforderliche Leistung und Notiz.
+- `HeizBalanceHeatingSurfacePreviewCalculator` berechnet aus expliziten Heizkörperkennwerten und Projekt-Systemtemperaturen die verfügbare Heizflächenleistung.
+- `HeizBalanceHydronicPreparationCalculator` trennt verfügbare Heizkörperleistung und zugeordnete erforderliche Leistung; der technische Ziel-Volumenstrom entsteht aus der erforderlichen Leistung und der Wasserspreizung.
+- Die Raumübersicht vergleicht technische Raum-Vorbereitung, verfügbare Heizflächenleistung, zugeordnete Leistungen und aufsummierte Ziel-Volumenströme.
+- Heizflächen-, Systemtemperatur-, Fluid- und Rohrnetzfelder sind optional angelegt, damit bestehende gespeicherte Projekte ohne diese Schlüssel weiterhin decodierbar bleiben.
+- Hydraulik-Fluidwerte werden explizit als Projektdaten erfasst: Dichte in kg/m³ und kinematische Viskosität in mm²/s. Es werden keine versteckten Wasser-/Glykolwerte angenommen.
+- Pro Heizfläche können hydraulisch wirksame Rohrabschnitte mit echtem Innendurchmesser, Länge, absoluter Rauheit und optionaler ζ-Summe erfasst werden.
+- `HeizBalanceHydronicCircuitCalculator` berechnet je Rohrabschnitt Geschwindigkeit, Reynolds-Zahl, Rohrreibungsverlust und bekannte Einzelwiderstandsverluste.
+- Ein vollständiger Rohrkreis-Druckverlust wird nur ausgegeben, wenn für jeden erfassten Abschnitt die ζ-Summe explizit vorhanden ist; sonst bleibt die Ausgabe bewusst eine Teilsumme bekannter Verluste.
+- Der Rohrkreiswert enthält aktuell keine automatisch angenommenen Verluste von Thermostatventil, Rücklaufverschraubung, Heizfläche, Verteiler, Wärmeerzeuger oder sonstigen Bauteilen.
 - Keine Hersteller-Typentabellen, Ventilkennlinien oder Voreinstellwerte werden erfunden oder ungeprüft hinterlegt.
-- CI Run #48 deckte einen SwiftUI-Compilefehler in der neuen Statusansicht auf; Fehler wurde anhand des Xcode-Logs behoben.
-- CI Run #49 Validierungsgates/Referenzfall-Validator: grün, inklusive Core-Tests und HeizBalance-iOS-Build.
-- CI Run #50 Heizflächenaufnahme/Leistungs- und Volumenstrom-Vorbereitung: komplett grün, inklusive Core-Tests und gesamter iOS-Matrix.
+- CI Run #50 Heizflächenaufnahme/Leistungs- und Volumenstrom-Vorbereitung: komplett grün.
+- CI Run #53 Trennung erforderliche/verfügbare Leistung und technischer Ziel-Volumenstrom: komplett grün.
+- CI Run #54 erkannte den doppelten Swift-Dateinamen der neuen Raumabdeckung; Ursache behoben.
+- CI Run #55 Rename-Fix und Raum-Heizflächenabdeckung: komplett grün.
+- CI Run #56 erkannte einen Test-Compilefehler durch nicht entpackten optionalen vollständigen Rohrkreis-Druckverlust; Test korrigiert.
+- CI Run #57 Rohrnetz-/Druckverlust-Vorbereitung: komplett grün, inklusive Core-Tests, HeizBalance-iOS-Build und gesamter iOS-Matrix.
 
 ## Nächster Entwicklungsschritt
 1. Fachliche Spezifikation der einzelnen Normbausteine anhand rechtmäßig zugänglicher Regelwerksunterlagen und verifizierter Referenzfälle erstellen.
 2. Referenzfälle je Normmodul sammeln und den Gate-Status erst nach echter Prüfung füllen.
-3. Heizflächenabdeckung je Raum gegen die technische Raum-Vorberechnung darstellen, ohne daraus bereits einen Normnachweis abzuleiten.
-4. Erforderliche Heizflächenleistung je Heizfläche explizit modellieren, damit der spätere Soll-Volumenstrom nicht mit der maximal verfügbaren Heizkörperleistung verwechselt wird.
-5. Danach Rohrnetz-/Druckverlustmodell und Ventil-Schnittstelle vorbereiten; Hersteller-Voreinstellungen erst mit freigegebenen Produktdaten.
-6. PDF-Projektbericht auf die bereits nachvollziehbaren Eingaben, Quellen und technischen Vorbereitungswerte vorbereiten.
+3. Hydraulische Verlustbausteine neben dem Rohrweg getrennt modellieren: Heizflächen-/Verteiler-/Armaturenverluste nur als explizite oder autorisierte Herstellerdaten.
+4. Ventil-Schnittstelle mit Ziel-Volumenstrom und erforderlichem Differenzdruck vorbereiten; Soll-kv und Voreinstellung erst nach fachlicher Validierung und autorisierten Kennlinien freigeben.
+5. Danach ungünstigsten hydraulischen Kreis, Anlagen-Gesamtvolumenstrom und Pumpenanforderung aus vollständigen Kreisdaten ableiten.
+6. PDF-Projektbericht auf die bereits nachvollziehbaren Eingaben, Quellen, technischen Heizflächenwerte, Ziel-Volumenströme und Druckverlustbausteine vorbereiten.
