@@ -110,6 +110,7 @@ struct HeizBalanceComponent: Identifiable, Codable, Hashable {
     var name: String
     var area: Double
     var uValue: Double?
+    var uValueSource: ValueSource?
     var note: String
 
     init(
@@ -118,6 +119,7 @@ struct HeizBalanceComponent: Identifiable, Codable, Hashable {
         name: String = "",
         area: Double = 0,
         uValue: Double? = nil,
+        uValueSource: ValueSource? = nil,
         note: String = ""
     ) {
         self.id = id
@@ -125,6 +127,7 @@ struct HeizBalanceComponent: Identifiable, Codable, Hashable {
         self.name = name.isEmpty ? kind.title : name
         self.area = area
         self.uValue = uValue
+        self.uValueSource = uValueSource
         self.note = note
     }
 
@@ -160,6 +163,26 @@ struct HeizBalanceComponent: Identifiable, Codable, Hashable {
             case .ceiling: "rectangle.topthird.inset.filled"
             case .floor: "rectangle.bottomthird.inset.filled"
             case .interiorBoundary: "square.split.2x1"
+            }
+        }
+    }
+
+    enum ValueSource: String, Codable, CaseIterable, Identifiable {
+        case plan
+        case manufacturer
+        case expertValue
+        case measured
+        case estimated
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .plan: "Plan / Baubeschreibung"
+            case .manufacturer: "Herstellerangabe"
+            case .expertValue: "Fachlich ermittelter Wert"
+            case .measured: "Messung / Nachweis"
+            case .estimated: "Geschätzt"
             }
         }
     }
