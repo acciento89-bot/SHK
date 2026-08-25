@@ -100,10 +100,34 @@ extension HeizBalanceProject {
     private func reportTemperatureScenarios() -> [HeizBalanceTemperatureScenario] {
         var values: [HeizBalanceTemperatureScenario] = []
 
+        func appendUnique(_ candidate: HeizBalanceTemperatureScenario) {
+            guard !values.contains(where: {
+                abs($0.flowTemperatureC - candidate.flowTemperatureC) < 0.001
+                    && abs($0.returnTemperatureC - candidate.returnTemperatureC) < 0.001
+            }) else { return }
+            values.append(candidate)
+        }
+
+        if let flow = retrofitTargetFlowTemperatureC,
+           let returnTemperature = retrofitTargetReturnTemperatureC,
+           flow > returnTemperature {
+            let sourceSuffix: String = {
+                guard let source = retrofitTargetTemperatureSource else { return "" }
+                return " · \(source.title)"
+            }()
+            appendUnique(
+                .init(
+                    title: "Sanierungsziel\(sourceSuffix)",
+                    flowTemperatureC: flow,
+                    returnTemperatureC: returnTemperature
+                )
+            )
+        }
+
         if let flow = designFlowTemperatureC,
            let returnTemperature = designReturnTemperatureC,
            flow > returnTemperature {
-            values.append(
+            appendUnique(
                 .init(
                     title: "Projekt",
                     flowTemperatureC: flow,
@@ -119,11 +143,8 @@ extension HeizBalanceProject {
             .init(title: "40 / 35", flowTemperatureC: 40, returnTemperatureC: 35)
         ]
 
-        for preset in presets where !values.contains(where: {
-            abs($0.flowTemperatureC - preset.flowTemperatureC) < 0.001
-                && abs($0.returnTemperatureC - preset.returnTemperatureC) < 0.001
-        }) {
-            values.append(preset)
+        for preset in presets {
+            appendUnique(preset)
         }
 
         return values
