@@ -33,6 +33,9 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
     var designFlowTemperatureC: Double?
     var designReturnTemperatureC: Double?
     var systemTemperatureSource: HeizBalanceInputSource?
+    var retrofitTargetFlowTemperatureC: Double?
+    var retrofitTargetReturnTemperatureC: Double?
+    var retrofitTargetTemperatureSource: HeizBalanceInputSource?
     var hydraulicFluidDensityKGPerM3: Double?
     var hydraulicKinematicViscosityMM2S: Double?
     var hydraulicFluidSource: HeizBalanceInputSource?
@@ -54,6 +57,9 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         designFlowTemperatureC: Double? = nil,
         designReturnTemperatureC: Double? = nil,
         systemTemperatureSource: HeizBalanceInputSource? = nil,
+        retrofitTargetFlowTemperatureC: Double? = nil,
+        retrofitTargetReturnTemperatureC: Double? = nil,
+        retrofitTargetTemperatureSource: HeizBalanceInputSource? = nil,
         hydraulicFluidDensityKGPerM3: Double? = nil,
         hydraulicKinematicViscosityMM2S: Double? = nil,
         hydraulicFluidSource: HeizBalanceInputSource? = nil,
@@ -74,6 +80,9 @@ struct HeizBalanceProject: Identifiable, Codable, Hashable {
         self.designFlowTemperatureC = designFlowTemperatureC
         self.designReturnTemperatureC = designReturnTemperatureC
         self.systemTemperatureSource = systemTemperatureSource
+        self.retrofitTargetFlowTemperatureC = retrofitTargetFlowTemperatureC
+        self.retrofitTargetReturnTemperatureC = retrofitTargetReturnTemperatureC
+        self.retrofitTargetTemperatureSource = retrofitTargetTemperatureSource
         self.hydraulicFluidDensityKGPerM3 = hydraulicFluidDensityKGPerM3
         self.hydraulicKinematicViscosityMM2S = hydraulicKinematicViscosityMM2S
         self.hydraulicFluidSource = hydraulicFluidSource
