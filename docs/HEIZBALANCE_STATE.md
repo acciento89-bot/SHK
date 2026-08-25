@@ -33,7 +33,7 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 10. System-Minimaltemperatur nur bei vollständig auswertbaren Heizflächen.
 11. Szenarioausgaben liefern benötigte Leistung/Faktor, erfinden aber kein Ersatzmodell.
 
-## Aktueller Stand – Foundation Pass 13
+## Aktueller Stand – Foundation Pass 14
 
 ### Projekt- und Gebäudeaufnahme
 - Persistente lokale Struktur Projekt → Geschoss → Raum → Bauteil.
@@ -100,6 +100,9 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - Pro Szenario: auswertbare Heizflächen, ausreichende Heizflächen, Systemstatus und thermisch schlechteste Heizfläche.
 - Detailansicht zeigt jede Heizfläche einzeln.
 - Keine konkrete Ersatzheizfläche oder Herstellerdimension wird erfunden; bei Unterdeckung wird stattdessen die mindestens benötigte ΔT50-Nennleistung und der Faktor ausgegeben.
+- Das Projekt-Dashboard zeigt das gespeicherte Sanierungsziel jetzt als fachlichen Sofortstatus: `Ziel erreichbar`, `Upgradebedarf`, `Daten unvollständig` oder noch keine Heizflächen.
+- Bei Upgradebedarf werden direkt die begrenzende Heizfläche, die mindestens erforderliche ΔT50-Nennleistung und der Größenfaktor angezeigt.
+- Die dokumentierte Quelle des Zieltemperaturniveaus ist auch im Dashboard sichtbar.
 
 ### Technisches Musterprojekt / Regression
 - Fiktives Entwicklungsprojekt mit drei Räumen und vollständiger technischer Heizflächen-/Hydraulikkette.
@@ -154,7 +157,8 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 - #100 Release-Gate: HeizBalance Debug + echter Release-Build grün; Debug-Musterinhalt release-seitig abgesichert.
 - #104 / #109 / #110: während des Szenario-UI-Passes gefundene SwiftUI-Compilerprobleme; analysiert und behoben, nicht als Release-Checkpoint gewertet.
 - #111: Foundation Pass 12 vollständig grün – Core-Tests, gesamte Debug-iOS-Matrix, HeizBalance Szenario-/3-PDF-Pfad und echter HeizBalance-Release-Build erfolgreich.
-- #120: **Foundation Pass 13 Code-Gate grün** – persistentes Sanierungsziel, zentrale Report-Szenariointegration, Core-Tests, gesamte Debug-iOS-Matrix und echter HeizBalance-Release-Build erfolgreich.
+- #120: Foundation Pass 13 Code-Gate grün – persistentes Sanierungsziel, zentrale Report-Szenariointegration, Core-Tests, gesamte Debug-iOS-Matrix und echter HeizBalance-Release-Build erfolgreich.
+- #123: **Foundation Pass 14 vollständig grün** – Sanierungsziel-Dashboardstatus, Core-Tests, komplette Debug-iOS-Matrix und echter HeizBalance-Release-Build erfolgreich.
 
 ## Noch bewusst gesperrt / offen
 - Norm-Heizlast nach DIN EN 12831-1 + deutschem Ergänzungsregelwerk.
@@ -168,6 +172,5 @@ Mobile SHK-Fachanwendung für raumweise Heizlast, Heizflächenprüfung, Niederte
 1. Herstellerdaten-Strategie für Heizkörper und Ventile definieren: ausschließlich autorisierte/legale strukturierte Daten; VDI-3805-kompatible Quellen prüfen.
 2. Auf Basis echter Heizkörperdaten konkrete Ersatz-/Upgradevorschläge aus der bereits berechneten erforderlichen ΔT50-Leistung ableiten.
 3. PDF-Ausgabe mit größeren realistischen Projekten visuell und auf Seitenumbrüche testen.
-4. Projektseitig einen klaren Sanierungsziel-Status ergänzen: Ziel vollständig / alle Heizflächen ausreichend / Upgradebedarf und begrenzende Heizfläche direkt im Dashboard sichtbar machen.
-5. Parallel die fachliche Spezifikation der späteren Norm-Heizlastmodule anhand rechtmäßig zugänglicher Regelwerksunterlagen und belastbarer Referenzfälle aufbauen.
-6. Erst nach echter fachlicher Referenzvalidierung normative Gates schrittweise freigeben.
+4. Parallel die fachliche Spezifikation der späteren Norm-Heizlastmodule anhand rechtmäßig zugänglicher Regelwerksunterlagen und belastbarer Referenzfälle aufbauen.
+5. Erst nach echter fachlicher Referenzvalidierung normative Gates schrittweise freigeben.
