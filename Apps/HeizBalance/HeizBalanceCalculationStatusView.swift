@@ -4,12 +4,36 @@ struct HeizBalanceCalculationStatusView: View {
     private let previewProfile = HeizBalanceCalculationProfile.technicalPreviewV1
     private let normativeProfile = HeizBalanceCalculationProfile.germanRoomHeatLoad2017_2020
 
+    private var publicSources: [HeizBalanceNormativeSourceRecord] {
+        HeizBalanceNormativeEvidenceCatalog.germanRoomHeatLoad2017_2020PublicMetadata
+    }
+
+    private var sourceBasis: HeizBalanceNormativeSourceBasisReport {
+        HeizBalanceNormativeEvidenceLedger.sourceBasis(
+            profile: normativeProfile,
+            sources: publicSources
+        )
+    }
+
+    private var moduleEvidence: [HeizBalanceNormativeModuleEvidence] {
+        HeizBalanceNormativeEvidenceLedger.moduleEvidence(
+            profile: normativeProfile,
+            sources: publicSources,
+            specifications: [],
+            referenceCases: []
+        )
+    }
+
     private var requiredModules: [HeizBalanceNormativeModuleID] {
         HeizBalanceNormativeReadiness.requiredModules(for: normativeProfile.engineID)
     }
 
     private var readiness: HeizBalanceNormativeReadinessReport {
-        HeizBalanceNormativeReadiness.evaluate(profile: normativeProfile, evidence: [])
+        HeizBalanceNormativeReadiness.evaluate(
+            profile: normativeProfile,
+            evidence: moduleEvidence,
+            sourceBasis: sourceBasis
+        )
     }
 
     var body: some View {
@@ -45,15 +69,50 @@ struct HeizBalanceCalculationStatusView: View {
             } header: {
                 Text("Reserviertes Normprofil")
             } footer: {
-                Text("Die Freigabe bleibt technisch gesperrt, bis Spezifikation, Referenzfälle und explizites Release-Gate erfüllt sind.")
+                Text("Die Freigabe bleibt technisch gesperrt, bis Quellenbasis, Spezifikation, unabhängige Referenzfälle und explizites Release-Gate erfüllt sind.")
+            }
+
+            Section {
+                ForEach(publicSources) { source in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(source.document)
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text(source.edition)
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Text(source.role == .successorDraft ? "Nachfolgeentwurf · Metadaten" : "Profilbasis · Metadaten")
+                            .font(.caption)
+                            .foregroundStyle(source.role == .successorDraft ? .orange : .secondary)
+
+                        if let doi = source.doi {
+                            Text("DOI \(doi)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Text("Metadaten geprüft: \(source.metadataVerifiedOn)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                }
+            } header: {
+                Text("Öffentlich verifizierte Quellenmetadaten")
+            } footer: {
+                Text("Metadaten belegen Dokument, Ausgabe und Nachfolgehinweise – nicht das Recht zur Implementierung und nicht die fachliche Verifikation der Rechenvorschriften. Der Entwurf 2025 wird deshalb separat als offener Review-Punkt geführt.")
             }
 
             Section {
                 ForEach(requiredModules, id: \.self) { module in
+                    let evidence = moduleEvidence.first { $0.moduleID == module }
                     HStack(alignment: .firstTextBaseline) {
-                        Label(module.displayName, systemImage: "square.dashed")
+                        Label(module.displayName, systemImage: evidence?.referenceCoverageComplete == true && evidence?.specificationVerified == true ? "checkmark.square.fill" : "square.dashed")
                         Spacer()
-                        Text("offen")
+                        Text(evidence?.specificationVerified == true && evidence?.referenceCoverageComplete == true ? "validiert" : "offen")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -61,10 +120,20 @@ struct HeizBalanceCalculationStatusView: View {
             } header: {
                 Text("Validierungsbausteine")
             } footer: {
-                Text("Die Liste beschreibt die getrennten Rechen- und Prüfmodule. Ihre konkrete normative Ausgestaltung wird erst nach verifizierter Fachspezifikation implementiert.")
+                Text("Jedes Modul benötigt eine rechtlich qualifizierte, unabhängig geprüfte Spezifikation und mindestens einen unabhängigen Referenzfall mit dokumentierten Erwartungswerten. Technische Eigenregressionen zählen dafür nicht automatisch.")
             }
 
             Section("Gate-Status") {
+                LabeledContent("Quellenbasis") {
+                    Text(readiness.sourceBasisReady ? "bereit" : "gesperrt")
+                        .foregroundStyle(readiness.sourceBasisReady ? .green : .orange)
+                }
+                LabeledContent("Basisrechte offen") {
+                    Text("\(sourceBasis.implementationRightsMissingEditions.count)")
+                }
+                LabeledContent("Nachfolge-Reviews offen") {
+                    Text("\(sourceBasis.pendingSuccessorDraftIDs.count)")
+                }
                 LabeledContent("Spezifikationen offen") {
                     Text("\(readiness.missingSpecificationModules.count)")
                 }
