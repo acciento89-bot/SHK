@@ -8,12 +8,13 @@ import Testing
     #expect(report.requiredModules.count == 10)
     #expect(report.missingSpecificationModules.count == report.requiredModules.count)
     #expect(report.missingReferenceValidationModules.count == report.requiredModules.count)
+    #expect(report.sourceBasisReady == false)
     #expect(report.profileLifecycleReady == false)
     #expect(report.explicitReleaseFlagEnabled == false)
     #expect(report.canProduceNormativeOutput == false)
 }
 
-@Test func normativeReadinessRequiresEveryModuleAndExplicitRelease() {
+@Test func normativeReadinessRequiresEveryModuleSourceBasisAndExplicitRelease() {
     var profile = HeizBalanceCalculationProfile.germanRoomHeatLoad2017_2020
     profile.validationState = .referenceValidated
     profile.normativeOutputAllowed = true
@@ -26,13 +27,40 @@ import Testing
             passedReferenceCaseCount: 2
         )
     }
+    let sourceBasis = readySourceBasis(for: profile)
+
+    let report = HeizBalanceNormativeReadiness.evaluate(
+        profile: profile,
+        evidence: evidence,
+        sourceBasis: sourceBasis
+    )
+    #expect(report.missingSpecificationModules.isEmpty)
+    #expect(report.missingReferenceValidationModules.isEmpty)
+    #expect(report.sourceBasisReady)
+    #expect(report.profileLifecycleReady)
+    #expect(report.explicitReleaseFlagEnabled)
+    #expect(report.canProduceNormativeOutput)
+}
+
+@Test func completeModulesCannotBypassMissingSourceBasis() {
+    var profile = HeizBalanceCalculationProfile.germanRoomHeatLoad2017_2020
+    profile.validationState = .released
+    profile.normativeOutputAllowed = true
+
+    let evidence = HeizBalanceNormativeReadiness.requiredModules(for: profile.engineID).map {
+        HeizBalanceNormativeModuleEvidence(
+            moduleID: $0,
+            specificationVerified: true,
+            referenceCaseCount: 3,
+            passedReferenceCaseCount: 3
+        )
+    }
 
     let report = HeizBalanceNormativeReadiness.evaluate(profile: profile, evidence: evidence)
     #expect(report.missingSpecificationModules.isEmpty)
     #expect(report.missingReferenceValidationModules.isEmpty)
-    #expect(report.profileLifecycleReady)
-    #expect(report.explicitReleaseFlagEnabled)
-    #expect(report.canProduceNormativeOutput)
+    #expect(report.sourceBasisReady == false)
+    #expect(report.canProduceNormativeOutput == false)
 }
 
 @Test func oneFailedModuleKeepsNormativeOutputLocked() {
@@ -50,8 +78,13 @@ import Testing
     }
 
     evidence[0].passedReferenceCaseCount = 2
-    let report = HeizBalanceNormativeReadiness.evaluate(profile: profile, evidence: evidence)
+    let report = HeizBalanceNormativeReadiness.evaluate(
+        profile: profile,
+        evidence: evidence,
+        sourceBasis: readySourceBasis(for: profile)
+    )
 
+    #expect(report.sourceBasisReady)
     #expect(report.missingSpecificationModules.isEmpty)
     #expect(report.missingReferenceValidationModules == [evidence[0].moduleID])
     #expect(report.canProduceNormativeOutput == false)
@@ -80,4 +113,26 @@ import Testing
     )
     #expect(failing.passed == false)
     #expect(failing.failures.count == 2)
+}
+
+private func readySourceBasis(
+    for profile: HeizBalanceCalculationProfile
+) -> HeizBalanceNormativeSourceBasisReport {
+    let sources = profile.sourceEditions.enumerated().map { index, edition in
+        HeizBalanceNormativeSourceRecord(
+            id: "qualified-source-\(index)",
+            document: edition.document,
+            edition: edition.edition,
+            role: .normativeBasis,
+            metadataReference: "Qualified test source",
+            metadataURL: nil,
+            doi: nil,
+            metadataVerifiedOn: "2026-08-26",
+            rights: .implementationAndReferenceValidation,
+            rightsReference: "TEST-RIGHTS-\(index)",
+            successorReviewState: .notApplicable
+        )
+    }
+
+    return HeizBalanceNormativeEvidenceLedger.sourceBasis(profile: profile, sources: sources)
 }
