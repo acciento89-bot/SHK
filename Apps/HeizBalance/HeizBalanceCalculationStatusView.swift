@@ -149,6 +149,27 @@ struct HeizBalanceCalculationStatusView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Section {
+                NavigationLink {
+                    HeizBalanceNormativeEvidenceCandidateManager()
+                } label: {
+                    Label("Evidenzpakete prüfen", systemImage: "tray.full")
+                }
+
+                LabeledContent("Importstatus") {
+                    Text("Quarantäne")
+                        .foregroundStyle(.orange)
+                }
+                LabeledContent("Direkter Gate-Einfluss") {
+                    Text("Keiner")
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Evidenz-Quarantäne")
+            } footer: {
+                Text("Importierte Kandidaten werden separat gespeichert und sind nicht mit der Readiness-Auswertung verbunden. Dadurch kann ein externes JSON-Paket die Normfreigabe nicht selbst aktivieren.")
+            }
         }
         .navigationTitle("Rechenstatus")
         .navigationBarTitleDisplayMode(.inline)
