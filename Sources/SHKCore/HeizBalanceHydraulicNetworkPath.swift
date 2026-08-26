@@ -12,12 +12,20 @@ enum HeizBalanceHydraulicNetworkPathCalculator {
         var zetaTotal: Double?
     }
 
+    struct ComponentInput: Sendable, Equatable {
+        var id: String
+        var name: String
+        var pressureLossKPa: Double?
+    }
+
     struct SegmentInput: Sendable, Equatable {
         var id: String
         var name: String
         var parentSegmentID: String?
         var designVolumeFlowLPH: Double?
         var pipeSections: [PipeSectionInput]
+        var components: [ComponentInput] = []
+        var componentAssessmentComplete: Bool = true
     }
 
     struct ConsumerInput: Sendable, Equatable {
@@ -41,9 +49,14 @@ enum HeizBalanceHydraulicNetworkPathCalculator {
         var parentSegmentID: String?
         var designVolumeFlowLPH: Double?
         var pipeSectionCount: Int
+        var componentCount: Int
+        var knownPipePressureLossKPa: Double
+        var knownComponentPressureLossKPa: Double
         var knownPressureLossKPa: Double
         var completePressureLossKPa: Double?
         var pressureCoverageComplete: Bool
+        var componentCoverageComplete: Bool
+        var missingComponentCount: Int
     }
 
     struct ConsumerResult: Sendable, Equatable {
@@ -96,7 +109,6 @@ enum HeizBalanceHydraulicNetworkPathCalculator {
             segmentsByID[segment.id] = segment
         }
 
-        // Reject cycles before any path is evaluated.
         for segment in input.segments {
             var visited = Set<String>()
             var current: String? = segment.id
@@ -110,11 +122,11 @@ enum HeizBalanceHydraulicNetworkPathCalculator {
         var segmentResultByID: [String: SegmentResult] = [:]
 
         for segment in input.segments {
-            var knownLoss = 0.0
-            var complete = true
+            var knownPipeLoss = 0.0
+            var pipeComplete = true
 
             if !segment.pipeSections.isEmpty, segment.designVolumeFlowLPH == nil {
-                complete = false
+                pipeComplete = false
             }
 
             for section in segment.pipeSections {
@@ -125,7 +137,7 @@ enum HeizBalanceHydraulicNetworkPathCalculator {
                       length.isFinite, length >= 0,
                       roughness.isFinite, roughness >= 0,
                       let flow = segment.designVolumeFlowLPH else {
-                    complete = false
+                    pipeComplete = false
                     continue
                 }
 
@@ -144,13 +156,28 @@ enum HeizBalanceHydraulicNetworkPathCalculator {
                     kinematicViscosityM2S: input.kinematicViscosityM2S
                 )
 
-                knownLoss += hydraulics.base.totalPressureDropKPa
+                knownPipeLoss += hydraulics.base.totalPressureDropKPa
                 if section.zetaTotal != nil {
-                    knownLoss += hydraulics.localPressureLossKPa
+                    knownPipeLoss += hydraulics.localPressureLossKPa
                 } else {
-                    complete = false
+                    pipeComplete = false
                 }
             }
+
+            var knownComponentLoss = 0.0
+            var missingComponents = 0
+            for component in segment.components {
+                guard let loss = component.pressureLossKPa else {
+                    missingComponents += 1
+                    continue
+                }
+                guard loss.isFinite, loss >= 0 else { return nil }
+                knownComponentLoss += loss
+            }
+
+            let componentComplete = segment.componentAssessmentComplete && missingComponents == 0
+            let knownTotal = knownPipeLoss + knownComponentLoss
+            let complete = pipeComplete && componentComplete
 
             let result = SegmentResult(
                 id: segment.id,
@@ -158,9 +185,14 @@ enum HeizBalanceHydraulicNetworkPathCalculator {
                 parentSegmentID: segment.parentSegmentID,
                 designVolumeFlowLPH: segment.designVolumeFlowLPH,
                 pipeSectionCount: segment.pipeSections.count,
-                knownPressureLossKPa: knownLoss,
-                completePressureLossKPa: complete ? knownLoss : nil,
-                pressureCoverageComplete: complete
+                componentCount: segment.components.count,
+                knownPipePressureLossKPa: knownPipeLoss,
+                knownComponentPressureLossKPa: knownComponentLoss,
+                knownPressureLossKPa: knownTotal,
+                completePressureLossKPa: complete ? knownTotal : nil,
+                pressureCoverageComplete: pipeComplete,
+                componentCoverageComplete: componentComplete,
+                missingComponentCount: missingComponents
             )
             segmentResults.append(result)
             segmentResultByID[result.id] = result
