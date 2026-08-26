@@ -16,7 +16,7 @@ struct HeizBalanceHydraulicNetworkView: View {
         project.hydraulicNetwork?.segments ?? []
     }
 
-    private var sharedPipes: [SharedPipeEntry] {
+    private var legacySharedPipes: [SharedPipeEntry] {
         var rows: [SharedPipeEntry] = []
         for floor in project.floors {
             for room in floor.rooms {
@@ -70,23 +70,20 @@ struct HeizBalanceHydraulicNetworkView: View {
                 }
 
                 if state.hasStaleLinkedPipes {
-                    Label("\(state.staleLinkedPipeCount) verknüpfte Rohrabschnitt(e) haben einen veralteten oder noch offenen Netzbaum-Q.", systemImage: "exclamationmark.triangle.fill")
+                    Label("\(state.staleLinkedPipeCount) Legacy-Rohrverknüpfung(en) haben einen veralteten oder offenen Netz-Q.", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
-                } else if !state.linkedPipes.isEmpty {
-                    Label("Alle verknüpften Rohrabschnitte entsprechen dem aktuellen Netzbaum-Q.", systemImage: "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.green)
                 }
             } header: {
                 Text("Netzstatus")
             } footer: {
-                Text("Ein Verbraucher wird genau einem tiefsten Netzsegment zugeordnet. Übergeordnete Segmente erhalten automatisch die Summe aller nachgelagerten Verbraucher und Teilstränge. Unvollständige Verbraucher-Q blockieren den vollständigen Segment-Q.")
+                Text("Ein Verbraucher wird genau einem tiefsten Netzsegment zugeordnet. Übergeordnete Segmente erhalten automatisch die Summe aller nachgelagerten Verbraucher. Gemeinsame Rohrgeometrie wird direkt am Netzsegment erfasst.")
             }
 
             Section {
                 LabeledContent("Pfadprofil", value: HeizBalanceHydraulicNetworkPathCalculator.profileVersion)
-                LabeledContent("Zentral verknüpfte Shared-Rohre", value: "\(pathState.centralLinkedPipeCount)")
+                LabeledContent("Direkt am Netzsegment", value: "\(pathState.segmentOwnedPipeCount)")
+                LabeledContent("Legacy verknüpft", value: "\(pathState.centralLinkedPipeCount)")
                 LabeledContent("Legacy/manuell", value: "\(pathState.unlinkedLegacySharedPipeCount)")
 
                 if pathState.centralPipeModeActive {
@@ -104,14 +101,14 @@ struct HeizBalanceHydraulicNetworkView: View {
                         Label("Netzpfade & Druckverluste", systemImage: "arrow.triangle.branch")
                     }
                 } else {
-                    Text("Noch kein gemeinsamer Rohrabschnitt ist zentral mit einem Netzsegment verknüpft. Bis dahin gilt die bisherige Legacy-/Manuellogik.")
+                    Text("Noch keine gemeinsame Rohrgeometrie im Netzbaum erfasst. Öffne ein Netzsegment und füge dort den ersten Rohrabschnitt hinzu.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } header: {
                 Text("Zentrale Shared-Edge-Hydraulik")
             } footer: {
-                Text("Sobald mindestens ein gemeinsamer Rohrabschnitt einem Netzsegment zugeordnet ist, werden alle verknüpften Shared-Rohre je Segment genau einmal gerechnet. Verbraucherpfade erhalten automatisch die Verluste ihrer übergeordneten Netzsegmente plus terminale Heizflächen-Anbindung.")
+                Text("Segment-eigene Rohrabschnitte werden genau einmal mit dem automatisch summierten Segment-Q gerechnet. Verbraucherpfade erhalten die seriellen Verluste ihrer übergeordneten Segmente plus terminale Heizflächen-Anbindung.")
             }
 
             Section {
@@ -135,75 +132,88 @@ struct HeizBalanceHydraulicNetworkView: View {
                     Label("Netzsegment hinzufügen", systemImage: "plus.circle")
                 }
             } header: {
-                Text("Netzbaum")
+                Text("Netzbaum & Rohrgeometrie")
             } footer: {
-                Text("Beispiel: Hauptstrang → EG / OG → einzelne Heizflächen. Ein zentral verknüpfter gemeinsamer Rohrabschnitt gilt als physischer Netz-Edge und wird nicht mehr pro Verbraucher dupliziert.")
+                Text("Beispiel: Hauptstrang → EG / OG → einzelne Heizflächen. Öffne ein Segment, um seine realen gemeinsamen Rohrabschnitte direkt dort zu erfassen.")
             }
 
-            Section {
-                if sharedPipes.isEmpty {
-                    Text("Noch keine Rohrabschnitte mit Rolle „Gemeinsame Verteilung“ vorhanden.")
-                        .foregroundStyle(.secondary)
-                }
-
-                ForEach(sharedPipes) { pipe in
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(pipe.roomName + " · " + pipe.surfaceName)
-                            .font(.subheadline.weight(.semibold))
-                        Text(pipe.floorName + " · " + pipe.pipeName)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Picker("Netzsegment", selection: networkSegmentBinding(pipeID: pipe.id)) {
-                            Text("Legacy / manueller Q").tag(UUID?.none)
-                            ForEach(segments) { segment in
-                                Text(segment.name).tag(Optional(segment.id))
-                            }
-                        }
-
-                        if let segmentID = networkSegmentBinding(pipeID: pipe.id).wrappedValue {
-                            let calculated = state.designFlow(segmentID: segmentID)
-                            HStack {
-                                Text("Zentraler Netz-Q")
-                                Spacer()
-                                Text(calculated.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen")
-                                    .foregroundStyle(calculated == nil ? Color.orange : Color.secondary)
-                            }
-                            .font(.caption)
-                            Text("Dieser Abschnitt wird als zentraler Edge des gewählten Netzsegments genau einmal gerechnet.")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        } else if let flow = pipe.storedFlowLPH {
-                            Text("Legacy/manuell: " + flow.formatted(.number.precision(.fractionLength(0...1))) + " l/h")
+            if !legacySharedPipes.isEmpty {
+                Section {
+                    ForEach(legacySharedPipes) { pipe in
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(pipe.roomName + " · " + pipe.surfaceName)
+                                .font(.subheadline.weight(.semibold))
+                            Text(pipe.floorName + " · " + pipe.pipeName)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+
+                            Picker("Netzsegment", selection: networkSegmentBinding(pipeID: pipe.id)) {
+                                Text("Legacy / manueller Q").tag(UUID?.none)
+                                ForEach(segments) { segment in
+                                    Text(segment.name).tag(Optional(segment.id))
+                                }
+                            }
+
+                            if let segmentID = networkSegmentBinding(pipeID: pipe.id).wrappedValue {
+                                let calculated = state.designFlow(segmentID: segmentID)
+                                HStack {
+                                    Text("Netz-Q")
+                                    Spacer()
+                                    Text(calculated.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen")
+                                        .foregroundStyle(calculated == nil ? Color.orange : Color.secondary)
+                                }
+                                .font(.caption)
+                                Text("Altformat: Der Abschnitt liegt noch unter einer Heizfläche. Nach der Migration liegt dieselbe Geometrie direkt im Netzsegment.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else if let flow = pipe.storedFlowLPH {
+                                Text("Legacy/manuell: " + flow.formatted(.number.precision(.fractionLength(0...1))) + " l/h")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 3)
+                    }
+
+                    if !state.linkedPipes.isEmpty {
+                        Button {
+                            migrateLegacyLinkedPipes()
+                        } label: {
+                            Label("Verknüpfte Alt-Rohre in Netzsegmente verschieben", systemImage: "arrow.right.doc.on.clipboard")
                         }
                     }
-                    .padding(.vertical, 3)
+                } header: {
+                    Text("Legacy-Rohrabschnitte")
+                } footer: {
+                    Text("Migration erhält Bezeichnung, Innendurchmesser, Länge, Rauheit, ζ und Notiz. Der gespeicherte Alt-Q entfällt absichtlich, weil der Segment-Q ab dann immer live aus den zugeordneten Verbrauchern berechnet wird. Unverknüpfte Alt-Rohre werden nicht automatisch verschoben.")
                 }
-            } header: {
-                Text("Gemeinsame Rohrabschnitte")
-            } footer: {
-                Text("Verknüpfte Abschnitte werden zentral gezählt. Nicht verknüpfte gemeinsame Rohre bleiben aus Kompatibilitätsgründen erhalten, werden im zentralen Pfadmodus aber nicht zusätzlich in Verbraucherpfade eingerechnet.")
             }
 
-            Section {
-                Button {
-                    synchronize(messagePrefix: nil)
-                } label: {
-                    Label("Netz-Q erneut synchronisieren", systemImage: "arrow.triangle.branch")
-                }
-                .disabled(state.result == nil || state.linkedPipes.isEmpty)
+            if !state.linkedPipes.isEmpty {
+                Section {
+                    Button {
+                        synchronize(messagePrefix: nil)
+                    } label: {
+                        Label("Legacy-Netz-Q erneut synchronisieren", systemImage: "arrow.triangle.branch")
+                    }
+                    .disabled(state.result == nil)
 
-                if let message {
+                    if let message {
+                        Text(message)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Legacy-Synchronisierung")
+                } footer: {
+                    Text("Nur alte verknüpfte Heizflächen-Rohre speichern noch einen Q-Wert. Neue segment-eigene Rohrabschnitte verwenden ausschließlich den aktuell berechneten Segment-Q und benötigen keine Synchronisierung.")
+                }
+            } else if let message {
+                Section {
                     Text(message)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            } header: {
-                Text("Synchronisieren")
-            } footer: {
-                Text("Der aktuelle zentrale Pfad-Rechenkern verwendet direkt den berechneten Netz-Q. Die gespeicherten Abschnitts-Q werden zusätzlich synchronisiert, damit ältere Ansichten und gespeicherte Projekte nachvollziehbar bleiben.")
             }
         }
         .navigationTitle("Hydraulischer Netzbaum")
@@ -227,6 +237,7 @@ struct HeizBalanceHydraulicNetworkView: View {
             HStack(spacing: 10) {
                 Text("direkt \(segment.directConsumerSurfaceIDs.count)")
                 Text("nachgelagert \(core?.downstreamConsumerIDs.count ?? 0)")
+                Text("Rohr \((segment.pipeSections ?? []).count)")
                 Text(flow.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "Q offen")
             }
             .font(.caption)
@@ -261,7 +272,7 @@ struct HeizBalanceHydraulicNetworkView: View {
             get: { project.networkSegmentID(pipeID: pipeID) },
             set: {
                 project.setNetworkSegmentID($0, pipeID: pipeID)
-                synchronize(messagePrefix: "Rohrverknüpfung aktualisiert.")
+                synchronize(messagePrefix: "Legacy-Rohrverknüpfung aktualisiert.")
             }
         )
     }
@@ -269,9 +280,18 @@ struct HeizBalanceHydraulicNetworkView: View {
     private func synchronize(messagePrefix: String?) {
         let count = project.applyHydraulicNetworkFlows()
         let tail = count == 0
-            ? "Keine zusätzlichen vollständigen Netz-Q zu übernehmen."
-            : "\(count) Rohrabschnitt(e) aktualisiert."
+            ? "Keine zusätzlichen vollständigen Legacy-Netz-Q zu übernehmen."
+            : "\(count) Legacy-Rohrabschnitt(e) aktualisiert."
         message = [messagePrefix, tail].compactMap { $0 }.joined(separator: " ")
+    }
+
+    private func migrateLegacyLinkedPipes() {
+        let count = project.migrateLinkedSharedPipesIntoNetworkSegments()
+        if count == 0 {
+            message = "Keine verknüpften Alt-Rohre zu migrieren."
+        } else {
+            message = "\(count) Alt-Rohrabschnitt(e) ohne Datenverlust in die zugehörigen Netzsegmente verschoben."
+        }
     }
 
     private struct SharedPipeEntry: Identifiable {
@@ -295,13 +315,34 @@ private struct HeizBalanceHydraulicNetworkSegmentEditor: View {
             get: { project.hydraulicNetwork!.segments[index] },
             set: {
                 project.hydraulicNetwork!.segments[index] = $0
+                _ = project.normalizeHydraulicNetworkReferences()
                 _ = project.applyHydraulicNetworkFlows()
+            }
+        )
+    }
+
+    private var segmentPipeSectionsBinding: Binding<[HeizBalancePipeSection]>? {
+        guard let segmentBinding else { return nil }
+        return Binding(
+            get: { segmentBinding.wrappedValue.pipeSections ?? [] },
+            set: { newValue in
+                var segment = segmentBinding.wrappedValue
+                segment.pipeSections = newValue
+                segmentBinding.wrappedValue = segment
             }
         )
     }
 
     private var consumers: [HeizBalanceHydraulicNetworkConsumerEntry] {
         project.hydraulicNetworkState().consumers
+    }
+
+    private var segmentFlowLPH: Double? {
+        project.hydraulicNetworkState().designFlow(segmentID: segmentID)
+    }
+
+    private var segmentPathResult: HeizBalanceHydraulicNetworkPathCalculator.SegmentResult? {
+        project.hydraulicNetworkPathState().result?.segment(id: segmentID.uuidString)
     }
 
     var body: some View {
@@ -317,6 +358,81 @@ private struct HeizBalanceHydraulicNetworkSegmentEditor: View {
                     }
                     TextField("Notiz", text: segmentBinding.note, axis: .vertical)
                         .lineLimit(2...5)
+                }
+
+                Section {
+                    if let flow = segmentFlowLPH {
+                        LabeledContent("Automatischer Segment-Q") {
+                            Text(flow.formatted(.number.precision(.fractionLength(0...1))) + " l/h")
+                                .fontWeight(.semibold)
+                        }
+                    } else {
+                        LabeledContent("Automatischer Segment-Q", value: "offen")
+                    }
+
+                    if let path = segmentPathResult {
+                        if let complete = path.completePressureLossKPa {
+                            LabeledContent("Segment-Δp") {
+                                Text(complete.formatted(.number.precision(.fractionLength(0...3))) + " kPa")
+                                    .fontWeight(.semibold)
+                            }
+                        } else if path.knownPressureLossKPa > 0 {
+                            LabeledContent("Bekannter Δp-Zwischenstand") {
+                                Text(path.knownPressureLossKPa.formatted(.number.precision(.fractionLength(0...3))) + " kPa")
+                                    .foregroundStyle(.orange)
+                            }
+                        }
+                    }
+
+                    if let pipeSectionsBinding = segmentPipeSectionsBinding {
+                        if pipeSectionsBinding.wrappedValue.isEmpty {
+                            Text("Noch keine gemeinsame Rohrgeometrie in diesem Segment.")
+                                .foregroundStyle(.secondary)
+                        }
+
+                        ForEach(pipeSectionsBinding) { $pipe in
+                            NavigationLink {
+                                HeizBalanceHydraulicNetworkSegmentPipeEditor(
+                                    section: $pipe,
+                                    segmentName: segmentBinding.wrappedValue.name,
+                                    segmentVolumeFlowLPH: segmentFlowLPH
+                                )
+                            } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(pipe.name)
+                                    HStack(spacing: 8) {
+                                        Text(pipe.innerDiameterMM.map { "ID " + $0.formatted(.number.precision(.fractionLength(0...1))) + " mm" } ?? "ID offen")
+                                        Text(pipe.lengthM.map { $0.formatted(.number.precision(.fractionLength(0...2))) + " m" } ?? "Länge offen")
+                                        Text(pipe.zetaTotal.map { "ζ " + $0.formatted(.number.precision(.fractionLength(0...2))) } ?? "ζ offen")
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .onDelete { offsets in
+                            var items = pipeSectionsBinding.wrappedValue
+                            items.remove(atOffsets: offsets)
+                            pipeSectionsBinding.wrappedValue = items
+                        }
+
+                        Button {
+                            var items = pipeSectionsBinding.wrappedValue
+                            items.append(
+                                HeizBalancePipeSection(
+                                    name: "Rohrabschnitt \(items.count + 1)",
+                                    role: .sharedDistribution
+                                )
+                            )
+                            pipeSectionsBinding.wrappedValue = items
+                        } label: {
+                            Label("Gemeinsamen Rohrabschnitt hinzufügen", systemImage: "plus.circle")
+                        }
+                    }
+                } header: {
+                    Text("Gemeinsame Rohrabschnitte")
+                } footer: {
+                    Text("Diese Geometrie gehört physisch zu diesem Netzsegment und wird genau einmal mit dessen automatisch summiertem Q berechnet. Es gibt hier bewusst kein manuelles Q-Feld. ζ leer bedeutet: Einzelwiderstände noch nicht vollständig erfasst.")
                 }
 
                 Section {
@@ -380,6 +496,49 @@ private struct HeizBalanceHydraulicNetworkSegmentEditor: View {
                 _ = project.applyHydraulicNetworkFlows()
             }
         )
+    }
+}
+
+private struct HeizBalanceHydraulicNetworkSegmentPipeEditor: View {
+    @Binding var section: HeizBalancePipeSection
+    let segmentName: String
+    let segmentVolumeFlowLPH: Double?
+
+    var body: some View {
+        Form {
+            Section("Netzsegment") {
+                LabeledContent("Segment", value: segmentName)
+                LabeledContent("Automatischer Q") {
+                    Text(segmentVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen")
+                        .foregroundStyle(segmentVolumeFlowLPH == nil ? Color.orange : Color.primary)
+                }
+            }
+
+            Section {
+                TextField("Bezeichnung", text: $section.name)
+                OptionalDecimalField(title: "Innendurchmesser", value: $section.innerDiameterMM, unit: "mm")
+                OptionalDecimalField(title: "Hydraulische Länge", value: $section.lengthM, unit: "m")
+                OptionalDecimalField(title: "Absolute Rauheit", value: $section.roughnessMM, unit: "mm")
+                OptionalDecimalField(title: "ζ-Summe Einzelwiderstände", value: $section.zetaTotal, unit: "")
+            } header: {
+                Text("Physische Rohrgeometrie")
+            } footer: {
+                Text("Q wird nicht gespeichert oder manuell eingegeben. HeizBalance verwendet bei jeder Berechnung den aktuellen Summen-Q dieses Netzsegments. Innendurchmesser statt DN, keine versteckte DN→ID-Annahme.")
+            }
+
+            Section("Notiz") {
+                TextField("Rohrwerkstoff / Formstücke / Quelle", text: $section.note, axis: .vertical)
+                    .lineLimit(2...6)
+            }
+        }
+        .navigationTitle(section.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            section.role = .sharedDistribution
+            section.explicitDesignVolumeFlowLPH = nil
+            section.volumeFlowSource = nil
+            section.networkSegmentID = nil
+        }
     }
 }
 
