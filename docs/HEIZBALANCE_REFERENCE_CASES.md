@@ -117,26 +117,21 @@ Folgende Fälle müssen ungültig bleiben:
 Unzugeordnete Verbraucher werden sichtbar gelassen und nicht still einem Strang zugewiesen.
 
 ### Netzbaum-/Rohr-Stale-Regel
-Ein gemeinsamer Rohrabschnitt darf optional mit einem Netzsegment verbunden sein.
-- vollständiger Segment-Q kann auf den Abschnitt synchronisiert werden
+Ein Legacy-Rohrabschnitt unter einer Heizfläche darf optional mit einem Netzsegment verbunden sein.
+- vollständiger Segment-Q kann auf den Altabschnitt synchronisiert werden
 - Rohrgeometrie/ζ bleiben unverändert
-- ohne Link bleibt der manuelle Summen-Q gültig
-- normales Projektspeichern normalisiert Referenzen und synchronisiert vollständige Netz-Q.
+- ohne Link bleibt der manuelle Summen-Q nur für Legacyprojekte gültig
+- normales Projektspeichern normalisiert Referenzen und synchronisiert vollständige Legacy-Netz-Q.
 
 Stored Q und aktuell berechneter Netz-Q müssen innerhalb 0,05 l/h übereinstimmen.
-Bei Abweichung/offenem Segment-Q:
-- `Netzbaum-Q neu synchronisieren`
-- betroffener Kreis-Δp nicht als vollständig für die Systemaggregation verwenden
-- technischer Pumpen-Betriebspunkt nicht als vollständig freigeben
-- bestehende Pumpenentscheidung damit neu bewerten.
 
 ## Zentrale Shared-Edge-/Pfadhydraulik – Batches 32–34
 Rechenprofil: `hydraulic-network-path-v1`.
 
 Referenztopologie:
-- Hauptstrang als zentraler Shared-Edge bei 450 l/h
-- EG-Strang als zentraler Shared-Edge bei 250 l/h
-- OG-Strang als zentraler Shared-Edge bei 200 l/h
+- Hauptstrang bei 450 l/h
+- EG-Strang bei 250 l/h
+- OG-Strang bei 200 l/h
 - Wohnzimmer direkt am EG
 - Schlafzimmer direkt am OG.
 
@@ -149,7 +144,7 @@ Erwartete Pfadidentität:
 Erwartete Druckverlustregeln:
 - Wohnzimmer vollständig = `Δp Hauptstrang + Δp EG + Δp terminal Wohnzimmer`
 - Schlafzimmer vollständig = `Δp Hauptstrang + Δp OG + Δp terminal Schlafzimmer`
-- der physische Hauptstrang wird nur einmal als zentraler Edge gespeichert/berechnet, obwohl sein Verlust logisch in beiden Verbraucherpfaden vorkommt
+- der physische Hauptstrang wird nur einmal gespeichert/berechnet, obwohl sein Verlust logisch in beiden Verbraucherpfaden vorkommt
 - parallele Verbraucherpfade werden nicht gegeneinander addiert; maßgebend bleibt der höchste vollständige Verbraucherpfad.
 
 ### Missing-ζ-Regression
@@ -162,10 +157,64 @@ Fehlt am zentralen Hauptstrang die ζ-Summe:
 ### Unzugeordneter Verbraucher
 Eine Heizfläche ohne direktes Netzsegment darf keinen vollständigen zentralen Verbraucherpfad erhalten. Der terminal bekannte Verlust darf sichtbar bleiben; der vollständige Pfad bleibt offen.
 
+## Segment-eigene Rohrgeometrie – Batch 35
+Neue gemeinsame Rohrabschnitte werden kanonisch direkt in `HeizBalanceHydraulicNetwork.Segment.pipeSections` gespeichert.
+
+### Q-Wahrheit
+Für segment-eigene Rohrabschnitte gilt:
+- kein `explicitDesignVolumeFlowLPH`,
+- keine `volumeFlowSource`,
+- keine `networkSegmentID` innerhalb des Segments,
+- Rechen-Q ist immer der aktuelle vollständige Segment-Q aus den zugeordneten Verbraucherströmen.
+
+Damit darf nach einer Last-/Temperatur-/Verbraucheränderung kein alter gespeicherter Shared-Q weiterwirken.
+
+### Mehrere reale Abschnitte in einem Segment
+Technische Regression `testMultiplePhysicalSectionsInsideOneSegmentAreAddedInSeries`:
+- Segment besitzt Rohrabschnitt A und B,
+- beide werden mit demselben Segment-Q gerechnet,
+- `Δp Segment = Δp A + Δp B`,
+- Verbraucherpfad = `Δp Segment + Δp terminal`,
+- das Segment geht in diesen Verbraucherpfad genau einmal ein.
+
+Das prüft die Trennung zwischen **mehreren seriellen physischen Abschnitten innerhalb eines Segments** und **parallelen Verbraucherpfaden**, die weiterhin nicht gegeneinander summiert werden.
+
+### Legacy-Migrationsvertrag
+Bei expliziter Migration eines bereits verknüpften Alt-Rohrs in sein Netzsegment müssen erhalten bleiben:
+- `id`
+- `name`
+- `innerDiameterMM`
+- `lengthM`
+- `roughnessMM`
+- `zetaTotal`
+- `note`.
+
+Im segment-eigenen Zielobjekt müssen bewusst entfernt sein:
+- `networkSegmentID`
+- `explicitDesignVolumeFlowLPH`
+- `volumeFlowSource`.
+
+Die ursprüngliche Heizflächen-Kopie muss im selben Migrationsvorgang entfernt werden. Damit existiert nach der Migration nur noch eine physische Geometriequelle und keine Doppelzählung.
+
+### Keine automatische Zuordnung unverknüpfter Alt-Rohre
+Ein Legacy-Shared-Rohr ohne `networkSegmentID` darf nicht automatisch migriert werden. HeizBalance darf kein Zielsegment anhand von Raum, Name oder Reihenfolge erraten.
+
+### Persistenz-/Archiv-Kompatibilität
+- Altes `hydraulic-network-v1` JSON ohne `Segment.pipeSections` muss weiter decodierbar bleiben; `nil` entspricht keiner segment-eigenen Geometrie.
+- `technical-hydraulic-network-v1` bleibt bestehen; Batch-35-Berichtsfelder sind optional.
+- Alte Netzbaumarchive werden dadurch nicht umdefiniert.
+
 ### Legacy-Doppelzählungsschutz
 Sobald der zentrale Pfadmodus aktiv ist:
-- nur `Gemeinsame Verteilung` mit `networkSegmentID` zählt als zentraler Shared-Edge
-- unverknüpfte Legacy-Shared-Rohre bleiben gespeichert, werden aber nicht zusätzlich zum Verbraucherpfad addiert
+- segment-eigene Shared-Rohre zählen zentral,
+- bereits verknüpfte Legacy-Shared-Rohre zählen bis zur Migration ebenfalls zentral,
+- nach Migration wird die alte Heizflächen-Kopie entfernt,
+- unverknüpfte Legacy-Shared-Rohre bleiben gespeichert, werden aber nicht zusätzlich zum Verbraucherpfad addiert,
 - terminal gerechnet werden nur `Heizflächen-Anbindung` plus explizite terminale Bauteilverluste.
 
 Diese Regeln sind technische Regressionen und kein normativer hydraulischer Abgleich.
+
+## Verifikation
+- CI #295: Batch 31 final grün.
+- CI #309: Batches 32–34 final grün.
+- **CI #317: Batch-35-Codehead `bbf0c7c6c09894d6a55e3e4b7f6b531680e6d431` vollständig grün – Core, komplette Debug-iOS-Matrix, HeizBalance Debug und echter HeizBalance Release-Simulator-Build.**
