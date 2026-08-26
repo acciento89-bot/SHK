@@ -77,12 +77,13 @@ struct HeizBalanceHydraulicNetworkView: View {
             } header: {
                 Text("Netzstatus")
             } footer: {
-                Text("Ein Verbraucher wird genau einem tiefsten Netzsegment zugeordnet. Übergeordnete Segmente erhalten automatisch die Summe aller nachgelagerten Verbraucher. Gemeinsame Rohrgeometrie wird direkt am Netzsegment erfasst.")
+                Text("Ein Verbraucher wird genau einem tiefsten Netzsegment zugeordnet. Übergeordnete Segmente erhalten automatisch die Summe aller nachgelagerten Verbraucher. Gemeinsame Rohrgeometrie und zentrale Bauteilverluste werden direkt am Netzsegment erfasst.")
             }
 
             Section {
                 LabeledContent("Pfadprofil", value: HeizBalanceHydraulicNetworkPathCalculator.profileVersion)
-                LabeledContent("Direkt am Netzsegment", value: "\(pathState.segmentOwnedPipeCount)")
+                LabeledContent("Rohr direkt am Netzsegment", value: "\(pathState.segmentOwnedPipeCount)")
+                LabeledContent("Zentrale Bauteile", value: "\(pathState.segmentOwnedComponentCount)")
                 LabeledContent("Legacy verknüpft", value: "\(pathState.centralLinkedPipeCount)")
                 LabeledContent("Legacy/manuell", value: "\(pathState.unlinkedLegacySharedPipeCount)")
 
@@ -101,14 +102,14 @@ struct HeizBalanceHydraulicNetworkView: View {
                         Label("Netzpfade & Druckverluste", systemImage: "arrow.triangle.branch")
                     }
                 } else {
-                    Text("Noch keine gemeinsame Rohrgeometrie im Netzbaum erfasst. Öffne ein Netzsegment und füge dort den ersten Rohrabschnitt hinzu.")
+                    Text("Noch keine gemeinsame Rohrgeometrie oder zentrale Bauteilverluste im Netzbaum erfasst. Öffne ein Netzsegment und erfasse dort die reale gemeinsame Strecke.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } header: {
-                Text("Zentrale Shared-Edge-Hydraulik")
+                Text("Zentrale Shared-Path-Hydraulik")
             } footer: {
-                Text("Segment-eigene Rohrabschnitte werden genau einmal mit dem automatisch summierten Segment-Q gerechnet. Verbraucherpfade erhalten die seriellen Verluste ihrer übergeordneten Segmente plus terminale Heizflächen-Anbindung.")
+                Text("Segment-eigene Rohrabschnitte und explizite zentrale Bauteilverluste werden genau einmal seriell in jedem betroffenen Verbraucherpfad berücksichtigt. Der Segment-Q stammt immer aus den nachgelagerten Verbrauchern.")
             }
 
             Section {
@@ -132,9 +133,9 @@ struct HeizBalanceHydraulicNetworkView: View {
                     Label("Netzsegment hinzufügen", systemImage: "plus.circle")
                 }
             } header: {
-                Text("Netzbaum & Rohrgeometrie")
+                Text("Netzbaum, Rohre & Bauteile")
             } footer: {
-                Text("Beispiel: Hauptstrang → EG / OG → einzelne Heizflächen. Öffne ein Segment, um seine realen gemeinsamen Rohrabschnitte direkt dort zu erfassen.")
+                Text("Beispiel: Hauptstrang → EG / OG → einzelne Heizflächen. Öffne ein Segment, um seine gemeinsamen Rohre und realen zentralen Armaturen direkt dort zu erfassen.")
             }
 
             if !legacySharedPipes.isEmpty {
@@ -238,6 +239,7 @@ struct HeizBalanceHydraulicNetworkView: View {
                 Text("direkt \(segment.directConsumerSurfaceIDs.count)")
                 Text("nachgelagert \(core?.downstreamConsumerIDs.count ?? 0)")
                 Text("Rohr \((segment.pipeSections ?? []).count)")
+                Text("Bauteil \((segment.hydraulicLossComponents ?? []).count)")
                 Text(flow.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "Q offen")
             }
             .font(.caption)
@@ -333,6 +335,36 @@ private struct HeizBalanceHydraulicNetworkSegmentEditor: View {
         )
     }
 
+    private var segmentComponentsBinding: Binding<[HeizBalanceHydraulicLossComponent]>? {
+        guard let segmentBinding else { return nil }
+        return Binding(
+            get: { segmentBinding.wrappedValue.hydraulicLossComponents ?? [] },
+            set: { newValue in
+                var segment = segmentBinding.wrappedValue
+                if newValue.isEmpty {
+                    segment.hydraulicLossComponents = nil
+                    segment.hydraulicComponentAssessmentComplete = nil
+                } else {
+                    segment.hydraulicLossComponents = newValue
+                    segment.hydraulicComponentAssessmentComplete = false
+                }
+                segmentBinding.wrappedValue = segment
+            }
+        )
+    }
+
+    private var componentAssessmentBinding: Binding<Bool>? {
+        guard let segmentBinding else { return nil }
+        return Binding(
+            get: { segmentBinding.wrappedValue.hydraulicComponentAssessmentComplete == true },
+            set: { newValue in
+                var segment = segmentBinding.wrappedValue
+                segment.hydraulicComponentAssessmentComplete = newValue
+                segmentBinding.wrappedValue = segment
+            }
+        )
+    }
+
     private var consumers: [HeizBalanceHydraulicNetworkConsumerEntry] {
         project.hydraulicNetworkState().consumers
     }
@@ -343,6 +375,14 @@ private struct HeizBalanceHydraulicNetworkSegmentEditor: View {
 
     private var segmentPathResult: HeizBalanceHydraulicNetworkPathCalculator.SegmentResult? {
         project.hydraulicNetworkPathState().result?.segment(id: segmentID.uuidString)
+    }
+
+    private var componentValuesComplete: Bool {
+        let components = segmentComponentsBinding?.wrappedValue ?? []
+        return components.allSatisfy { component in
+            guard let loss = component.pressureLossKPa else { return false }
+            return loss.isFinite && loss >= 0
+        }
     }
 
     var body: some View {
@@ -371,6 +411,12 @@ private struct HeizBalanceHydraulicNetworkSegmentEditor: View {
                     }
 
                     if let path = segmentPathResult {
+                        LabeledContent("Bekannter Rohr-Δp") {
+                            Text(path.knownPipePressureLossKPa.formatted(.number.precision(.fractionLength(0...3))) + " kPa")
+                        }
+                        LabeledContent("Bekannter Bauteil-Δp") {
+                            Text(path.knownComponentPressureLossKPa.formatted(.number.precision(.fractionLength(0...3))) + " kPa")
+                        }
                         if let complete = path.completePressureLossKPa {
                             LabeledContent("Segment-Δp") {
                                 Text(complete.formatted(.number.precision(.fractionLength(0...3))) + " kPa")
@@ -433,6 +479,62 @@ private struct HeizBalanceHydraulicNetworkSegmentEditor: View {
                     Text("Gemeinsame Rohrabschnitte")
                 } footer: {
                     Text("Diese Geometrie gehört physisch zu diesem Netzsegment und wird genau einmal mit dessen automatisch summiertem Q berechnet. Es gibt hier bewusst kein manuelles Q-Feld. ζ leer bedeutet: Einzelwiderstände noch nicht vollständig erfasst.")
+                }
+
+                Section {
+                    if let componentsBinding = segmentComponentsBinding {
+                        if componentsBinding.wrappedValue.isEmpty {
+                            Text("Keine zentralen Bauteilverluste erfasst.")
+                                .foregroundStyle(.secondary)
+                        }
+
+                        ForEach(componentsBinding) { $component in
+                            NavigationLink {
+                                HeizBalanceHydraulicNetworkSegmentComponentEditor(
+                                    component: $component,
+                                    segmentName: segmentBinding.wrappedValue.name,
+                                    segmentVolumeFlowLPH: segmentFlowLPH
+                                )
+                            } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(component.name)
+                                    HStack(spacing: 8) {
+                                        Text(component.kind.title)
+                                        Text(component.pressureLossKPa.map { $0.formatted(.number.precision(.fractionLength(0...3))) + " kPa" } ?? "Δp offen")
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(component.pressureLossKPa == nil ? Color.orange : Color.secondary)
+                                }
+                            }
+                        }
+                        .onDelete { offsets in
+                            var items = componentsBinding.wrappedValue
+                            items.remove(atOffsets: offsets)
+                            componentsBinding.wrappedValue = items
+                        }
+
+                        Menu {
+                            ForEach(HeizBalanceHydraulicLossComponent.Kind.networkCases) { kind in
+                                Button(kind.title) {
+                                    var items = componentsBinding.wrappedValue
+                                    items.append(HeizBalanceHydraulicLossComponent(kind: kind))
+                                    componentsBinding.wrappedValue = items
+                                }
+                            }
+                        } label: {
+                            Label("Zentrales Bauteil hinzufügen", systemImage: "plus.circle")
+                        }
+
+                        if !componentsBinding.wrappedValue.isEmpty,
+                           let componentAssessmentBinding {
+                            Toggle("Zentrale Bauteilaufnahme vollständig", isOn: componentAssessmentBinding)
+                                .disabled(!componentValuesComplete)
+                        }
+                    }
+                } header: {
+                    Text("Zentrale Armaturen & Bauteile")
+                } footer: {
+                    Text("Erfasst werden nur explizite Druckverluste des realen gemeinsamen Pfads, z. B. Strangregulierventil, Differenzdruckregler, Wärmemengenzähler, Filter oder Verteiler. Δp muss zum vorgesehenen Segment-Q passen. Keine pauschalen Herstellerwerte oder automatisch erfundenen Kennlinien.")
                 }
 
                 Section {
@@ -538,6 +640,62 @@ private struct HeizBalanceHydraulicNetworkSegmentPipeEditor: View {
             section.explicitDesignVolumeFlowLPH = nil
             section.volumeFlowSource = nil
             section.networkSegmentID = nil
+        }
+    }
+}
+
+private struct HeizBalanceHydraulicNetworkSegmentComponentEditor: View {
+    @Binding var component: HeizBalanceHydraulicLossComponent
+    let segmentName: String
+    let segmentVolumeFlowLPH: Double?
+
+    var body: some View {
+        Form {
+            Section("Netzsegment") {
+                LabeledContent("Segment", value: segmentName)
+                LabeledContent("Automatischer Q") {
+                    Text(segmentVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen")
+                        .foregroundStyle(segmentVolumeFlowLPH == nil ? Color.orange : Color.primary)
+                }
+            }
+
+            Section("Bauteil") {
+                Picker("Art", selection: $component.kind) {
+                    ForEach(HeizBalanceHydraulicLossComponent.Kind.networkCases) { kind in
+                        Text(kind.title).tag(kind)
+                    }
+                }
+                TextField("Bezeichnung", text: $component.name)
+            }
+
+            Section {
+                OptionalDecimalField(title: "Druckverlust", value: $component.pressureLossKPa, unit: "kPa")
+                InputSourcePicker(title: "Quelle Δp", selection: $component.source)
+            } header: {
+                Text("Hydraulischer Kennwert")
+            } footer: {
+                Text("Der dokumentierte Δp muss zum aktuellen Segment-Q bzw. zum realen Hersteller-/Messpunkt passen. HeizBalance erzeugt hier keine pauschale Kennlinie und keine automatische Ventilfreigabe.")
+            }
+
+            Section("Notiz") {
+                TextField("Hersteller / Typ / Datenblatt / Messpunkt", text: $component.note, axis: .vertical)
+                    .lineLimit(2...6)
+            }
+        }
+        .navigationTitle(component.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: component.kind) { _, newKind in
+            if component.name.isEmpty || HeizBalanceHydraulicLossComponent.Kind.networkCases.map(\.title).contains(component.name) {
+                component.name = newKind.title
+            }
+            component.valveProductData = nil
+        }
+        .onAppear {
+            if !HeizBalanceHydraulicLossComponent.Kind.networkCases.contains(component.kind) {
+                component.kind = .other
+                component.name = component.name.isEmpty ? HeizBalanceHydraulicLossComponent.Kind.other.title : component.name
+                component.valveProductData = nil
+            }
         }
     }
 }
