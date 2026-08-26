@@ -17,6 +17,8 @@ struct HeizBalancePumpProductDataset: Codable, Hashable, Identifiable {
         var url: String?
         var usageBasis: UsageBasis
         var rightsNote: String?
+        var distributionScope: HeizBalanceProductDataDistributionScope? = nil
+        var authorizationReference: String? = nil
     }
 
     enum UsageBasis: String, Codable, CaseIterable, Identifiable {
@@ -185,6 +187,18 @@ struct HeizBalancePumpProductDataset: Codable, Hashable, Identifiable {
     }
 
     var isValid: Bool { validationIssues.isEmpty }
+
+    var distributionRightsAssessment: HeizBalanceProductDataRightsGate.Assessment {
+        HeizBalanceProductDataRightsGate.assess(
+            .init(
+                usageBasis: source.usageBasis.rawValue,
+                sourceReference: source.reference,
+                rightsNote: source.rightsNote,
+                distributionScope: source.distributionScope,
+                authorizationReference: source.authorizationReference
+            )
+        )
+    }
 
     func compositeProductID(for productID: String) -> String {
         id + Self.compositeIDSeparator + productID
