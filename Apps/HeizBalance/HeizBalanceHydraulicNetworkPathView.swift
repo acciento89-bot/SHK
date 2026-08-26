@@ -41,7 +41,8 @@ struct HeizBalanceHydraulicNetworkPathView: View {
 
             if let result = state.result {
                 Section {
-                    ForEach(result.segments, id: \.id) { segment in
+                    ForEach(result.segments.indices, id: \.self) { index in
+                        let segment = result.segments[index]
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text(segment.name)
