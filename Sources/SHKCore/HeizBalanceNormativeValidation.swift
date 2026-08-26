@@ -43,11 +43,13 @@ struct HeizBalanceNormativeReadinessReport: Equatable, Sendable {
     var requiredModules: [HeizBalanceNormativeModuleID]
     var missingSpecificationModules: [HeizBalanceNormativeModuleID]
     var missingReferenceValidationModules: [HeizBalanceNormativeModuleID]
+    var sourceBasisReady: Bool
     var profileLifecycleReady: Bool
     var explicitReleaseFlagEnabled: Bool
 
     var canProduceNormativeOutput: Bool {
-        profileLifecycleReady
+        sourceBasisReady
+            && profileLifecycleReady
             && explicitReleaseFlagEnabled
             && missingSpecificationModules.isEmpty
             && missingReferenceValidationModules.isEmpty
@@ -79,7 +81,8 @@ enum HeizBalanceNormativeReadiness {
 
     static func evaluate(
         profile: HeizBalanceCalculationProfile,
-        evidence: [HeizBalanceNormativeModuleEvidence]
+        evidence: [HeizBalanceNormativeModuleEvidence],
+        sourceBasis: HeizBalanceNormativeSourceBasisReport? = nil
     ) -> HeizBalanceNormativeReadinessReport {
         let required = requiredModules(for: profile.engineID)
         var evidenceByModule: [HeizBalanceNormativeModuleID: HeizBalanceNormativeModuleEvidence] = [:]
@@ -95,10 +98,13 @@ enum HeizBalanceNormativeReadiness {
             evidenceByModule[$0]?.referenceCoverageComplete != true
         }
 
+        let sourceBasisReady = required.isEmpty || sourceBasis?.readyForNormativeRelease == true
+
         return HeizBalanceNormativeReadinessReport(
             requiredModules: required,
             missingSpecificationModules: missingSpecification,
             missingReferenceValidationModules: missingReferences,
+            sourceBasisReady: sourceBasisReady,
             profileLifecycleReady: profile.validationState.allowsReferenceValidatedExecution,
             explicitReleaseFlagEnabled: profile.normativeOutputAllowed
         )
