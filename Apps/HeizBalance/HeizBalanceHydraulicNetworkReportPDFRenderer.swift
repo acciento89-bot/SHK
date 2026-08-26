@@ -60,11 +60,12 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
             if snapshot.centralPathModeActive == true {
                 let profile = snapshot.pathProfileVersion ?? "—"
                 let owned = snapshot.segmentOwnedPipeCount ?? 0
+                let components = snapshot.segmentOwnedComponentCount ?? 0
                 let linked = snapshot.centralLinkedPipeCount ?? 0
                 let legacy = snapshot.unlinkedLegacySharedPipeCount ?? 0
-                draw("Pfadprofil: \(profile) · direkt am Segment: \(owned) · Legacy verknüpft: \(linked) · Legacy/manuell: \(legacy)", font: .systemFont(ofSize: 8), color: (linked + legacy) > 0 ? .systemOrange : .black, spacing: 8)
+                draw("Pfadprofil: \(profile) · Segment-Rohre: \(owned) · zentrale Bauteile: \(components) · Legacy verknüpft: \(linked) · Legacy/manuell: \(legacy)", font: .systemFont(ofSize: 8), color: (linked + legacy) > 0 ? .systemOrange : .black, spacing: 8)
             } else {
-                draw("Zentraler Shared-Edge-/Pfadmodus: nicht aktiv – noch keine gemeinsame Segmentgeometrie", font: .systemFont(ofSize: 8), color: .darkGray, spacing: 8)
+                draw("Zentraler Shared-Path-Modus: nicht aktiv – noch keine gemeinsame Segmentgeometrie/Bauteilverluste", font: .systemFont(ofSize: 8), color: .darkGray, spacing: 8)
             }
 
             draw("Segmente", font: .boldSystemFont(ofSize: 11), spacing: 5)
@@ -85,12 +86,24 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
 
                 if snapshot.centralPathModeActive == true {
                     let pipeCount = segment.centralPipeSectionCount ?? 0
-                    let ownedCount = segment.segmentOwnedPipeSectionCount ?? 0
+                    let ownedPipeCount = segment.segmentOwnedPipeSectionCount ?? 0
+                    let componentCount = segment.centralComponentCount ?? segment.segmentOwnedComponentCount ?? 0
+                    let pipeLoss = segment.knownPipePressureLossKPa ?? 0
+                    let componentLoss = segment.knownComponentPressureLossKPa ?? 0
+
+                    draw("Rohr: \(pipeCount) gesamt / \(ownedPipeCount) direkt · Bauteile: \(componentCount)", font: .systemFont(ofSize: 7.5), color: .darkGray, indent: indent + 8, spacing: 1)
+                    draw("bekannt: Rohr \(pipeLoss.formatted(.number.precision(.fractionLength(0...3)))) kPa + Bauteile \(componentLoss.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 7.5), color: .darkGray, indent: indent + 8, spacing: 1)
+
                     if let complete = segment.completePressureLossKPa {
-                        draw("Rohrabschnitte gesamt: \(pipeCount) · direkt im Segment: \(ownedCount) · Segment-Δp: \(complete.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 8), indent: indent + 8, spacing: 1)
+                        draw("Segment-Δp: \(complete.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 8), indent: indent + 8, spacing: 1)
                     } else {
                         let known = segment.knownPressureLossKPa ?? 0
-                        draw("Rohrabschnitte gesamt: \(pipeCount) · direkt im Segment: \(ownedCount) · Segment-Δp unvollständig · bekannt: \(known.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 8), color: .systemOrange, indent: indent + 8, spacing: 1)
+                        var reasons: [String] = []
+                        if segment.pressureCoverageComplete == false { reasons.append("Rohrdaten/ζ unvollständig") }
+                        if segment.componentCoverageComplete == false { reasons.append("Bauteilaufnahme unvollständig") }
+                        if let missing = segment.missingCentralComponentCount, missing > 0 { reasons.append("\(missing) Bauteil-Δp offen") }
+                        let reasonText = reasons.isEmpty ? "Vollständigkeit offen" : reasons.joined(separator: " · ")
+                        draw("Segment-Δp unvollständig · bekannt \(known.formatted(.number.precision(.fractionLength(0...3)))) kPa · \(reasonText)", font: .systemFont(ofSize: 8), color: .systemOrange, indent: indent + 8, spacing: 1)
                     }
                 }
 
@@ -134,7 +147,7 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
                     draw("\(pipe.floorName) · \(pipe.roomName) · \(pipe.surfaceName) · \(pipe.pipeName)", font: .boldSystemFont(ofSize: 8), spacing: 1)
                     let stored = pipe.storedVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen"
                     let calculated = pipe.calculatedVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen"
-                    draw("Segment \(pipe.segmentName) · Altformat unter Heizfläche · gespeichert \(stored) · aktuell berechnet \(calculated) · \(pipe.current ? "aktuell" : "neu synchronisieren")", font: .systemFont(ofSize: 7.5), color: pipe.current ? .systemOrange : .systemOrange, indent: 8, spacing: 4)
+                    draw("Segment \(pipe.segmentName) · Altformat unter Heizfläche · gespeichert \(stored) · aktuell berechnet \(calculated) · \(pipe.current ? "aktuell" : "neu synchronisieren")", font: .systemFont(ofSize: 7.5), color: .systemOrange, indent: 8, spacing: 4)
                 }
                 draw("Diese Altabschnitte bleiben rechenbar, können aber ohne Geometrieverlust in die Segmentstruktur migriert werden.", font: .systemFont(ofSize: 8), color: .systemOrange, spacing: 5)
             }
