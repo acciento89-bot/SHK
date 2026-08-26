@@ -9,7 +9,7 @@ Mobile SHK-Fachanwendung für raumweise Wärmeverlust-/Heizlastvorbereitung, Hei
 - Bundle Identifier: `de.kamilunavo.heizbalance`
 - Branch: `feature/heizbalance-foundation`
 - Draft-PR: #12
-- Aktueller Stand: **Foundation Batch 35 – segment-eigene gemeinsame Rohrgeometrie**
+- Aktueller Stand: **Foundation Batches 36–38 – segment-eigene Rohre & zentrale Netzbauteile**
 
 ## Compliance-Grenzen
 - Keine proprietären DIN-/VDI-/VdZ-Inhalte im Repository.
@@ -23,6 +23,7 @@ Fachdokumente:
 - `docs/HEIZBALANCE_HYDRAULIC_RESEARCH.md`
 - `docs/HEIZBALANCE_PRODUCTION_REPORT.md`
 - `docs/HEIZBALANCE_HYDRAULIC_NETWORK.md`
+- `docs/HEIZBALANCE_SHARED_NETWORK_COMPONENTS.md`
 
 ## Bereits implementiert
 - Projekt → Geschoss → Raum → Bauteil → Heizfläche, lokal persistent.
@@ -160,8 +161,88 @@ Der Netzbaum-PDF-Teil kennzeichnet verbleibende Legacy-Geometrie ausdrücklich a
 - Verbraucherpfad = Segment-Δp + Terminal-Δp,
 - das Segment wird im Pfad genau einmal gezählt.
 
-### Batch-35-Codeverifikation
-- **CI #317: Codehead `bbf0c7c6c09894d6a55e3e4b7f6b531680e6d431` vollständig grün – Core, komplette Debug-iOS-Matrix, HeizBalance Debug und echter HeizBalance Release-Simulator-Build.**
+### Batch-35-Verifikation
+- **CI #317: Codehead `bbf0c7c6c09894d6a55e3e4b7f6b531680e6d431` vollständig grün.**
+- **CI #320: finaler Batch-35-Handoff-Head `a11a6f647064e72b0f2ca4b58fc0ace976e43e9f` vollständig grün – Core, komplette Debug-iOS-Matrix, HeizBalance Debug und echter HeizBalance Release-Simulator-Build.**
+
+## Batches 36–38 – zentrale Netzarmaturen & Bauteilverluste
+### Persistenz
+`HeizBalanceHydraulicNetwork.Segment` besitzt zusätzlich optional:
+- `hydraulicLossComponents`
+- `hydraulicComponentAssessmentComplete`.
+
+Die Felder sind optional; alte `hydraulic-network-v1` Projekte bleiben rückwärtskompatibel decodierbar.
+
+### Zentrale Bauteilarten
+Der Netzsegment-Editor erlaubt bewusst generische zentrale Typen:
+- Strangregulierventil
+- Differenzdruckregler
+- Wärmemengenzähler
+- Schmutzfänger / Filter
+- Rückschlagventil
+- Verteiler / Sammler
+- Armatur / Bauteil
+- Sonstiger Verlust.
+
+Thermostatventil und Rücklaufverschraubung bleiben terminale Heizflächenbauteile.
+
+### Fachlogik
+Ein zentraler Bauteilverlust wird ausschließlich mit explizitem Δp und dokumentierter Quelle erfasst. HeizBalance schätzt keinen Δp aus Bauteilart oder Namen und erzeugt keine Herstellerkennlinie.
+
+Im bestehenden Profil `hydraulic-network-path-v1` gilt nun transparent:
+
+`Segment-Δp = Rohr-Δp + zentrale Bauteil-Δp`
+
+und weiterhin:
+
+`Verbraucherpfad = Summe serieller Segment-Δp + terminaler Heizflächenkreis`.
+
+Parallele Verbraucherpfade werden nicht miteinander addiert.
+
+### Harte Vollständigkeitsgates
+- fehlender zentraler Bauteil-Δp bleibt offen,
+- bekannte Bauteil-Teilsumme bleibt sichtbar,
+- bei vorhandenen zentralen Bauteilen ist eine ausdrückliche Vollständigkeitsbestätigung erforderlich,
+- unbestätigte bzw. unvollständige zentrale Bauteilaufnahme blockiert vollständigen Segment-Δp,
+- damit bleiben auch Verbraucherpfad und Pumpenbetriebspunkt unvollständig,
+- ein Segment ohne zentrale Bauteile benötigt keine zusätzliche Bestätigung.
+
+### UI
+Im Netzsegment-Editor stehen jetzt gemeinsam:
+- automatischer Segment-Q,
+- bekannter Rohr-Δp,
+- bekannter zentraler Bauteil-Δp,
+- vollständiger Segment-Δp,
+- segment-eigene Rohre,
+- zentrale Armaturen/Bauteile,
+- Vollständigkeitsbestätigung der zentralen Bauteilaufnahme.
+
+Der zentrale Bauteil-Editor zeigt den Segment-Q nur lesend an und verlangt einen expliziten Δp/Quelle.
+
+### Core-Regressionen
+`HeizBalanceHydraulicNetworkComponentPathTests` prüft:
+1. 2 kPa + 3 kPa zentrale Bauteile + 4 kPa terminal = 9 kPa vollständiger Pfad.
+2. Fehlender zentraler Bauteil-Δp erhält bekannte Teilsumme, blockiert aber kompletten Pfad.
+3. Nicht bestätigte zentrale Bauteilaufnahme blockiert kompletten Pfad trotz vorhandener Einzelwerte.
+
+### Snapshot / PDF
+`technical-hydraulic-network-v1` bleibt bestehen und wird nur optional erweitert um:
+- zentrale Bauteilanzahl,
+- bekannten Rohr-Δp,
+- bekannten Bauteil-Δp,
+- Bauteilabdeckung vollständig/offen,
+- Anzahl fehlender zentraler Bauteil-Δp.
+
+Der Netzbaum-PDF-Teil zeigt beide Δp-Anteile getrennt und nennt bei unvollständigem Segment die konkrete Ursache.
+
+Ausführlicher Handoff:
+- `docs/HEIZBALANCE_SHARED_NETWORK_COMPONENTS.md`
+
+### Main-Synchronisierung
+Der zwischenzeitlich auf `main` gelandete Design-Commit `19f2ddb47d3ae44149695cf4c2fc284f4461b7da` wurde in den Feature-Branch übernommen. Die fünf dort neu gestalteten bestehenden SHK-Apps bleiben damit erhalten; HeizBalance-spezifische Änderungen wurden nicht überschrieben.
+
+### Batches-36–38-Verifikation
+- Finaler vollständiger CI-Nachweis auf dem aktuellen Head ist noch ausstehend; erst Core + komplette Debug-iOS-Matrix + HeizBalance Debug + echter Release-Build dürfen diesen Block als grün markieren.
 
 ## Aktive Berichtssnapshots
 - `technical-report-v1`
@@ -186,9 +267,7 @@ Historisch grün:
 - #266/#268 Batch 30
 - #295 Batch 31
 - #309 Batches 32–34
-- #317 Batch-35-Codegate.
-
-Batch 35 gilt final abgeschlossen, wenn der **endgültige Dokumentations-/Handoff-Head** ebenfalls komplett grün ist.
+- #317/#320 Batch 35.
 
 ## Bewusst noch gesperrt
 - normative Heizlast / Verfahren B / GEG-/BEG-Konformität
@@ -200,7 +279,7 @@ Batch 35 gilt final abgeschlossen, wenn der **endgültige Dokumentations-/Handof
 - echte Wärmepumpenauslegung/COP/Bivalenz
 - Flächenheizung nach DIN EN 1264.
 
-## Nächste große Fachblöcke nach Batch 35
+## Nächste große Fachblöcke nach Batches 36–38
 1. Realistische große Netzbäume mit 20–50 Räumen/Verbrauchern praktisch stressen: UI-Dichte, Navigation, Performance und PDF-Seitenumbrüche.
 2. Netzbaum-Aufnahme weiter ergonomisieren: Segment-/Teilbaum kopieren oder verschieben nur mit sicheren Reset-/ID-Regeln, keine fertigen Q-/Δp-Entscheidungen klonen.
 3. Hersteller-/Lizenzquellen rechtlich klären und die bereits vorhandenen Heizkörper-/Ventil-/Pumpenadapter mit autorisierten Produktdaten produktiv befüllen.
