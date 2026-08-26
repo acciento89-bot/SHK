@@ -21,6 +21,7 @@ struct HeizBalanceHydraulicNetworkReportSnapshot: Codable, Hashable {
     // technical-hydraulic-network-v1 JSON remains decodable unchanged.
     var pathProfileVersion: String?
     var centralPathModeActive: Bool?
+    var segmentOwnedPipeCount: Int?
     var centralLinkedPipeCount: Int?
     var unlinkedLegacySharedPipeCount: Int?
     var consumerPaths: [ConsumerPath]?
@@ -43,6 +44,9 @@ struct HeizBalanceHydraulicNetworkReportSnapshot: Codable, Hashable {
         var knownPressureLossKPa: Double?
         var completePressureLossKPa: Double?
         var pressureCoverageComplete: Bool?
+
+        // Optional Batch-35+ canonical segment geometry evidence.
+        var segmentOwnedPipeSectionCount: Int?
     }
 
     struct LinkedPipe: Identifiable, Codable, Hashable {
@@ -99,7 +103,8 @@ struct HeizBalanceHydraulicNetworkReportSnapshot: Codable, Hashable {
                 centralPipeSectionCount: pathState.centralPipeModeActive ? path?.pipeSectionCount : nil,
                 knownPressureLossKPa: pathState.centralPipeModeActive ? path?.knownPressureLossKPa : nil,
                 completePressureLossKPa: pathState.centralPipeModeActive ? path?.completePressureLossKPa : nil,
-                pressureCoverageComplete: pathState.centralPipeModeActive ? path?.pressureCoverageComplete : nil
+                pressureCoverageComplete: pathState.centralPipeModeActive ? path?.pressureCoverageComplete : nil,
+                segmentOwnedPipeSectionCount: (segment.pipeSections ?? []).count
             )
         }
 
@@ -157,9 +162,10 @@ struct HeizBalanceHydraulicNetworkReportSnapshot: Codable, Hashable {
             staleLinkedPipeCount: state.staleLinkedPipeCount,
             segments: segmentRows,
             linkedPipes: linked,
-            notice: "Technische Netzbaum-Dokumentation. Segment-Q werden ausschließlich aus den aktuell zugeordneten Heizflächen-Zielvolumenströmen summiert. Im zentralen Pfadmodus werden verknüpfte gemeinsame Rohrabschnitte je Netzsegment genau einmal gerechnet; jeder Verbraucherpfad erhält die seriellen Segmentverluste plus ausschließlich terminale Heizflächen-Anbindung und Bauteilverluste. Fehlende Rohr-/ζ-/Fluid-/Q-Daten blockieren vollständige Pfad- und Pumpenergebnisse. Kein Verfahren-B-/GEG-/BEG-Nachweis.",
+            notice: "Technische Netzbaum-Dokumentation. Segment-Q werden ausschließlich aus den aktuell zugeordneten Heizflächen-Zielvolumenströmen summiert. Gemeinsame Rohrgeometrie wird bevorzugt direkt am Netzsegment gespeichert und dort genau einmal mit dem live berechneten Segment-Q gerechnet. Bereits vorhandene verknüpfte Legacy-Rohre bleiben bis zur expliziten Migration rechenbar. Verbraucherpfade erhalten die seriellen Segmentverluste plus ausschließlich terminale Heizflächen-Anbindung und Bauteilverluste. Fehlende Rohr-/ζ-/Fluid-/Q-Daten blockieren vollständige Pfad- und Pumpenergebnisse. Kein Verfahren-B-/GEG-/BEG-Nachweis.",
             pathProfileVersion: pathState.centralPipeModeActive ? HeizBalanceHydraulicNetworkPathCalculator.profileVersion : nil,
             centralPathModeActive: pathState.centralPipeModeActive,
+            segmentOwnedPipeCount: pathState.segmentOwnedPipeCount,
             centralLinkedPipeCount: pathState.centralLinkedPipeCount,
             unlinkedLegacySharedPipeCount: pathState.unlinkedLegacySharedPipeCount,
             consumerPaths: consumerPaths
