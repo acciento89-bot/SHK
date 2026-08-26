@@ -149,7 +149,9 @@ struct HeizBalanceVDI3805PumpMappedDataset: Codable, Hashable, Identifiable {
                 reference: source.reference,
                 url: source.url,
                 usageBasis: source.usageBasis,
-                rightsNote: rightsNote.isEmpty ? nil : rightsNote
+                rightsNote: rightsNote.isEmpty ? nil : rightsNote,
+                distributionScope: source.distributionScope,
+                authorizationReference: source.authorizationReference
             ),
             products: products.map { product in
                 .init(
