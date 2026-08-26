@@ -3,6 +3,15 @@ import Foundation
 struct HeizBalanceNormativeEvidenceCandidatePackage: Codable, Equatable, Sendable, Identifiable {
     static let schemaVersion = "normative-evidence-candidate-package-v1"
 
+    struct Identity: Codable, Equatable, Hashable, Sendable {
+        var packageID: String
+        var packageVersion: String
+
+        var displayValue: String {
+            packageID + " · v" + packageVersion
+        }
+    }
+
     var schema: String
     var id: String
     var packageVersion: String
@@ -13,6 +22,10 @@ struct HeizBalanceNormativeEvidenceCandidatePackage: Codable, Equatable, Sendabl
     var sources: [HeizBalanceNormativeSourceRecord]
     var specifications: [SpecificationCandidate]
     var referenceCases: [ReferenceCaseCandidate]
+
+    var identity: Identity {
+        .init(packageID: id, packageVersion: packageVersion)
+    }
 
     struct SpecificationCandidate: Codable, Equatable, Sendable, Identifiable {
         var id: String
@@ -198,6 +211,24 @@ struct HeizBalanceNormativeEvidenceCandidatePackage: Codable, Equatable, Sendabl
     }
 
     var isStructurallyValid: Bool { validationIssues.isEmpty }
+}
+
+enum HeizBalanceNormativeEvidenceCandidateRevisionDecision: Equatable, Sendable {
+    case insertNewIdentity
+    case identicalRevision
+    case conflictingRevision
+}
+
+enum HeizBalanceNormativeEvidenceCandidateRevisionPolicy {
+    static func decision(
+        existing: [HeizBalanceNormativeEvidenceCandidatePackage],
+        incoming: HeizBalanceNormativeEvidenceCandidatePackage
+    ) -> HeizBalanceNormativeEvidenceCandidateRevisionDecision {
+        guard let stored = existing.first(where: { $0.identity == incoming.identity }) else {
+            return .insertNewIdentity
+        }
+        return stored == incoming ? .identicalRevision : .conflictingRevision
+    }
 }
 
 enum HeizBalanceNormativeEvidenceCandidateTrustState: String, Codable, Equatable, Sendable {
