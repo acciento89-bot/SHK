@@ -9,7 +9,7 @@ Mobile SHK-Fachanwendung für raumweise Wärmeverlust-/Heizlastvorbereitung, Hei
 - Bundle Identifier: `de.kamilunavo.heizbalance`
 - Branch: `feature/heizbalance-foundation`
 - Draft-PR: #12
-- Aktueller Stand: **Foundation Batches 31–34 – Netzbaum, zentrale Shared-Edges & Verbraucherpfade**
+- Aktueller Stand: **Foundation Batch 35 – segment-eigene gemeinsame Rohrgeometrie**
 
 ## Compliance-Grenzen
 - Keine proprietären DIN-/VDI-/VdZ-Inhalte im Repository.
@@ -57,100 +57,111 @@ Technischer Q-Referenzfall:
 - OG 200 l/h
 - Hauptstrang 450 l/h.
 
-### Shared-Pipe-Verknüpfung / Kompatibilität
-- `networkSegmentID` optional an gemeinsamen Rohrabschnitten.
-- Ohne Link bleibt der bisherige manuelle Summen-Q für Legacyprojekte gültig.
-- Mit Link wird vollständiger Segment-Q auf den Rohrabschnitt synchronisiert.
-- Rohrgeometrie, Länge, Rauheit, ζ und Verbraucher-Q werden dabei nicht verändert.
-- Synchronisierung erfolgt beim Verknüpfen, bei Baum-/Verbraucheränderung, beim Öffnen des Netzbaum-Workspace und beim Projektspeichern.
-- Verwaiste Verbraucher-/Eltern-/Rohrreferenzen werden bereinigt, ohne Fachdaten zu erfinden.
-
 ### Batch-31-Verifikation
-- **CI #295: finaler Batch-31-Head `47f9962519b1686d4d6d0524d34d1eaa733ac0d1` vollständig grün** – Core, komplette Debug-iOS-Matrix, HeizBalance Debug und echter HeizBalance Release-Simulator-Build.
+- **CI #295: finaler Batch-31-Head `47f9962519b1686d4d6d0524d34d1eaa733ac0d1` vollständig grün.**
 
 ## Batches 32–34 – zentrale Shared-Edges & Path-Hydraulik
-Neues Rechenprofil:
+Rechenprofil:
 - `hydraulic-network-path-v1`
 
-### Zentrale Edge-Regel
-- Ein `Gemeinsame Verteilung`-Rohrabschnitt mit `networkSegmentID` wird als zentraler physischer Edge des Netzsegments behandelt.
-- Jeder verknüpfte Shared-Abschnitt wird innerhalb seines Segments genau einmal gerechnet.
-- Mehrere reale serielle Abschnitte dürfen demselben Segment zugeordnet sein.
-- Sobald mindestens ein zentraler Shared-Edge vorhanden ist, ist der zentrale Pfadmodus aktiv.
-- Unverknüpfte Legacy-Shared-Rohre bleiben gespeichert, werden im zentralen Pfadmodus aber **nicht zusätzlich** in Verbraucherpfade eingerechnet.
+### Pfadlogik
+- Gemeinsame physische Rohrstrecken werden zentral pro Netzsegment gerechnet.
+- Mehrere reale serielle Abschnitte innerhalb eines Segments werden seriell addiert.
+- Terminal gerechnet werden ausschließlich `Heizflächen-Anbindung` plus terminale hydraulische Bauteilverluste.
+- Verbraucherpfad = Wurzel → direkt zugeordnetes Zielsegment + terminaler Kreis.
+- Gesamt-Q = Summe terminaler Verbraucher-Q.
+- Maßgebender Netz-Δp = höchster vollständiger Verbraucherpfad.
+- Parallele Verbraucherpfade werden nicht miteinander addiert.
+- Fehlende Fluid-/Rohr-/Q-/ζ-Daten blockieren vollständige Segment-/Pfadwerte.
+- Einstellliste, Systemaggregation und Pumpenbetriebspunkt verwenden dieselbe Pfadwahrheit.
 
-### Terminale Trennung
-Neue App-Helfer:
-- `terminalPipeCircuitPreparation`
-- `terminalCircuitPressureLossSummary`
+### Batch-32–34-Verifikation
+- **CI #309: finaler Head `d7e4797f00ce94a19b6b4c5616ab92339ead30d6` vollständig grün – Core, komplette Debug-iOS-Matrix, HeizBalance Debug und echter Release-Build.**
 
-Sie rechnen ausschließlich `Heizflächen-Anbindung` plus terminale hydraulische Bauteilverluste. Verknüpfte gemeinsame Verteilungen werden nicht nochmals pro Heizfläche addiert.
+## Batch 35 – segment-eigene gemeinsame Rohrgeometrie
+### Kanonischer Speicherort
+`HeizBalanceHydraulicNetwork.Segment` besitzt optional `pipeSections`.
 
-### Verbraucherpfad
-Für jede Heizfläche:
-1. direkt zugeordnetes tiefstes Netzsegment bestimmen,
-2. Segmentkette bis zur Wurzel bilden,
-3. jeden zentralen Segment-Δp genau einmal seriell addieren,
-4. terminalen Heizflächen-Anbindungs-/Bauteilverlust addieren.
+Neue gemeinsame Rohrstrecken werden direkt dort erfasst. Segment-eigene Rohrabschnitte speichern nur ihre physischen Fachdaten:
+- ID / Bezeichnung
+- Innendurchmesser
+- hydraulische Länge
+- absolute Rauheit
+- ζ-Summe
+- Notiz.
 
-Vollständiger Kreis-Δp wird nur ausgegeben, wenn:
-- alle für den Pfad nötigen Segment-Q vollständig sind,
-- alle zentralen Rohrmaße gültig sind,
-- alle erforderlichen ζ-Summen explizit vorhanden sind,
-- Fluiddichte und kinematische Viskosität explizit gültig sind,
-- die Heizfläche einem Segment zugeordnet ist,
-- terminaler Rohrweg/Bauteilverlust vollständig ist.
+Bewusst nicht segment-eigen gespeichert werden:
+- manueller Abschnitts-Q
+- Q-Quelle
+- `networkSegmentID`.
 
-Fehlende Werte bleiben als bekannte Teilsumme sichtbar; vollständiger Pfad bleibt `nil`.
+Der Rechen-Q ist immer der live aggregierte Segment-Q aus den zugeordneten Heizflächen. Damit gibt es für neue Shared-Edges keine zweite, potenziell veraltete Q-Wahrheit.
 
-### System/Pumpe
-`hydraulicSystemPreparationState()` verwendet im zentralen Pfadmodus den neuen vollständigen Verbraucherpfad-Δp.
+### Segment-Editor
+Im `Hydraulischer Netzbaum` kann jedes Segment seine gemeinsamen Rohrabschnitte direkt verwalten:
+- hinzufügen
+- bearbeiten
+- löschen
+- automatischen Segment-Q sehen
+- bekannten/vollständigen Segment-Δp sehen.
 
-Damit gilt:
-- Gesamt-Q bleibt Summe der terminalen Verbraucher-Q,
-- maßgebender Netz-Δp = höchster vollständiger Verbraucherpfad,
-- gemeinsame Hauptleitungen werden nicht pro Heizfläche dupliziert,
-- parallele Pfade werden nicht addiert,
-- ein unvollständiger Verbraucherpfad verhindert vollständige Druckabdeckung und damit den Pumpen-Betriebspunkt,
-- bestehende Pumpenentscheidung wird bei geändertem Betriebspunkt automatisch `neu bewerten`.
+Der Rohr-Editor verlangt expliziten Innendurchmesser; es existiert weiterhin keine DN→ID-Automatik.
 
-### Baustellen-Einstellliste
-`technical-adjustment-list-v1` verwendet im zentralen Modus denselben Verbraucherpfad-Δp wie System/Pumpe. Es gibt damit keine zweite hydraulische Wahrheit zwischen Einstellliste und Pumpenberechnung.
+### Pfadengine
+`hydraulicNetworkPathState()` bevorzugt segment-eigene Geometrie als neuen kanonischen Pfad. Für Altprojekte werden bereits verknüpfte Legacy-Shared-Rohre unter Heizflächen weiterhin zusätzlich eingelesen, bis sie explizit migriert wurden.
 
-### UI
-`Hydraulischer Netzbaum` zeigt zusätzlich:
-- Pfadprofil,
-- Anzahl zentral verknüpfter Shared-Rohre,
-- Anzahl unverknüpfter Legacy-Shared-Rohre,
-- zentralen Pfadmodusstatus.
+Zentraler Pfadmodus ist aktiv, sobald mindestens ein segment-eigener oder verknüpfter Legacy-Shared-Abschnitt vorhanden ist.
 
-Neue Diagnoseansicht `Netzpfade & Druckverluste` zeigt:
-- Segment-Q und Segment-Δp,
-- Anzahl zentraler Rohrabschnitte je Segment,
-- Verbraucherpfad `Wurzel → … → Zielsegment`,
-- bekannte Shared-, terminale und gesamte Verluste,
-- vollständigen Kreis-Δp nur bei kompletter Pfadabdeckung.
+### Explizite Legacy-Migration
+`migrateLinkedSharedPipesIntoNetworkSegments()` verschiebt bereits fachlich verknüpfte Alt-Rohre in das zugehörige Netzsegment.
 
-### Bericht / Reproduzierbarkeit
-`technical-hydraulic-network-v1` bleibt bewusst dieselbe Schema-ID; neue Batch-32+-Felder sind optional, sodass ältere Batch-31-Archive weiter decodierbar bleiben.
+Erhalten bleiben:
+- ID
+- Name
+- Innendurchmesser
+- Länge
+- Rauheit
+- ζ
+- Notiz.
 
-Neue optionale Snapshotdaten:
-- `pathProfileVersion`
-- `centralPathModeActive`
-- `centralLinkedPipeCount`
-- `unlinkedLegacySharedPipeCount`
-- Segment-Rohranzahl / bekannter-vollständiger Δp
+Entfernt werden Legacy-Metadaten:
+- `networkSegmentID`
+- `explicitDesignVolumeFlowLPH`
+- `volumeFlowSource`.
+
+Die ursprüngliche Heizflächen-Kopie wird im selben Vorgang entfernt. Dadurch existiert nach der Migration genau eine physische Geometriequelle und keine Doppelzählung.
+
+Unverknüpfte Alt-Rohre werden nicht automatisch verschoben; HeizBalance errät kein Zielsegment.
+
+### Persistenz / Rückwärtskompatibilität
+- `Segment.pipeSections` ist optional.
+- Bestehendes Schema `hydraulic-network-v1` bleibt lesbar.
+- Alte Projekte ohne Segment-Geometrie öffnen unverändert.
+- Alte verknüpfte Shared-Rohre bleiben bis zur expliziten Migration rechenbar.
+- Legacy-Q-Synchronisierung gilt nur noch für diese alten Heizflächen-Rohre.
+
+### Snapshot / PDF
+`technical-hydraulic-network-v1` bleibt bewusst bestehen; neue Felder sind optional.
+
+Neu dokumentiert werden:
+- Anzahl direkt segment-eigener Rohrabschnitte,
+- Anzahl verbleibender Legacy-verknüpfter/unverknüpfter Abschnitte,
+- Gesamt- und direkt segment-eigene Rohranzahl je Segment,
+- Segment-Q / bekannter-vollständiger Δp,
 - Verbraucherpfade mit Shared-/Terminal-/Gesamt-Δp.
 
-Der Netzbaum-PDF-Teil zeigt diese Pfad-/Edge-Daten ebenfalls. Produktionsbericht bleibt bei 8 gemeinsam datierten Snapshots; `Technischer Bericht & PDF` bei 6, jeweils inklusive des erweiterten Netzbaum-/Pfad-Snapshots.
+Der Netzbaum-PDF-Teil kennzeichnet verbleibende Legacy-Geometrie ausdrücklich als Altformat und migriebar.
 
-### Core-Regressionen
-`HeizBalanceHydraulicNetworkPathTests` prüft:
-- Root-/Kindsegmente werden genau einmal pro Verbraucherpfad addiert,
-- derselbe physische Root-Edge kann logisch in mehreren Verbraucherpfaden vorkommen, ohne mehrfach gespeichert zu werden,
-- fehlende ζ-Summe lässt bekannten geraden Verlust sichtbar, blockiert aber kompletten Segment-/Pfad-Δp,
-- unzugeordneter Verbraucher erhält keinen vollständigen Pfad,
-- Zyklen werden abgewiesen.
+### Core-Regression
+`testMultiplePhysicalSectionsInsideOneSegmentAreAddedInSeries` prüft:
+- zwei physische Rohrabschnitte im selben Segment,
+- beide werden mit demselben Segment-Q gerechnet,
+- Segment-Δp = Δp A + Δp B,
+- Verbraucherpfad = Segment-Δp + Terminal-Δp,
+- das Segment wird im Pfad genau einmal gezählt.
+
+### Batch-35-Codeverifikation
+- **CI #317: Codehead `bbf0c7c6c09894d6a55e3e4b7f6b531680e6d431` vollständig grün – Core, komplette Debug-iOS-Matrix, HeizBalance Debug und echter HeizBalance Release-Simulator-Build.**
 
 ## Aktive Berichtssnapshots
 - `technical-report-v1`
@@ -173,9 +184,11 @@ Historisch grün:
 - #231 Batch 25
 - #250/#256 Batches 26–29
 - #266/#268 Batch 30
-- #295 Batch 31 final.
+- #295 Batch 31
+- #309 Batches 32–34
+- #317 Batch-35-Codegate.
 
-Batches 32–34 gelten erst als abgeschlossen, wenn der **endgültige Branch-Head** nach Code + Handoff-Doku komplett grün ist.
+Batch 35 gilt final abgeschlossen, wenn der **endgültige Dokumentations-/Handoff-Head** ebenfalls komplett grün ist.
 
 ## Bewusst noch gesperrt
 - normative Heizlast / Verfahren B / GEG-/BEG-Konformität
@@ -187,9 +200,9 @@ Batches 32–34 gelten erst als abgeschlossen, wenn der **endgültige Branch-Hea
 - echte Wärmepumpenauslegung/COP/Bivalenz
 - Flächenheizung nach DIN EN 1264.
 
-## Nächste große Fachblöcke nach Stabilisierung
-1. Zentrale Edge-Erfassung noch ergonomischer machen: physische Shared-Rohre direkt am Netzsegment anlegen/verschieben statt sie zunächst unter einer Heizfläche zu erfassen.
-2. Reale große Netzbäume / PDF-Ausgaben mit 20–50 Räumen praktisch testen und UI verdichten.
-3. Hersteller-/Lizenzquellen rechtlich klären und Mappingadapter produktiv befüllen.
-4. Normative Heizlast-Spezifikation + belastbare Referenzfälle getrennt aufbauen.
-5. Danach Flächenheizung bzw. Wärmepumpen-/Bivalenzmodule.
+## Nächste große Fachblöcke nach Batch 35
+1. Realistische große Netzbäume mit 20–50 Räumen/Verbrauchern praktisch stressen: UI-Dichte, Navigation, Performance und PDF-Seitenumbrüche.
+2. Netzbaum-Aufnahme weiter ergonomisieren: Segment-/Teilbaum kopieren oder verschieben nur mit sicheren Reset-/ID-Regeln, keine fertigen Q-/Δp-Entscheidungen klonen.
+3. Hersteller-/Lizenzquellen rechtlich klären und die bereits vorhandenen Heizkörper-/Ventil-/Pumpenadapter mit autorisierten Produktdaten produktiv befüllen.
+4. Normative Heizlast-Spezifikation und belastbare rechtmäßig verfügbare Referenzfälle getrennt aufbauen.
+5. Erst danach Flächenheizung bzw. Wärmepumpen-/Bivalenzmodule freigeben.
