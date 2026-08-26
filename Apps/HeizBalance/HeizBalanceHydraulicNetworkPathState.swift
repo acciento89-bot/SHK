@@ -2,9 +2,14 @@ import Foundation
 
 struct HeizBalanceHydraulicNetworkPathProjectState {
     var centralPipeModeActive: Bool
+    var segmentOwnedPipeCount: Int
     var centralLinkedPipeCount: Int
     var unlinkedLegacySharedPipeCount: Int
     var result: HeizBalanceHydraulicNetworkPathCalculator.Result?
+
+    var totalCentralPipeCount: Int {
+        segmentOwnedPipeCount + centralLinkedPipeCount
+    }
 
     func completePressureLoss(surfaceID: UUID) -> Double? {
         result?.consumer(id: surfaceID.uuidString)?.completePathPressureLossKPa
@@ -22,6 +27,7 @@ extension HeizBalanceProject {
               network.schema == HeizBalanceHydraulicNetwork.schemaVersion else {
             return .init(
                 centralPipeModeActive: false,
+                segmentOwnedPipeCount: 0,
                 centralLinkedPipeCount: 0,
                 unlinkedLegacySharedPipeCount: legacySharedPipeCount,
                 result: nil
@@ -29,9 +35,30 @@ extension HeizBalanceProject {
         }
 
         var pipesBySegment: [UUID: [HeizBalanceHydraulicNetworkPathCalculator.PipeSectionInput]] = [:]
+        var segmentOwnedCount = 0
         var linkedCount = 0
         var unlinkedCount = 0
 
+        for segment in network.segments {
+            for pipe in segment.pipeSections ?? [] {
+                segmentOwnedCount += 1
+                pipesBySegment[segment.id, default: []].append(
+                    .init(
+                        id: pipe.id.uuidString,
+                        name: pipe.name,
+                        innerDiameterMM: pipe.innerDiameterMM,
+                        lengthM: pipe.lengthM,
+                        roughnessMM: pipe.roughnessMM,
+                        zetaTotal: pipe.zetaTotal
+                    )
+                )
+            }
+        }
+
+        // Backward compatibility for Batch-31/34 projects. Legacy linked shared
+        // pipes remain fully usable until the user explicitly migrates them into
+        // their network segment. Once migrated, they are removed from the
+        // heating-surface path and therefore cannot be counted twice.
         for floor in floors {
             for room in floor.rooms {
                 for surface in room.heatingSurfaces ?? [] {
@@ -56,14 +83,16 @@ extension HeizBalanceProject {
             }
         }
 
-        guard linkedCount > 0,
+        let centralModeActive = segmentOwnedCount + linkedCount > 0
+        guard centralModeActive,
               let networkResult = networkState.result,
               let density = hydraulicFluidDensityKGPerM3,
               let viscosityMM2S = hydraulicKinematicViscosityMM2S,
               density > 0,
               viscosityMM2S > 0 else {
             return .init(
-                centralPipeModeActive: linkedCount > 0,
+                centralPipeModeActive: centralModeActive,
+                segmentOwnedPipeCount: segmentOwnedCount,
                 centralLinkedPipeCount: linkedCount,
                 unlinkedLegacySharedPipeCount: unlinkedCount,
                 result: nil
@@ -122,6 +151,7 @@ extension HeizBalanceProject {
 
         return .init(
             centralPipeModeActive: true,
+            segmentOwnedPipeCount: segmentOwnedCount,
             centralLinkedPipeCount: linkedCount,
             unlinkedLegacySharedPipeCount: unlinkedCount,
             result: result
