@@ -55,15 +55,16 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
             draw(snapshot.notice, font: .systemFont(ofSize: 8), color: .darkGray, spacing: 8)
             draw("Status", font: .boldSystemFont(ofSize: 11), spacing: 4)
             draw("Q-Profil: \(snapshot.profileVersion)", font: .systemFont(ofSize: 8))
-            draw("Netz gültig: \(snapshot.networkValid ? "Ja" : "Nein") · Verbraucher zugeordnet: \(snapshot.assignedConsumerCount)/\(snapshot.consumerCount) · veraltete Rohrverknüpfungen: \(snapshot.staleLinkedPipeCount)", font: .systemFont(ofSize: 8), spacing: 3)
+            draw("Netz gültig: \(snapshot.networkValid ? "Ja" : "Nein") · Verbraucher zugeordnet: \(snapshot.assignedConsumerCount)/\(snapshot.consumerCount) · veraltete Legacy-Verknüpfungen: \(snapshot.staleLinkedPipeCount)", font: .systemFont(ofSize: 8), spacing: 3)
 
             if snapshot.centralPathModeActive == true {
                 let profile = snapshot.pathProfileVersion ?? "—"
+                let owned = snapshot.segmentOwnedPipeCount ?? 0
                 let linked = snapshot.centralLinkedPipeCount ?? 0
                 let legacy = snapshot.unlinkedLegacySharedPipeCount ?? 0
-                draw("Pfadprofil: \(profile) · zentrale Shared-Rohre: \(linked) · Legacy/unverknüpft: \(legacy)", font: .systemFont(ofSize: 8), color: legacy > 0 ? .systemOrange : .black, spacing: 8)
+                draw("Pfadprofil: \(profile) · direkt am Segment: \(owned) · Legacy verknüpft: \(linked) · Legacy/manuell: \(legacy)", font: .systemFont(ofSize: 8), color: (linked + legacy) > 0 ? .systemOrange : .black, spacing: 8)
             } else {
-                draw("Zentraler Shared-Edge-/Pfadmodus: nicht aktiv – Legacy-/Manuellogik", font: .systemFont(ofSize: 8), color: .darkGray, spacing: 8)
+                draw("Zentraler Shared-Edge-/Pfadmodus: nicht aktiv – noch keine gemeinsame Segmentgeometrie", font: .systemFont(ofSize: 8), color: .darkGray, spacing: 8)
             }
 
             draw("Segmente", font: .boldSystemFont(ofSize: 11), spacing: 5)
@@ -84,11 +85,12 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
 
                 if snapshot.centralPathModeActive == true {
                     let pipeCount = segment.centralPipeSectionCount ?? 0
+                    let ownedCount = segment.segmentOwnedPipeSectionCount ?? 0
                     if let complete = segment.completePressureLossKPa {
-                        draw("Zentrale Rohrabschnitte: \(pipeCount) · Segment-Δp: \(complete.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 8), indent: indent + 8, spacing: 1)
+                        draw("Rohrabschnitte gesamt: \(pipeCount) · direkt im Segment: \(ownedCount) · Segment-Δp: \(complete.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 8), indent: indent + 8, spacing: 1)
                     } else {
                         let known = segment.knownPressureLossKPa ?? 0
-                        draw("Zentrale Rohrabschnitte: \(pipeCount) · Segment-Δp unvollständig · bekannt: \(known.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 8), color: .systemOrange, indent: indent + 8, spacing: 1)
+                        draw("Rohrabschnitte gesamt: \(pipeCount) · direkt im Segment: \(ownedCount) · Segment-Δp unvollständig · bekannt: \(known.formatted(.number.precision(.fractionLength(0...3)))) kPa", font: .systemFont(ofSize: 8), color: .systemOrange, indent: indent + 8, spacing: 1)
                     }
                 }
 
@@ -126,16 +128,15 @@ struct HeizBalanceHydraulicNetworkReportPDFRenderer {
                 }
             }
 
-            draw("Verknüpfte gemeinsame Rohrabschnitte", font: .boldSystemFont(ofSize: 11), spacing: 5)
-            if snapshot.linkedPipes.isEmpty {
-                draw("Keine Rohrabschnitte mit Netzsegment verknüpft.", font: .systemFont(ofSize: 8), color: .darkGray)
-            }
-            for pipe in snapshot.linkedPipes {
-                draw("\(pipe.floorName) · \(pipe.roomName) · \(pipe.surfaceName) · \(pipe.pipeName)", font: .boldSystemFont(ofSize: 8), spacing: 1)
-                let stored = pipe.storedVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen"
-                let calculated = pipe.calculatedVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen"
-                let roleText = snapshot.centralPathModeActive == true ? "zentraler Edge" : "verknüpfter Shared-Abschnitt"
-                draw("Segment \(pipe.segmentName) · \(roleText) · gespeichert \(stored) · aktuell berechnet \(calculated) · \(pipe.current ? "aktuell" : "neu synchronisieren")", font: .systemFont(ofSize: 7.5), color: pipe.current ? .black : .systemOrange, indent: 8, spacing: 4)
+            if !snapshot.linkedPipes.isEmpty {
+                draw("Verknüpfte Legacy-Rohrabschnitte", font: .boldSystemFont(ofSize: 11), spacing: 5)
+                for pipe in snapshot.linkedPipes {
+                    draw("\(pipe.floorName) · \(pipe.roomName) · \(pipe.surfaceName) · \(pipe.pipeName)", font: .boldSystemFont(ofSize: 8), spacing: 1)
+                    let stored = pipe.storedVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen"
+                    let calculated = pipe.calculatedVolumeFlowLPH.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " l/h" } ?? "offen"
+                    draw("Segment \(pipe.segmentName) · Altformat unter Heizfläche · gespeichert \(stored) · aktuell berechnet \(calculated) · \(pipe.current ? "aktuell" : "neu synchronisieren")", font: .systemFont(ofSize: 7.5), color: pipe.current ? .systemOrange : .systemOrange, indent: 8, spacing: 4)
+                }
+                draw("Diese Altabschnitte bleiben rechenbar, können aber ohne Geometrieverlust in die Segmentstruktur migriert werden.", font: .systemFont(ofSize: 8), color: .systemOrange, spacing: 5)
             }
 
             if let legacy = snapshot.unlinkedLegacySharedPipeCount,
