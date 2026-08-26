@@ -41,56 +41,8 @@ struct HeizBalanceHydraulicNetworkPathView: View {
 
             if let result = state.result {
                 Section {
-                    ForEach(0..<result.segments.count, id: \.self) { index in
-                        let segment = result.segments[index]
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(segment.name)
-                                    .font(.subheadline.weight(.semibold))
-                                Spacer()
-                                if let complete = segment.completePressureLossKPa {
-                                    Text("Δp \(complete.formatted(.number.precision(.fractionLength(0...3)))) kPa")
-                                        .font(.caption.monospacedDigit())
-                                } else {
-                                    Text("Δp offen")
-                                        .font(.caption)
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-
-                            HStack(spacing: 12) {
-                                Text("Rohr \(segment.pipeSectionCount)")
-                                Text("Bauteil \(segment.componentCount)")
-                                if let flow = segment.designVolumeFlowLPH {
-                                    Text("Q \(flow.formatted(.number.precision(.fractionLength(0...1)))) l/h")
-                                } else {
-                                    Text("Q offen")
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-
-                            HStack(spacing: 12) {
-                                Text("Rohr Δp \(segment.knownPipePressureLossKPa.formatted(.number.precision(.fractionLength(0...3)))) kPa")
-                                Text("Bauteil Δp \(segment.knownComponentPressureLossKPa.formatted(.number.precision(.fractionLength(0...3)))) kPa")
-                            }
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-
-                            if segment.completePressureLossKPa == nil {
-                                var reasons: [String] = []
-                                if !segment.pressureCoverageComplete { reasons.append("Rohr/ζ unvollständig") }
-                                if !segment.componentCoverageComplete { reasons.append("Bauteilaufnahme unvollständig") }
-                                if segment.missingComponentCount > 0 { reasons.append("\(segment.missingComponentCount) Bauteil-Δp offen") }
-                                if !reasons.isEmpty {
-                                    Text(reasons.joined(separator: " · "))
-                                        .font(.caption2)
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 2)
+                    ForEach(result.segments, id: \.id) { (segment: HeizBalanceHydraulicNetworkPathCalculator.SegmentResult) in
+                        HeizBalanceHydraulicNetworkSegmentRow(segment: segment)
                     }
                 } header: {
                     Text("Zentrale Netzsegmente")
@@ -160,5 +112,68 @@ struct HeizBalanceHydraulicNetworkPathView: View {
         }
         .navigationTitle("Netzpfade & Δp")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct HeizBalanceHydraulicNetworkSegmentRow: View {
+    let segment: HeizBalanceHydraulicNetworkPathCalculator.SegmentResult
+
+    private var incompleteReasons: [String] {
+        var reasons: [String] = []
+        if !segment.pressureCoverageComplete {
+            reasons.append("Rohr/ζ unvollständig")
+        }
+        if !segment.componentCoverageComplete {
+            reasons.append("Bauteilaufnahme unvollständig")
+        }
+        if segment.missingComponentCount > 0 {
+            reasons.append("\(segment.missingComponentCount) Bauteil-Δp offen")
+        }
+        return reasons
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(segment.name)
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if let complete = segment.completePressureLossKPa {
+                    Text("Δp \(complete.formatted(.number.precision(.fractionLength(0...3)))) kPa")
+                        .font(.caption.monospacedDigit())
+                } else {
+                    Text("Δp offen")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
+
+            HStack(spacing: 12) {
+                Text("Rohr \(segment.pipeSectionCount)")
+                Text("Bauteil \(segment.componentCount)")
+                if let flow = segment.designVolumeFlowLPH {
+                    Text("Q \(flow.formatted(.number.precision(.fractionLength(0...1)))) l/h")
+                } else {
+                    Text("Q offen")
+                        .foregroundStyle(.orange)
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+
+            HStack(spacing: 12) {
+                Text("Rohr Δp \(segment.knownPipePressureLossKPa.formatted(.number.precision(.fractionLength(0...3)))) kPa")
+                Text("Bauteil Δp \(segment.knownComponentPressureLossKPa.formatted(.number.precision(.fractionLength(0...3)))) kPa")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+
+            if segment.completePressureLossKPa == nil, !incompleteReasons.isEmpty {
+                Text(incompleteReasons.joined(separator: " · "))
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
