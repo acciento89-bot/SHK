@@ -266,6 +266,13 @@ struct HeizBalanceProjectEditor: View {
                 }
 
                 NavigationLink {
+                    HeizBalanceHydraulicNetworkStructureToolsView(project: $draft)
+                } label: {
+                    Label("Netzbaum-Strukturwerkzeuge", systemImage: "point.3.connected.trianglepath.dotted")
+                }
+                .disabled((draft.hydraulicNetwork?.segments ?? []).isEmpty)
+
+                NavigationLink {
                     HeizBalancePumpProjectWorkspaceView(project: draft)
                 } label: {
                     Label("Pumpe & Betriebspunkt", systemImage: "arrow.triangle.2.circlepath")
