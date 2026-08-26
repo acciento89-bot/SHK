@@ -15,11 +15,12 @@ struct HeizBalanceHydraulicNetworkPathView: View {
         List {
             Section {
                 LabeledContent("Rechenprofil", value: HeizBalanceHydraulicNetworkPathCalculator.profileVersion)
-                LabeledContent("Zentrale Shared-Rohre", value: "\(state.centralLinkedPipeCount)")
+                LabeledContent("Direkt am Netzsegment", value: "\(state.segmentOwnedPipeCount)")
+                LabeledContent("Legacy verknüpft", value: "\(state.centralLinkedPipeCount)")
                 LabeledContent("Legacy/manuell", value: "\(state.unlinkedLegacySharedPipeCount)")
 
                 if !state.centralPipeModeActive {
-                    Label("Zentraler Pfadmodus noch nicht aktiv. Mindestens einen gemeinsamen Rohrabschnitt mit einem Netzsegment verknüpfen.", systemImage: "circle.dashed")
+                    Label("Zentraler Pfadmodus noch nicht aktiv. Gemeinsame Rohrgeometrie direkt in mindestens einem Netzsegment erfassen.", systemImage: "circle.dashed")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if state.result == nil {
@@ -33,6 +34,8 @@ struct HeizBalanceHydraulicNetworkPathView: View {
                 }
             } header: {
                 Text("Pfadmodus")
+            } footer: {
+                Text("Neue gemeinsame Rohrstrecken werden direkt am Netzsegment gespeichert. Bereits vorhandene verknüpfte Altabschnitte bleiben bis zur Migration rechenbar.")
             }
 
             if let result = state.result {
@@ -119,14 +122,20 @@ struct HeizBalanceHydraulicNetworkPathView: View {
                 }
             }
 
-            if state.centralPipeModeActive && state.unlinkedLegacySharedPipeCount > 0 {
+            if state.centralLinkedPipeCount > 0 || state.unlinkedLegacySharedPipeCount > 0 {
                 Section {
-                    Label("\(state.unlinkedLegacySharedPipeCount) gemeinsame Rohrabschnitt(e) sind nicht mit dem Netzbaum verknüpft und werden im zentralen Pfadmodus nicht zusätzlich mitgezählt.", systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange)
+                    if state.centralLinkedPipeCount > 0 {
+                        Label("\(state.centralLinkedPipeCount) verknüpfte Altabschnitt(e) liegen noch unter Heizflächen. Sie werden weiterhin korrekt zentral gerechnet, können aber im Netzbaum in die Segmentgeometrie migriert werden.", systemImage: "arrow.right.circle")
+                            .foregroundStyle(.orange)
+                    }
+                    if state.unlinkedLegacySharedPipeCount > 0 {
+                        Label("\(state.unlinkedLegacySharedPipeCount) unverknüpfte Altabschnitt(e) werden im zentralen Pfadmodus nicht zusätzlich mitgezählt.", systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                    }
                 } header: {
                     Text("Legacy-Hinweis")
                 } footer: {
-                    Text("Damit derselbe physische Strang nicht mehrfach gerechnet wird, zählen im zentralen Pfadmodus ausschließlich Shared-Rohre mit Netzsegment-Verknüpfung. Nicht verknüpfte Altabschnitte bleiben im Projekt erhalten, müssen aber fachlich geprüft oder entfernt werden.")
+                    Text("Neue gemeinsame Rohrgeometrie gehört direkt zum Netzsegment. Damit derselbe physische Strang nicht mehrfach gerechnet wird, müssen Altabschnitte fachlich geprüft, verknüpft und migriert oder entfernt werden.")
                 }
             }
         }
