@@ -61,6 +61,67 @@ final class HeizBalanceHydraulicNetworkPathTests: XCTestCase {
         XCTAssertGreaterThan(bedLoss, 6)
     }
 
+    func testMultiplePhysicalSectionsInsideOneSegmentAreAddedInSeries() throws {
+        let density = 998.0
+        let viscosity = 1.004e-6
+        let flow = 320.0
+        let first = HeizBalanceHydraulicNetworkPathCalculator.PipeSectionInput(
+            id: "a",
+            name: "Kellerleitung",
+            innerDiameterMM: 20,
+            lengthM: 8,
+            roughnessMM: 0.01,
+            zetaTotal: 1.5
+        )
+        let second = HeizBalanceHydraulicNetworkPathCalculator.PipeSectionInput(
+            id: "b",
+            name: "Steigleitung",
+            innerDiameterMM: 16,
+            lengthM: 6,
+            roughnessMM: 0.01,
+            zetaTotal: 2
+        )
+
+        let firstOnly = try XCTUnwrap(
+            HeizBalanceHydraulicNetworkPathCalculator.calculate(
+                .init(
+                    densityKGPerM3: density,
+                    kinematicViscosityM2S: viscosity,
+                    segments: [.init(id: "root", name: "Root", parentSegmentID: nil, designVolumeFlowLPH: flow, pipeSections: [first])],
+                    consumers: []
+                )
+            )?.segment(id: "root")?.completePressureLossKPa
+        )
+        let secondOnly = try XCTUnwrap(
+            HeizBalanceHydraulicNetworkPathCalculator.calculate(
+                .init(
+                    densityKGPerM3: density,
+                    kinematicViscosityM2S: viscosity,
+                    segments: [.init(id: "root", name: "Root", parentSegmentID: nil, designVolumeFlowLPH: flow, pipeSections: [second])],
+                    consumers: []
+                )
+            )?.segment(id: "root")?.completePressureLossKPa
+        )
+        let combinedResult = try XCTUnwrap(
+            HeizBalanceHydraulicNetworkPathCalculator.calculate(
+                .init(
+                    densityKGPerM3: density,
+                    kinematicViscosityM2S: viscosity,
+                    segments: [.init(id: "root", name: "Root", parentSegmentID: nil, designVolumeFlowLPH: flow, pipeSections: [first, second])],
+                    consumers: [.init(id: "c", name: "Verbraucher", assignedSegmentID: "root", terminalCompletePressureLossKPa: 4, terminalKnownPressureLossKPa: 4)]
+                )
+            )
+        )
+
+        let segment = try XCTUnwrap(combinedResult.segment(id: "root"))
+        let segmentLoss = try XCTUnwrap(segment.completePressureLossKPa)
+        let consumerLoss = try XCTUnwrap(combinedResult.consumer(id: "c")?.completePathPressureLossKPa)
+
+        XCTAssertEqual(segment.pipeSectionCount, 2)
+        XCTAssertEqual(segmentLoss, firstOnly + secondOnly, accuracy: 0.000001)
+        XCTAssertEqual(consumerLoss, segmentLoss + 4, accuracy: 0.000001)
+    }
+
     func testMissingZetaBlocksCompletePathButKeepsKnownStraightLoss() throws {
         let result = try XCTUnwrap(
             HeizBalanceHydraulicNetworkPathCalculator.calculate(
