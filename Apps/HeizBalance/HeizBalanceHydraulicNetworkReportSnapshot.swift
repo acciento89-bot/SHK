@@ -17,11 +17,10 @@ struct HeizBalanceHydraulicNetworkReportSnapshot: Codable, Hashable {
     var linkedPipes: [LinkedPipe]
     var notice: String
 
-    // Optional Batch-32+ extension. Optional on purpose so archived Batch-31
-    // technical-hydraulic-network-v1 JSON remains decodable unchanged.
     var pathProfileVersion: String?
     var centralPathModeActive: Bool?
     var segmentOwnedPipeCount: Int?
+    var segmentOwnedComponentCount: Int?
     var centralLinkedPipeCount: Int?
     var unlinkedLegacySharedPipeCount: Int?
     var consumerPaths: [ConsumerPath]?
@@ -39,14 +38,20 @@ struct HeizBalanceHydraulicNetworkReportSnapshot: Codable, Hashable {
         var unresolvedConsumers: [String]
         var note: String
 
-        // Optional Batch-32+ edge/path evidence.
         var centralPipeSectionCount: Int?
         var knownPressureLossKPa: Double?
         var completePressureLossKPa: Double?
         var pressureCoverageComplete: Bool?
-
-        // Optional Batch-35+ canonical segment geometry evidence.
         var segmentOwnedPipeSectionCount: Int?
+
+        // Optional Batch-36+ shared-component evidence. Optional so older
+        // technical-hydraulic-network-v1 archives remain decodable unchanged.
+        var centralComponentCount: Int?
+        var segmentOwnedComponentCount: Int?
+        var knownPipePressureLossKPa: Double?
+        var knownComponentPressureLossKPa: Double?
+        var componentCoverageComplete: Bool?
+        var missingCentralComponentCount: Int?
     }
 
     struct LinkedPipe: Identifiable, Codable, Hashable {
@@ -104,7 +109,13 @@ struct HeizBalanceHydraulicNetworkReportSnapshot: Codable, Hashable {
                 knownPressureLossKPa: pathState.centralPipeModeActive ? path?.knownPressureLossKPa : nil,
                 completePressureLossKPa: pathState.centralPipeModeActive ? path?.completePressureLossKPa : nil,
                 pressureCoverageComplete: pathState.centralPipeModeActive ? path?.pressureCoverageComplete : nil,
-                segmentOwnedPipeSectionCount: (segment.pipeSections ?? []).count
+                segmentOwnedPipeSectionCount: (segment.pipeSections ?? []).count,
+                centralComponentCount: pathState.centralPipeModeActive ? path?.componentCount : nil,
+                segmentOwnedComponentCount: (segment.hydraulicLossComponents ?? []).count,
+                knownPipePressureLossKPa: pathState.centralPipeModeActive ? path?.knownPipePressureLossKPa : nil,
+                knownComponentPressureLossKPa: pathState.centralPipeModeActive ? path?.knownComponentPressureLossKPa : nil,
+                componentCoverageComplete: pathState.centralPipeModeActive ? path?.componentCoverageComplete : nil,
+                missingCentralComponentCount: pathState.centralPipeModeActive ? path?.missingComponentCount : nil
             )
         }
 
@@ -162,10 +173,11 @@ struct HeizBalanceHydraulicNetworkReportSnapshot: Codable, Hashable {
             staleLinkedPipeCount: state.staleLinkedPipeCount,
             segments: segmentRows,
             linkedPipes: linked,
-            notice: "Technische Netzbaum-Dokumentation. Segment-Q werden ausschließlich aus den aktuell zugeordneten Heizflächen-Zielvolumenströmen summiert. Gemeinsame Rohrgeometrie wird bevorzugt direkt am Netzsegment gespeichert und dort genau einmal mit dem live berechneten Segment-Q gerechnet. Bereits vorhandene verknüpfte Legacy-Rohre bleiben bis zur expliziten Migration rechenbar. Verbraucherpfade erhalten die seriellen Segmentverluste plus ausschließlich terminale Heizflächen-Anbindung und Bauteilverluste. Fehlende Rohr-/ζ-/Fluid-/Q-Daten blockieren vollständige Pfad- und Pumpenergebnisse. Kein Verfahren-B-/GEG-/BEG-Nachweis.",
+            notice: "Technische Netzbaum-Dokumentation. Segment-Q werden ausschließlich aus den aktuell zugeordneten Heizflächen-Zielvolumenströmen summiert. Gemeinsame Rohrgeometrie und explizite zentrale Bauteilverluste werden direkt am Netzsegment gespeichert und in jedem betroffenen Verbraucherpfad genau einmal seriell berücksichtigt. Bereits vorhandene verknüpfte Legacy-Rohre bleiben bis zur expliziten Migration rechenbar. Fehlende Rohr-/ζ-/Fluid-/Q-/Bauteilwerte oder eine nicht bestätigte zentrale Bauteilaufnahme blockieren vollständige Pfad- und Pumpenergebnisse. Kein Verfahren-B-/GEG-/BEG-Nachweis.",
             pathProfileVersion: pathState.centralPipeModeActive ? HeizBalanceHydraulicNetworkPathCalculator.profileVersion : nil,
             centralPathModeActive: pathState.centralPipeModeActive,
             segmentOwnedPipeCount: pathState.segmentOwnedPipeCount,
+            segmentOwnedComponentCount: pathState.segmentOwnedComponentCount,
             centralLinkedPipeCount: pathState.centralLinkedPipeCount,
             unlinkedLegacySharedPipeCount: pathState.unlinkedLegacySharedPipeCount,
             consumerPaths: consumerPaths
