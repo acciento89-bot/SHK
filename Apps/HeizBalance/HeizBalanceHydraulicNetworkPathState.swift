@@ -3,12 +3,13 @@ import Foundation
 struct HeizBalanceHydraulicNetworkPathProjectState {
     var centralPipeModeActive: Bool
     var segmentOwnedPipeCount: Int
+    var segmentOwnedComponentCount: Int
     var centralLinkedPipeCount: Int
     var unlinkedLegacySharedPipeCount: Int
     var result: HeizBalanceHydraulicNetworkPathCalculator.Result?
 
-    var totalCentralPipeCount: Int {
-        segmentOwnedPipeCount + centralLinkedPipeCount
+    var totalCentralElementCount: Int {
+        segmentOwnedPipeCount + segmentOwnedComponentCount + centralLinkedPipeCount
     }
 
     func completePressureLoss(surfaceID: UUID) -> Double? {
@@ -28,6 +29,7 @@ extension HeizBalanceProject {
             return .init(
                 centralPipeModeActive: false,
                 segmentOwnedPipeCount: 0,
+                segmentOwnedComponentCount: 0,
                 centralLinkedPipeCount: 0,
                 unlinkedLegacySharedPipeCount: legacySharedPipeCount,
                 result: nil
@@ -36,6 +38,7 @@ extension HeizBalanceProject {
 
         var pipesBySegment: [UUID: [HeizBalanceHydraulicNetworkPathCalculator.PipeSectionInput]] = [:]
         var segmentOwnedCount = 0
+        var segmentOwnedComponentCount = 0
         var linkedCount = 0
         var unlinkedCount = 0
 
@@ -53,6 +56,7 @@ extension HeizBalanceProject {
                     )
                 )
             }
+            segmentOwnedComponentCount += (segment.hydraulicLossComponents ?? []).count
         }
 
         // Backward compatibility for Batch-31/34 projects. Legacy linked shared
@@ -83,7 +87,7 @@ extension HeizBalanceProject {
             }
         }
 
-        let centralModeActive = segmentOwnedCount + linkedCount > 0
+        let centralModeActive = segmentOwnedCount + segmentOwnedComponentCount + linkedCount > 0
         guard centralModeActive,
               let networkResult = networkState.result,
               let density = hydraulicFluidDensityKGPerM3,
@@ -93,6 +97,7 @@ extension HeizBalanceProject {
             return .init(
                 centralPipeModeActive: centralModeActive,
                 segmentOwnedPipeCount: segmentOwnedCount,
+                segmentOwnedComponentCount: segmentOwnedComponentCount,
                 centralLinkedPipeCount: linkedCount,
                 unlinkedLegacySharedPipeCount: unlinkedCount,
                 result: nil
@@ -107,12 +112,21 @@ extension HeizBalanceProject {
         }
 
         let segmentInputs = network.segments.map { segment in
-            HeizBalanceHydraulicNetworkPathCalculator.SegmentInput(
+            let components = segment.hydraulicLossComponents ?? []
+            return HeizBalanceHydraulicNetworkPathCalculator.SegmentInput(
                 id: segment.id.uuidString,
                 name: segment.name,
                 parentSegmentID: segment.parentSegmentID?.uuidString,
                 designVolumeFlowLPH: networkResult.segment(id: segment.id.uuidString)?.designVolumeFlowLPH,
-                pipeSections: pipesBySegment[segment.id] ?? []
+                pipeSections: pipesBySegment[segment.id] ?? [],
+                components: components.map {
+                    .init(
+                        id: $0.id.uuidString,
+                        name: $0.name,
+                        pressureLossKPa: $0.pressureLossKPa
+                    )
+                },
+                componentAssessmentComplete: components.isEmpty || segment.hydraulicComponentAssessmentComplete == true
             )
         }
 
@@ -152,6 +166,7 @@ extension HeizBalanceProject {
         return .init(
             centralPipeModeActive: true,
             segmentOwnedPipeCount: segmentOwnedCount,
+            segmentOwnedComponentCount: segmentOwnedComponentCount,
             centralLinkedPipeCount: linkedCount,
             unlinkedLegacySharedPipeCount: unlinkedCount,
             result: result
