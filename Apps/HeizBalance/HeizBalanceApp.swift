@@ -11,6 +11,7 @@ struct HeizBalanceApp: App {
     @State private var hydraulicCaptureTemplateStore = HeizBalanceHydraulicCaptureTemplateStore()
     @State private var valveSettingSelectionStore = HeizBalanceValveSettingSelectionStore()
     @State private var documentationStore = HeizBalanceDocumentationStore()
+    @State private var normativeEvidenceCandidateStore = HeizBalanceNormativeEvidenceCandidateStore()
 
     var body: some Scene {
         WindowGroup {
@@ -24,6 +25,7 @@ struct HeizBalanceApp: App {
                 .environment(hydraulicCaptureTemplateStore)
                 .environment(valveSettingSelectionStore)
                 .environment(documentationStore)
+                .environment(normativeEvidenceCandidateStore)
                 .preferredColorScheme(.dark)
                 .shkKeyboardDismissal()
         }
