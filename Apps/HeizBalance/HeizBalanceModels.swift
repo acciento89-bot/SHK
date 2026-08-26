@@ -126,6 +126,8 @@ struct HeizBalanceHydraulicNetwork: Codable, Hashable {
         var parentSegmentID: UUID?
         var directConsumerSurfaceIDs: [UUID]
         var pipeSections: [HeizBalancePipeSection]?
+        var hydraulicLossComponents: [HeizBalanceHydraulicLossComponent]?
+        var hydraulicComponentAssessmentComplete: Bool?
         var note: String
 
         init(
@@ -134,6 +136,8 @@ struct HeizBalanceHydraulicNetwork: Codable, Hashable {
             parentSegmentID: UUID? = nil,
             directConsumerSurfaceIDs: [UUID] = [],
             pipeSections: [HeizBalancePipeSection]? = nil,
+            hydraulicLossComponents: [HeizBalanceHydraulicLossComponent]? = nil,
+            hydraulicComponentAssessmentComplete: Bool? = nil,
             note: String = ""
         ) {
             self.id = id
@@ -141,12 +145,19 @@ struct HeizBalanceHydraulicNetwork: Codable, Hashable {
             self.parentSegmentID = parentSegmentID
             self.directConsumerSurfaceIDs = directConsumerSurfaceIDs
             self.pipeSections = pipeSections
+            self.hydraulicLossComponents = hydraulicLossComponents
+            self.hydraulicComponentAssessmentComplete = hydraulicComponentAssessmentComplete
             self.note = note
         }
 
         var pipeSectionItems: [HeizBalancePipeSection] {
             get { pipeSections ?? [] }
             set { pipeSections = newValue }
+        }
+
+        var hydraulicLossComponentItems: [HeizBalanceHydraulicLossComponent] {
+            get { hydraulicLossComponents ?? [] }
+            set { hydraulicLossComponents = newValue }
         }
     }
 }
@@ -394,6 +405,11 @@ struct HeizBalanceHydraulicLossComponent: Identifiable, Codable, Hashable {
         case thermostaticValve
         case returnValve
         case heatingSurface
+        case balancingValve
+        case differentialPressureController
+        case heatMeter
+        case filter
+        case checkValve
         case distributor
         case fitting
         case other
@@ -405,10 +421,28 @@ struct HeizBalanceHydraulicLossComponent: Identifiable, Codable, Hashable {
             case .thermostaticValve: "Thermostatventil"
             case .returnValve: "Rücklaufverschraubung"
             case .heatingSurface: "Heizfläche"
+            case .balancingValve: "Strangregulierventil"
+            case .differentialPressureController: "Differenzdruckregler"
+            case .heatMeter: "Wärmemengenzähler"
+            case .filter: "Schmutzfänger / Filter"
+            case .checkValve: "Rückschlagventil"
             case .distributor: "Verteiler / Sammler"
             case .fitting: "Armatur / Bauteil"
             case .other: "Sonstiger Verlust"
             }
+        }
+
+        static var networkCases: [Self] {
+            [
+                .balancingValve,
+                .differentialPressureController,
+                .heatMeter,
+                .filter,
+                .checkValve,
+                .distributor,
+                .fitting,
+                .other
+            ]
         }
     }
 }
