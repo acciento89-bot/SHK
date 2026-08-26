@@ -125,6 +125,7 @@ struct HeizBalanceHydraulicNetwork: Codable, Hashable {
         var name: String
         var parentSegmentID: UUID?
         var directConsumerSurfaceIDs: [UUID]
+        var pipeSections: [HeizBalancePipeSection]?
         var note: String
 
         init(
@@ -132,13 +133,20 @@ struct HeizBalanceHydraulicNetwork: Codable, Hashable {
             name: String = "Netzsegment",
             parentSegmentID: UUID? = nil,
             directConsumerSurfaceIDs: [UUID] = [],
+            pipeSections: [HeizBalancePipeSection]? = nil,
             note: String = ""
         ) {
             self.id = id
             self.name = name
             self.parentSegmentID = parentSegmentID
             self.directConsumerSurfaceIDs = directConsumerSurfaceIDs
+            self.pipeSections = pipeSections
             self.note = note
+        }
+
+        var pipeSectionItems: [HeizBalancePipeSection] {
+            get { pipeSections ?? [] }
+            set { pipeSections = newValue }
         }
     }
 }
