@@ -4,9 +4,17 @@ import SwiftUI
 enum RohrCalcMode: String, CaseIterable, Identifiable {
     case hydraulics = "Hydraulik"
     case sizing = "Dimension"
-    case comparison = "Vergleich"
+    case comparison = "Matrix"
 
     var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .hydraulics: "waveform.path.ecg.rectangle"
+        case .sizing: "ruler"
+        case .comparison: "square.grid.3x3"
+        }
+    }
 }
 
 struct RohrCalcView: View {
@@ -72,18 +80,12 @@ struct RohrCalcView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                SHKBackground()
+                PipeBlueprintBackground()
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        header
-
-                        Picker("Bereich", selection: $mode) {
-                            ForEach(RohrCalcMode.allCases) { item in
-                                Text(item.rawValue).tag(item)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                        blueprintHeader
+                        modeRail
 
                         switch mode {
                         case .hydraulics:
@@ -94,7 +96,8 @@ struct RohrCalcView: View {
                             comparisonContent
                         }
                     }
-                    .padding()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
             }
             .navigationTitle("RohrCalc")
@@ -103,214 +106,428 @@ struct RohrCalcView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     ShareLink(item: shareText) {
                         Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(PipePalette.accent)
                     }
-                    .accessibilityLabel("Ergebnis teilen")
                 }
             }
         }
         .preferredColorScheme(.dark)
+        .shkKeyboardDismissal()
     }
 
-    private var header: some View {
-        SHKCard {
-            HStack(spacing: 14) {
-                Image(systemName: "arrow.left.arrow.right.circle")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(.mint)
-                    .frame(width: 54, height: 54)
-                    .background(.mint.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Rohrhydraulik im Kundendienst")
-                        .font(.title2.bold())
-                    Text("Geschwindigkeit, Druckverlust und Dimensionierung.")
+    private var blueprintHeader: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("HYDRAULIC WORKSHEET")
+                        .font(.caption2.weight(.black))
+                        .tracking(2.4)
+                        .foregroundStyle(PipePalette.accent)
+                    Text("Rohrstrecke 01")
+                        .font(.system(size: 31, weight: .bold, design: .monospaced))
+                    Text("Freier Innendurchmesser · reale Länge · ζ-Widerstände")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-
                 Spacer()
+                Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
+                    .font(.system(size: 29, weight: .medium))
+                    .foregroundStyle(PipePalette.accent)
+                    .padding(13)
+                    .background(PipePalette.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+            }
+
+            HStack(spacing: 0) {
+                PipeHeaderStat(label: "Q", value: "\(format(flow, digits: 0)) l/h")
+                Divider().overlay(Color.white.opacity(0.12)).padding(.vertical, 4)
+                PipeHeaderStat(label: "Øi", value: "\(format(diameter)) mm")
+                Divider().overlay(Color.white.opacity(0.12)).padding(.vertical, 4)
+                PipeHeaderStat(label: "v", value: "\(format(result.base.velocityMS, digits: 2)) m/s")
+            }
+            .padding(.vertical, 8)
+            .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 12))
+        }
+        .padding(18)
+        .background(PipePalette.panel, in: RoundedRectangle(cornerRadius: 10))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(PipePalette.line, lineWidth: 1)
+        }
+    }
+
+    private var modeRail: some View {
+        HStack(spacing: 10) {
+            ForEach(RohrCalcMode.allCases) { item in
+                Button {
+                    mode = item
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: item.icon)
+                        Text(item.rawValue)
+                            .font(.caption.weight(.bold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .foregroundStyle(mode == item ? Color.black : PipePalette.textSecondary)
+                    .background(mode == item ? PipePalette.accent : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay {
+                        if mode != item {
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(PipePalette.line)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
             }
         }
     }
 
-    private var baseInputs: some View {
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Rohrstrecke", icon: "point.topleft.down.to.point.bottomright.curvepath")
-                MetricField(title: "Volumenstrom", unit: "l/h", value: $flow)
-                MetricField(title: "Innendurchmesser", unit: "mm", value: $diameter)
-                MetricField(title: "Länge", unit: "m", value: $length)
-                MetricField(title: "Rauheit ε", unit: "mm", value: $roughness)
-                MetricField(title: "ζ-Summe", unit: "", value: $zetaTotal)
+    private var pipeInputs: some View {
+        PipeBlueprintCard(index: "A", title: "Rohrstrecke", icon: "line.diagonal") {
+            PipeField(code: "Q", title: "Volumenstrom", unit: "l/h", value: $flow)
+            PipeField(code: "DI", title: "Innendurchmesser", unit: "mm", value: $diameter)
+            PipeField(code: "L", title: "Rohrlänge", unit: "m", value: $length)
+            PipeField(code: "EPS", title: "Rauheit ε", unit: "mm", value: $roughness)
+            PipeField(code: "ZETA", title: "ζ-Summe", unit: "", value: $zetaTotal)
 
-                Text("Die Rauheit ist ein Rechenwert für die Innenoberfläche. Bei unbekanntem Rohrzustand nicht künstlich exakt einstellen.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+            Text("Rauheit als Rechenwert der Innenoberfläche verwenden. Bei unbekanntem Rohrzustand keine Scheingenauigkeit erzeugen.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, 2)
         }
     }
 
     @ViewBuilder
     private var hydraulicsContent: some View {
-        baseInputs
+        pipeInputs
 
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 18) {
-                    BigResult(
-                        title: "GESCHWINDIGKEIT",
-                        value: String(format: "%.2f m/s", result.base.velocityMS),
-                        subtitle: "aus Volumenstrom und freiem Querschnitt"
-                    )
-                    BigResult(
-                        title: "REYNOLDS",
-                        value: String(format: "%.0f", result.reynoldsNumber),
-                        subtitle: result.flowRegime.rawValue
-                    )
-                }
-
-                Divider().opacity(0.4)
-
-                resultRow("Rohrreibung", value: result.base.pressureDropPaPerM, unit: "Pa/m", digits: 0)
-                resultRow("Rohrreibung", value: PipeCalculator.pascalPerMeterToMbarPerMeter(result.base.pressureDropPaPerM), unit: "mbar/m", digits: 2)
-                resultRow("Verlust Rohrstrecke", value: result.base.totalPressureDropKPa, unit: "kPa", digits: 2)
-                resultRow("Verlust Einzelwiderstände", value: result.localPressureLossKPa, unit: "kPa", digits: 2)
+        PipeBlueprintCard(index: "B", title: "Strömungszustand", icon: "waveform.path") {
+            HStack(spacing: 10) {
+                PipeMetricTile(code: "V", label: "Geschwindigkeit", value: "\(format(result.base.velocityMS, digits: 2)) m/s")
+                PipeMetricTile(code: "RE", label: result.flowRegime.rawValue, value: format(result.reynoldsNumber, digits: 0))
             }
+
+            PipeResultLine(label: "Rohrreibung", value: "\(format(result.base.pressureDropPaPerM, digits: 0)) Pa/m")
+            PipeResultLine(label: "Rohrreibung", value: "\(format(PipeCalculator.pascalPerMeterToMbarPerMeter(result.base.pressureDropPaPerM), digits: 2)) mbar/m")
+            PipeResultLine(label: "Rohrstrecke", value: "\(format(result.base.totalPressureDropKPa, digits: 2)) kPa")
+            PipeResultLine(label: "Einzelwiderstände", value: "\(format(result.localPressureLossKPa, digits: 2)) kPa")
         }
 
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                BigResult(
-                    title: "GESAMTDRUCKVERLUST",
-                    value: String(format: "%.2f kPa", result.totalPressureLossIncludingLocalKPa),
-                    subtitle: "Rohrreibung + ζ-Einzelwiderstände"
-                )
-
-                resultRow("Förderhöhe", value: result.totalHeadMeters, unit: "mWS", digits: 2)
-                resultRow("Rohrinhalt", value: result.base.pipeVolumeL, unit: "l", digits: 2)
+        PipeBlueprintCard(index: "C", title: "Druckbilanz", icon: "arrow.down.right.and.arrow.up.left") {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("GESAMTDRUCKVERLUST")
+                    .font(.caption2.weight(.black))
+                    .tracking(1.5)
+                    .foregroundStyle(.secondary)
+                Text("\(format(result.totalPressureLossIncludingLocalKPa, digits: 2)) kPa")
+                    .font(.system(size: 38, weight: .black, design: .monospaced))
+                    .foregroundStyle(PipePalette.accent)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 4)
+
+            PipeResultLine(label: "Förderhöhe", value: "\(format(result.totalHeadMeters, digits: 2)) mWS")
+            PipeResultLine(label: "Rohrinhalt", value: "\(format(result.base.pipeVolumeL, digits: 2)) l")
         }
 
         mediumNotice
-        shareCard
+        shareBlock
     }
 
     @ViewBuilder
     private var sizingContent: some View {
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Zielwert", icon: "scope")
-                MetricField(title: "Volumenstrom", unit: "l/h", value: $flow)
-                MetricField(title: "Zielgeschwindigkeit", unit: "m/s", value: $targetVelocity)
+        PipeBlueprintCard(index: "D", title: "Geometrische Dimension", icon: "scope") {
+            PipeField(code: "Q", title: "Volumenstrom", unit: "l/h", value: $flow)
+            PipeField(code: "VT", title: "Zielgeschwindigkeit", unit: "m/s", value: $targetVelocity)
 
-                BigResult(
-                    title: "BENÖTIGTER INNENDURCHMESSER",
-                    value: String(format: "%.1f mm", requiredDiameter),
-                    subtitle: "rein aus Volumenstrom und Zielgeschwindigkeit"
-                )
-            }
-        }
-
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Vorhandenes Rohr prüfen", icon: "checkmark.circle")
-                MetricField(title: "Innendurchmesser", unit: "mm", value: $diameter)
-
-                resultRow("Ist-Geschwindigkeit", value: result.base.velocityMS, unit: "m/s", digits: 2)
-                resultRow("Max. Volumenstrom bei Ziel-v", value: maximumFlowAtTargetVelocity, unit: "l/h", digits: 0)
-            }
-        }
-
-        SHKCard {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionTitle("Wichtig", icon: "info.circle")
-                Text("Der geometrisch benötigte Innendurchmesser ist noch keine fertige Rohrdimensionierung. Druckverlust, verfügbare Pumpenförderhöhe, Armaturen, Geräusch und Herstellerdimensionen müssen gemeinsam bewertet werden.")
+            VStack(alignment: .leading, spacing: 5) {
+                Text("ERFORDERLICHER FREIER Ø")
+                    .font(.caption2.weight(.black))
+                    .tracking(1.3)
                     .foregroundStyle(.secondary)
+                Text("\(format(requiredDiameter)) mm")
+                    .font(.system(size: 42, weight: .black, design: .monospaced))
+                    .foregroundStyle(PipePalette.accent)
             }
+            .padding(.vertical, 8)
+        }
+
+        PipeBlueprintCard(index: "E", title: "Bestandsrohr", icon: "checkmark.circle") {
+            PipeField(code: "DI", title: "Innendurchmesser", unit: "mm", value: $diameter)
+            PipeResultLine(label: "Ist-Geschwindigkeit", value: "\(format(result.base.velocityMS, digits: 2)) m/s")
+            PipeResultLine(label: "Max. Q bei Ziel-v", value: "\(format(maximumFlowAtTargetVelocity, digits: 0)) l/h")
+        }
+
+        PipeBlueprintCard(index: "!", title: "Auslegungshinweis", icon: "exclamationmark.triangle") {
+            Text("Der geometrisch benötigte Innendurchmesser ist keine vollständige Rohrdimensionierung. Druckverlust, Pumpenförderhöhe, Armaturen, Geräusch und Herstellerdimensionen gehören in die Gesamtbewertung.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
     }
 
     @ViewBuilder
     private var comparisonContent: some View {
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Vergleichsgrundlage", icon: "list.bullet")
-                MetricField(title: "Volumenstrom", unit: "l/h", value: $flow)
-                MetricField(title: "Rohrlänge", unit: "m", value: $length)
-                MetricField(title: "Rauheit ε", unit: "mm", value: $roughness)
-
-                Text("Die Liste vergleicht freie Innendurchmesser – keine DN-/Außendurchmesser-Zuordnung. So werden unterschiedliche Rohrsysteme nicht miteinander vermischt.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+        PipeBlueprintCard(index: "M", title: "Vergleichsmatrix", icon: "square.grid.3x3") {
+            PipeField(code: "Q", title: "Volumenstrom", unit: "l/h", value: $flow)
+            PipeField(code: "L", title: "Rohrlänge", unit: "m", value: $length)
+            PipeField(code: "EPS", title: "Rauheit ε", unit: "mm", value: $roughness)
+            Text("Verglichen werden freie Innendurchmesser, bewusst ohne DN- oder Außendurchmesser-Zuordnung.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
 
-        ForEach(comparisonDiameters, id: \.self) { candidate in
-            let candidateResult = PipeCalculator.calculateExtended(
-                volumeFlowLPH: flow,
-                innerDiameterMM: candidate,
-                lengthM: length,
-                roughnessMM: roughness
-            )
+        VStack(spacing: 0) {
+            HStack {
+                Text("Øi")
+                Spacer()
+                Text("v")
+                    .frame(width: 82, alignment: .trailing)
+                Text("Pa/m")
+                    .frame(width: 82, alignment: .trailing)
+            }
+            .font(.caption2.weight(.black))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
 
-            SHKCard {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text(String(format: "Ø innen %.0f mm", candidate))
-                            .font(.headline)
-                        Spacer()
-                        Text(String(format: "%.2f m/s", candidateResult.base.velocityMS))
-                            .font(.title3.bold())
-                            .foregroundStyle(.mint)
-                    }
+            ForEach(comparisonDiameters, id: \.self) { candidate in
+                let candidateResult = PipeCalculator.calculateExtended(
+                    volumeFlowLPH: flow,
+                    innerDiameterMM: candidate,
+                    lengthM: length,
+                    roughnessMM: roughness
+                )
 
-                    resultRow("Druckverlust", value: candidateResult.base.pressureDropPaPerM, unit: "Pa/m", digits: 0)
-                    resultRow("Gesamt Rohrstrecke", value: candidateResult.base.totalPressureDropKPa, unit: "kPa", digits: 2)
-                    resultRow("Reynolds", value: candidateResult.reynoldsNumber, unit: candidateResult.flowRegime.rawValue, digits: 0)
+                HStack {
+                    Text("Ø \(format(candidate, digits: 0)) mm")
+                        .font(.system(.body, design: .monospaced).weight(.bold))
+                    Spacer()
+                    Text(format(candidateResult.base.velocityMS, digits: 2))
+                        .frame(width: 82, alignment: .trailing)
+                    Text(format(candidateResult.base.pressureDropPaPerM, digits: 0))
+                        .frame(width: 82, alignment: .trailing)
+                        .foregroundStyle(PipePalette.accent)
+                }
+                .font(.system(.subheadline, design: .monospaced))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 11)
+                .background(candidate == diameter ? PipePalette.accent.opacity(0.09) : Color.clear)
+
+                if candidate != comparisonDiameters.last {
+                    Divider().overlay(PipePalette.line)
                 }
             }
         }
+        .padding(8)
+        .background(PipePalette.panel, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(PipePalette.line))
 
         mediumNotice
     }
 
     private var mediumNotice: some View {
-        SHKCard {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionTitle("Rechenzustand", icon: "drop")
-                Text("v1 rechnet mit Wasserkennwerten nahe 20 °C: ρ ≈ 998 kg/m³ und ν ≈ 1,004·10⁻⁶ m²/s. Bei heißem Wasser, Glykol oder anderen Medien ändern sich insbesondere Reynolds-Zahl und Druckverlust.")
-                    .foregroundStyle(.secondary)
-            }
+        PipeBlueprintCard(index: "W", title: "Rechenmedium", icon: "drop") {
+            Text("v1 nutzt Wasserkennwerte nahe 20 °C: ρ ≈ 998 kg/m³ und ν ≈ 1,004·10⁻⁶ m²/s. Temperatur, Glykol und andere Medien verändern Reynolds-Zahl und Druckverlust.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
     }
 
-    private var shareCard: some View {
-        SHKCard {
-            ShareLink(item: shareText) {
-                Label("Ergebnis teilen", systemImage: "square.and.arrow.up")
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+    private var shareBlock: some View {
+        ShareLink(item: shareText) {
+            HStack {
+                Image(systemName: "square.and.arrow.up")
+                Text("Hydraulikblatt teilen")
+                    .fontWeight(.bold)
+                Spacer()
+                Text("PDF/Text")
+                    .font(.caption.monospaced())
+                    .opacity(0.7)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.mint)
-        }
-    }
-
-    private func sectionTitle(_ title: String, icon: String) -> some View {
-        Label(title, systemImage: icon)
-            .font(.headline)
-    }
-
-    private func resultRow(_ title: String, value: Double, unit: String, digits: Int) -> some View {
-        HStack {
-            Text(title)
-            Spacer()
-            Text("\(format(value, digits: digits)) \(unit)")
-                .font(.system(.body, design: .rounded).weight(.semibold))
-                .foregroundStyle(.mint)
+            .padding(14)
+            .foregroundStyle(.black)
+            .background(PipePalette.accent, in: RoundedRectangle(cornerRadius: 8))
         }
     }
 
     private func format(_ value: Double, digits: Int = 1) -> String {
         String(format: "%.*f", digits, value)
+    }
+}
+
+private enum PipePalette {
+    static let accent = Color(red: 0.35, green: 0.95, blue: 0.84)
+    static let panel = Color(red: 0.035, green: 0.10, blue: 0.14).opacity(0.96)
+    static let line = Color(red: 0.30, green: 0.72, blue: 0.72).opacity(0.22)
+    static let textSecondary = Color.white.opacity(0.66)
+}
+
+private struct PipeBlueprintBackground: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.018, green: 0.07, blue: 0.10),
+                    Color(red: 0.025, green: 0.12, blue: 0.15)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            GeometryReader { proxy in
+                Path { path in
+                    let spacing: CGFloat = 28
+                    var x: CGFloat = 0
+                    while x <= proxy.size.width {
+                        path.move(to: CGPoint(x: x, y: 0))
+                        path.addLine(to: CGPoint(x: x, y: proxy.size.height))
+                        x += spacing
+                    }
+                    var y: CGFloat = 0
+                    while y <= proxy.size.height {
+                        path.move(to: CGPoint(x: 0, y: y))
+                        path.addLine(to: CGPoint(x: proxy.size.width, y: y))
+                        y += spacing
+                    }
+                }
+                .stroke(PipePalette.line.opacity(0.35), lineWidth: 0.5)
+            }
+        }
+        .ignoresSafeArea()
+    }
+}
+
+private struct PipeHeaderStat: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(label)
+                .font(.caption2.weight(.black))
+                .foregroundStyle(PipePalette.accent)
+            Text(value)
+                .font(.system(.caption, design: .monospaced).weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct PipeBlueprintCard<Content: View>: View {
+    let index: String
+    let title: String
+    let icon: String
+    let content: Content
+
+    init(index: String, title: String, icon: String, @ViewBuilder content: () -> Content) {
+        self.index = index
+        self.title = title
+        self.icon = icon
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Text(index)
+                    .font(.system(.caption, design: .monospaced).weight(.black))
+                    .foregroundStyle(.black)
+                    .frame(width: 27, height: 27)
+                    .background(PipePalette.accent, in: RoundedRectangle(cornerRadius: 5))
+                Label(title.uppercased(), systemImage: icon)
+                    .font(.caption.weight(.black))
+                    .tracking(0.8)
+                Spacer()
+            }
+            content
+        }
+        .padding(15)
+        .background(PipePalette.panel, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(PipePalette.line))
+    }
+}
+
+private struct PipeField: View {
+    let code: String
+    let title: String
+    let unit: String
+    @Binding var value: Double
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(code)
+                .font(.system(.caption2, design: .monospaced).weight(.black))
+                .foregroundStyle(PipePalette.accent)
+                .frame(width: 38, alignment: .leading)
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 8)
+            HStack(spacing: 5) {
+                TextField("0", value: $value, format: .number.precision(.fractionLength(0...3)))
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(.body, design: .monospaced).weight(.bold))
+                    .focused($focused)
+                Text(unit)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+            }
+            .frame(width: 145)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 8)
+            .background(Color.black.opacity(0.24), in: RoundedRectangle(cornerRadius: 6))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(focused ? PipePalette.accent : PipePalette.line, lineWidth: focused ? 1.5 : 1)
+            }
+        }
+    }
+}
+
+private struct PipeMetricTile: View {
+    let code: String
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(code)
+                .font(.caption2.weight(.black))
+                .foregroundStyle(PipePalette.accent)
+            Text(value)
+                .font(.system(.title3, design: .monospaced).weight(.black))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(PipePalette.accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 7))
+        .overlay(RoundedRectangle(cornerRadius: 7).stroke(PipePalette.line))
+    }
+}
+
+private struct PipeResultLine: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(.system(.subheadline, design: .monospaced).weight(.bold))
+                .foregroundStyle(PipePalette.accent)
+        }
+        .padding(.vertical, 3)
     }
 }

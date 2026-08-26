@@ -3,10 +3,18 @@ import SwiftUI
 
 enum KalteCalcMode: String, CaseIterable, Identifiable {
     case circuit = "Kältekreis"
-    case air = "Luft"
-    case converter = "Umrechner"
+    case air = "Luftseite"
+    case converter = "Tools"
 
     var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .circuit: "gauge.with.dots.needle.50percent"
+        case .air: "wind"
+        case .converter: "arrow.left.arrow.right"
+        }
+    }
 }
 
 struct KalteCalcView: View {
@@ -47,9 +55,7 @@ struct KalteCalcView: View {
         )
     }
 
-    private var airDelta: Double {
-        enteringAir - leavingAir
-    }
+    private var airDelta: Double { enteringAir - leavingAir }
 
     private var airCapacity: Double {
         RefrigerationCalculator.airSideCapacityKW(
@@ -90,18 +96,12 @@ struct KalteCalcView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                SHKBackground()
+                KalteConsoleBackground()
 
                 ScrollView {
-                    VStack(spacing: 16) {
-                        header
-
-                        Picker("Bereich", selection: $mode) {
-                            ForEach(KalteCalcMode.allCases) { item in
-                                Text(item.rawValue).tag(item)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                    VStack(spacing: 18) {
+                        consoleHeader
+                        modeSelector
 
                         switch mode {
                         case .circuit:
@@ -112,7 +112,8 @@ struct KalteCalcView: View {
                             converterContent
                         }
                     }
-                    .padding()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
             }
             .navigationTitle("KälteCalc")
@@ -121,210 +122,406 @@ struct KalteCalcView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     ShareLink(item: serviceSummary) {
                         Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.cyan)
                     }
                     .accessibilityLabel("Messwerte teilen")
                 }
             }
         }
         .preferredColorScheme(.dark)
+        .shkKeyboardDismissal()
     }
 
-    private var header: some View {
-        SHKCard {
-            HStack(spacing: 14) {
-                Image(systemName: "snowflake")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(.mint)
-                    .frame(width: 54, height: 54)
-                    .background(.mint.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
+    private var consoleHeader: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Kälte-Service")
-                        .font(.title2.bold())
-                    Text("Messwerte rechnen statt überschlagen.")
+                    Text("SERVICE CONSOLE")
+                        .font(.caption.weight(.black))
+                        .tracking(2.2)
+                        .foregroundStyle(.cyan)
+                    Text("Kältekreis im Blick")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                    Text("Messwerte getrennt nach Nieder- und Hochdruckseite.")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
+
+                ZStack {
+                    Circle()
+                        .stroke(.cyan.opacity(0.25), lineWidth: 8)
+                        .frame(width: 68, height: 68)
+                    Image(systemName: "snowflake")
+                        .font(.system(size: 29, weight: .semibold))
+                        .foregroundStyle(.cyan)
+                }
+            }
+
+            HStack(spacing: 10) {
+                statusPill("REF", value: refrigerant, color: .cyan)
+                statusPill("SH", value: "\(format(superheat)) K", color: .blue)
+                statusPill("SC", value: "\(format(subcooling)) K", color: .orange)
+            }
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color(red: 0.035, green: 0.08, blue: 0.12))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.cyan.opacity(0.18), lineWidth: 1)
+        }
+    }
+
+    private var modeSelector: some View {
+        HStack(spacing: 8) {
+            ForEach(KalteCalcMode.allCases) { item in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        mode = item
+                    }
+                } label: {
+                    VStack(spacing: 6) {
+                        Image(systemName: item.icon)
+                            .font(.headline)
+                        Text(item.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .foregroundStyle(mode == item ? Color.black : Color.white.opacity(0.72))
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(mode == item ? Color.cyan : Color.white.opacity(0.055))
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
     }
 
     @ViewBuilder
     private var circuitContent: some View {
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Kältemittel", icon: "drop.degreesign")
-
-                Picker("Kältemittel", selection: $refrigerant) {
-                    ForEach(refrigerants, id: \.self) { item in
-                        Text(item).tag(item)
-                    }
+        KalteConsoleCard(title: "Kältemittel", systemImage: "drop.degreesign", accent: .cyan) {
+            Picker("Kältemittel", selection: $refrigerant) {
+                ForEach(refrigerants, id: \.self) { item in
+                    Text(item).tag(item)
                 }
-                .pickerStyle(.menu)
+            }
+            .pickerStyle(.menu)
+            .tint(.cyan)
 
-                Text("Die Auswahl wird aktuell im Servicebericht geführt. P/T-Sättigungswerte werden bewusst nicht geschätzt – die Sättigungstemperatur kommt aus Manometer, Hersteller- oder verifizierter P/T-Tabelle.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            Text("Sättigungstemperaturen werden nicht geraten. Werte aus Messgerät, Hersteller- oder verifizierter P/T-Quelle übernehmen.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+
+        HStack(alignment: .top, spacing: 12) {
+            KalteSidePanel(
+                title: "NIEDERDRUCK",
+                icon: "arrow.down.right",
+                value: "\(format(suctionPressure)) bar(g)",
+                accent: .cyan
+            )
+            KalteSidePanel(
+                title: "HOCHDRUCK",
+                icon: "arrow.up.right",
+                value: "\(format(dischargePressure)) bar(g)",
+                accent: .orange
+            )
+        }
+
+        KalteConsoleCard(title: "Niederdruckseite", systemImage: "arrow.down.right.circle.fill", accent: .cyan) {
+            KalteServiceField(title: "Verdampfung / Sättigung", unit: "°C", value: $evaporation, accent: .cyan)
+            KalteServiceField(title: "Sauggas", unit: "°C", value: $suction, accent: .cyan)
+            KalteServiceField(title: "Saugdruck", unit: "bar(g)", value: $suctionPressure, accent: .cyan)
+
+            KalteResultStrip(
+                title: "ÜBERHITZUNG",
+                value: "\(format(superheat)) K",
+                detail: superheat < 0 ? "Messpunkte / Sättigung prüfen" : "Sauggas − Verdampfung",
+                accent: .cyan
+            )
+        }
+
+        KalteConsoleCard(title: "Hochdruckseite", systemImage: "arrow.up.right.circle.fill", accent: .orange) {
+            KalteServiceField(title: "Kondensation / Sättigung", unit: "°C", value: $condensation, accent: .orange)
+            KalteServiceField(title: "Flüssigkeitsleitung", unit: "°C", value: $liquid, accent: .orange)
+            KalteServiceField(title: "Hochdruck", unit: "bar(g)", value: $dischargePressure, accent: .orange)
+
+            KalteResultStrip(
+                title: "UNTERKÜHLUNG",
+                value: "\(format(subcooling)) K",
+                detail: subcooling < 0 ? "Messpunkte / Sättigung prüfen" : "Kondensation − Flüssigkeitsleitung",
+                accent: .orange
+            )
+        }
+
+        KalteConsoleCard(title: "Verdichter", systemImage: "gearshape.2.fill", accent: .purple) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("DRUCKVERHÄLTNIS")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                    Text("aus Absolutdrücken")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(pressureRatio > 0 ? "\(format(pressureRatio, digits: 2)) : 1" : "–")
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.purple)
             }
         }
 
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Niederdruckseite", icon: "arrow.down.right.circle")
-                MetricField(title: "Verdampfung / Sättigung", unit: "°C", value: $evaporation)
-                MetricField(title: "Sauggas", unit: "°C", value: $suction)
-                MetricField(title: "Saugdruck", unit: "bar(g)", value: $suctionPressure)
-
-                Divider().opacity(0.4)
-
-                BigResult(
-                    title: "ÜBERHITZUNG",
-                    value: String(format: "%.1f K", superheat),
-                    subtitle: superheat < 0
-                        ? "Negativer Wert – Messpunkte bzw. Sättigungstemperatur prüfen."
-                        : "Sauggastemperatur minus Verdampfung/Sättigung."
-                )
-            }
-        }
-
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Hochdruckseite", icon: "arrow.up.right.circle")
-                MetricField(title: "Kondensation / Sättigung", unit: "°C", value: $condensation)
-                MetricField(title: "Flüssigkeitsleitung", unit: "°C", value: $liquid)
-                MetricField(title: "Hochdruck", unit: "bar(g)", value: $dischargePressure)
-
-                Divider().opacity(0.4)
-
-                BigResult(
-                    title: "UNTERKÜHLUNG",
-                    value: String(format: "%.1f K", subcooling),
-                    subtitle: subcooling < 0
-                        ? "Negativer Wert – Messpunkte bzw. Sättigungstemperatur prüfen."
-                        : "Kondensation/Sättigung minus Flüssigkeitsleitung."
-                )
-            }
-        }
-
-        SHKCard {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionTitle("Verdichter", icon: "gauge.with.dots.needle.50percent")
-                BigResult(
-                    title: "DRUCKVERHÄLTNIS",
-                    value: pressureRatio > 0 ? String(format: "%.2f : 1", pressureRatio) : "–",
-                    subtitle: "Berechnung aus Absolutdrücken; Eingabe bleibt bar(g)."
-                )
-            }
-        }
-
-        shareCard
+        shareConsole
     }
 
     @ViewBuilder
     private var airContent: some View {
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Luftseite", icon: "wind")
-                MetricField(title: "Luftmenge", unit: "m³/h", value: $airFlow)
-                MetricField(title: "Lufteintritt", unit: "°C", value: $enteringAir)
-                MetricField(title: "Luftaustritt", unit: "°C", value: $leavingAir)
-            }
+        KalteConsoleCard(title: "Luftseite", systemImage: "wind", accent: .blue) {
+            KalteServiceField(title: "Luftmenge", unit: "m³/h", value: $airFlow, accent: .blue)
+            KalteServiceField(title: "Lufteintritt", unit: "°C", value: $enteringAir, accent: .blue)
+            KalteServiceField(title: "Luftaustritt", unit: "°C", value: $leavingAir, accent: .blue)
         }
 
-        SHKCard {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top, spacing: 16) {
-                    BigResult(
-                        title: "ΔT LUFT",
-                        value: String(format: "%.1f K", airDelta),
-                        subtitle: "Eintritt minus Austritt"
-                    )
-
-                    BigResult(
-                        title: "SENSIBEL",
-                        value: String(format: "%.2f kW", airCapacity),
-                        subtitle: "Näherung aus Luftmenge und ΔT"
-                    )
-                }
-
-                Text("Die luftseitige Leistung ist eine sensible Näherung. Latente Leistung/Entfeuchtung ist darin nicht enthalten.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+        HStack(spacing: 12) {
+            KalteSidePanel(title: "ΔT LUFT", icon: "thermometer.medium", value: "\(format(airDelta)) K", accent: .blue)
+            KalteSidePanel(title: "SENSIBEL", icon: "bolt.fill", value: "\(format(airCapacity, digits: 2)) kW", accent: .indigo)
         }
 
-        shareCard
+        KalteConsoleCard(title: "Einordnung", systemImage: "info.circle.fill", accent: .blue) {
+            Text("Die luftseitige Leistung ist eine sensible Näherung. Latente Leistung und Entfeuchtung sind darin nicht enthalten.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+
+        shareConsole
     }
 
     @ViewBuilder
     private var converterContent: some View {
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Temperatur", icon: "thermometer.medium")
-                MetricField(title: "Celsius", unit: "°C", value: $celsius)
-                converterRow("Fahrenheit", value: RefrigerationCalculator.celsiusToFahrenheit(celsius), unit: "°F", digits: 1)
-            }
+        KalteConsoleCard(title: "Temperatur", systemImage: "thermometer.medium", accent: .cyan) {
+            KalteServiceField(title: "Celsius", unit: "°C", value: $celsius, accent: .cyan)
+            converterLine("Fahrenheit", value: RefrigerationCalculator.celsiusToFahrenheit(celsius), unit: "°F", digits: 1, accent: .cyan)
         }
 
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Druck", icon: "gauge.open.with.lines.needle.33percent")
-                MetricField(title: "bar", unit: "bar", value: $bar)
-                converterRow("psi", value: RefrigerationCalculator.barToPSI(bar), unit: "psi", digits: 2)
-                converterRow("kPa", value: RefrigerationCalculator.barToKPa(bar), unit: "kPa", digits: 1)
-            }
+        KalteConsoleCard(title: "Druck", systemImage: "gauge.open.with.lines.needle.33percent", accent: .orange) {
+            KalteServiceField(title: "bar", unit: "bar", value: $bar, accent: .orange)
+            converterLine("psi", value: RefrigerationCalculator.barToPSI(bar), unit: "psi", digits: 2, accent: .orange)
+            converterLine("kPa", value: RefrigerationCalculator.barToKPa(bar), unit: "kPa", digits: 1, accent: .orange)
         }
 
-        SHKCard {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Vakuum absolut", icon: "arrow.down.to.line.compact")
-                MetricField(title: "mbar", unit: "mbar abs", value: $vacuumMbar)
-                converterRow("Micron", value: RefrigerationCalculator.mbarToMicron(vacuumMbar), unit: "micron", digits: 0)
-                converterRow("Pascal", value: RefrigerationCalculator.mbarToPascal(vacuumMbar), unit: "Pa", digits: 1)
-
-                Text("Vakuumwerte sind Absolutdrücke. Nicht mit bar(g) aus dem Kältekreis verwechseln.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+        KalteConsoleCard(title: "Vakuum absolut", systemImage: "arrow.down.to.line.compact", accent: .purple) {
+            KalteServiceField(title: "mbar absolut", unit: "mbar", value: $vacuumMbar, accent: .purple)
+            converterLine("Micron", value: RefrigerationCalculator.mbarToMicron(vacuumMbar), unit: "micron", digits: 0, accent: .purple)
+            converterLine("Pascal", value: RefrigerationCalculator.mbarToPascal(vacuumMbar), unit: "Pa", digits: 1, accent: .purple)
+            Text("Vakuumwerte sind Absolutdrücke – nicht mit bar(g) aus dem Kältekreis verwechseln.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 
-    private var shareCard: some View {
-        SHKCard {
-            VStack(alignment: .leading, spacing: 12) {
-                sectionTitle("Servicebericht", icon: "doc.text")
-                Text("Alle aktuellen Kältekreis- und Luftmesswerte als Text weitergeben oder in einen Arbeitsbericht übernehmen.")
-                    .foregroundStyle(.secondary)
-
-                ShareLink(item: serviceSummary) {
-                    Label("Messwerte teilen", systemImage: "square.and.arrow.up")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.mint)
+    private var shareConsole: some View {
+        ShareLink(item: serviceSummary) {
+            HStack {
+                Image(systemName: "doc.text.fill")
+                Text("Servicewerte teilen")
+                    .fontWeight(.semibold)
+                Spacer()
+                Image(systemName: "square.and.arrow.up")
             }
+            .padding(16)
+            .foregroundStyle(.black)
+            .background(.cyan, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
 
-    private func sectionTitle(_ title: String, icon: String) -> some View {
-        Label(title, systemImage: icon)
-            .font(.headline)
-            .foregroundStyle(.primary)
+    private func statusPill(_ title: String, value: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.caption2.weight(.black))
+                .foregroundStyle(color)
+            Text(value)
+                .font(.caption.weight(.semibold).monospacedDigit())
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(color.opacity(0.09), in: Capsule())
+        .overlay(Capsule().stroke(color.opacity(0.18)))
     }
 
-    private func converterRow(_ title: String, value: Double, unit: String, digits: Int) -> some View {
+    private func converterLine(_ title: String, value: Double, unit: String, digits: Int, accent: Color) -> some View {
         HStack {
             Text(title)
+                .foregroundStyle(.secondary)
             Spacer()
             Text("\(format(value, digits: digits)) \(unit)")
-                .font(.system(.body, design: .rounded).weight(.semibold))
-                .foregroundStyle(.mint)
+                .font(.system(.body, design: .monospaced).weight(.bold))
+                .foregroundStyle(accent)
         }
+        .padding(.vertical, 5)
     }
 
     private func format(_ value: Double, digits: Int = 1) -> String {
         String(format: "%.*f", digits, value)
+    }
+}
+
+private struct KalteConsoleBackground: View {
+    var body: some View {
+        LinearGradient(
+            colors: [
+                Color(red: 0.005, green: 0.025, blue: 0.045),
+                Color(red: 0.015, green: 0.055, blue: 0.085),
+                Color(red: 0.01, green: 0.02, blue: 0.04)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
+    }
+}
+
+private struct KalteConsoleCard<Content: View>: View {
+    let title: String
+    let systemImage: String
+    let accent: Color
+    @ViewBuilder let content: Content
+
+    init(title: String, systemImage: String, accent: Color, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.systemImage = systemImage
+        self.accent = accent
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 9) {
+                Image(systemName: systemImage)
+                    .foregroundStyle(accent)
+                Text(title.uppercased())
+                    .font(.caption.weight(.black))
+                    .tracking(1.1)
+                Spacer()
+            }
+            content
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(accent)
+                .frame(width: 3)
+                .padding(.vertical, 14)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+        }
+    }
+}
+
+private struct KalteServiceField: View {
+    let title: String
+    let unit: String
+    @Binding var value: Double
+    let accent: Color
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 10)
+            HStack(spacing: 6) {
+                TextField("0", value: $value, format: .number.precision(.fractionLength(0...2)))
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(.body, design: .monospaced).weight(.bold))
+                    .focused($focused)
+                    .frame(minWidth: 64)
+                Text(unit)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 9)
+            .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(focused ? accent : Color.white.opacity(0.12), lineWidth: focused ? 1.5 : 1)
+            }
+        }
+    }
+}
+
+private struct KalteResultStrip: View {
+    let title: String
+    let value: String
+    let detail: String
+    let accent: Color
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption.weight(.black))
+                    .foregroundStyle(accent)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(value)
+                .font(.system(size: 25, weight: .bold, design: .monospaced))
+                .foregroundStyle(accent)
+        }
+        .padding(13)
+        .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct KalteSidePanel: View {
+    let title: String
+    let icon: String
+    let value: String
+    let accent: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundStyle(accent)
+                Spacer()
+                Circle()
+                    .fill(accent)
+                    .frame(width: 7, height: 7)
+                    .shadow(color: accent, radius: 5)
+            }
+            Text(title)
+                .font(.caption2.weight(.black))
+                .tracking(1)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(.title3, design: .monospaced).weight(.bold))
+                .foregroundStyle(accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(15)
+        .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(accent.opacity(0.16))
+        }
     }
 }
