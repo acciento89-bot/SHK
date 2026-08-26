@@ -15,27 +15,28 @@ struct HeizBalanceHydraulicNetworkPathView: View {
         List {
             Section {
                 LabeledContent("Rechenprofil", value: HeizBalanceHydraulicNetworkPathCalculator.profileVersion)
-                LabeledContent("Direkt am Netzsegment", value: "\(state.segmentOwnedPipeCount)")
+                LabeledContent("Segment-Rohre", value: "\(state.segmentOwnedPipeCount)")
+                LabeledContent("Zentrale Bauteile", value: "\(state.segmentOwnedComponentCount)")
                 LabeledContent("Legacy verknüpft", value: "\(state.centralLinkedPipeCount)")
                 LabeledContent("Legacy/manuell", value: "\(state.unlinkedLegacySharedPipeCount)")
 
                 if !state.centralPipeModeActive {
-                    Label("Zentraler Pfadmodus noch nicht aktiv. Gemeinsame Rohrgeometrie direkt in mindestens einem Netzsegment erfassen.", systemImage: "circle.dashed")
+                    Label("Zentraler Pfadmodus noch nicht aktiv. Gemeinsame Rohrgeometrie oder zentrale Bauteilverluste direkt in mindestens einem Netzsegment erfassen.", systemImage: "circle.dashed")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if state.result == nil {
-                    Label("Pfadberechnung unvollständig: Netzbaum, Fluidwerte, Verbraucher-Q oder Rohrdaten prüfen.", systemImage: "exclamationmark.triangle.fill")
+                    Label("Pfadberechnung unvollständig: Netzbaum, Fluidwerte, Verbraucher-Q, Rohrdaten oder zentrale Bauteile prüfen.", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
                 } else {
-                    Label("Gemeinsame Rohrabschnitte werden zentral je Netzsegment und nicht pro Heizfläche gerechnet.", systemImage: "checkmark.circle.fill")
+                    Label("Gemeinsame Rohre und zentrale Bauteilverluste werden je Netzsegment genau einmal in den betroffenen Verbraucherpfad gerechnet.", systemImage: "checkmark.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.green)
                 }
             } header: {
                 Text("Pfadmodus")
             } footer: {
-                Text("Neue gemeinsame Rohrstrecken werden direkt am Netzsegment gespeichert. Bereits vorhandene verknüpfte Altabschnitte bleiben bis zur Migration rechenbar.")
+                Text("Neue gemeinsame Rohrstrecken und zentrale Armaturen gehören direkt zum Netzsegment. Bereits vorhandene verknüpfte Alt-Rohre bleiben bis zur Migration rechenbar.")
             }
 
             if let result = state.result {
@@ -55,28 +56,45 @@ struct HeizBalanceHydraulicNetworkPathView: View {
                                         .foregroundStyle(.orange)
                                 }
                             }
+
                             HStack(spacing: 12) {
-                                Text("\(segment.pipeSectionCount) Abschnitt(e)")
+                                Text("Rohr \(segment.pipeSectionCount)")
+                                Text("Bauteil \(segment.componentCount)")
                                 if let flow = segment.designVolumeFlowLPH {
                                     Text("Q \(flow.formatted(.number.precision(.fractionLength(0...1)))) l/h")
                                 } else {
                                     Text("Q offen")
                                         .foregroundStyle(.orange)
                                 }
-                                if segment.completePressureLossKPa == nil,
-                                   segment.knownPressureLossKPa > 0 {
-                                    Text("bekannt \(segment.knownPressureLossKPa.formatted(.number.precision(.fractionLength(0...3)))) kPa")
-                                }
                             }
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+
+                            HStack(spacing: 12) {
+                                Text("Rohr Δp \(segment.knownPipePressureLossKPa.formatted(.number.precision(.fractionLength(0...3)))) kPa")
+                                Text("Bauteil Δp \(segment.knownComponentPressureLossKPa.formatted(.number.precision(.fractionLength(0...3)))) kPa")
+                            }
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+
+                            if segment.completePressureLossKPa == nil {
+                                var reasons: [String] = []
+                                if !segment.pressureCoverageComplete { reasons.append("Rohr/ζ unvollständig") }
+                                if !segment.componentCoverageComplete { reasons.append("Bauteilaufnahme unvollständig") }
+                                if segment.missingComponentCount > 0 { reasons.append("\(segment.missingComponentCount) Bauteil-Δp offen") }
+                                if !reasons.isEmpty {
+                                    Text(reasons.joined(separator: " · "))
+                                        .font(.caption2)
+                                        .foregroundStyle(.orange)
+                                }
+                            }
                         }
                         .padding(.vertical, 2)
                     }
                 } header: {
                     Text("Zentrale Netzsegmente")
                 } footer: {
-                    Text("Ein Segment ohne eigene Rohrabschnitte fügt 0 kPa hinzu und dient nur als Verzweigung. Sobald Rohrabschnitte erfasst sind, müssen Innendurchmesser, Länge, Rauheit, Segment-Q und ζ vollständig sein, bevor ein vollständiger Segment-Δp freigegeben wird.")
+                    Text("Ein Segment ohne eigene Rohre oder Bauteile fügt 0 kPa hinzu und dient nur als Verzweigung. Sobald reale gemeinsame Elemente erfasst sind, müssen ihre technischen Werte vollständig sein, bevor ein vollständiger Segment-Δp freigegeben wird.")
                 }
 
                 Section {
@@ -118,7 +136,7 @@ struct HeizBalanceHydraulicNetworkPathView: View {
                 } header: {
                     Text("Verbraucherpfade")
                 } footer: {
-                    Text("Der vollständige Kreis-Δp ist die Summe aller zentralen Netzsegmente vom Wurzelstrang bis zum zugeordneten Segment plus der ausschließlich terminalen Heizflächen-Anbindung und der erfassten Bauteilverluste.")
+                    Text("Der vollständige Kreis-Δp ist die Summe aller zentralen Netzsegmente vom Wurzelstrang bis zum zugeordneten Segment plus der ausschließlich terminalen Heizflächen-Anbindung und ihrer terminalen Bauteilverluste.")
                 }
             }
 
