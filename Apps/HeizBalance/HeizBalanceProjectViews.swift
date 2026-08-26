@@ -86,6 +86,12 @@ struct HeizBalanceProjectListView: View {
                     } label: {
                         Label("Musterprojekt hinzufügen", systemImage: "testtube.2")
                     }
+
+                    Button {
+                        store.save(HeizBalanceSampleProjectFactory.makeLargeNetworkStressProject())
+                    } label: {
+                        Label("Großprojekt 50 Räume hinzufügen", systemImage: "building.2.crop.circle")
+                    }
                 } label: {
                     Label("Entwicklung", systemImage: "ellipsis.circle")
                 }
