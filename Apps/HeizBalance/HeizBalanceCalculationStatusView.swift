@@ -39,6 +39,12 @@ struct HeizBalanceCalculationStatusView: View {
         )
     }
 
+    private var qualificationAvailability: HeizBalanceNormativeQualificationProductionAvailability {
+        HeizBalanceNormativeQualificationProductionRegistry.availability(
+            for: normativeProfile.engineID
+        )
+    }
+
     var body: some View {
         List {
             Section {
@@ -174,6 +180,31 @@ struct HeizBalanceCalculationStatusView: View {
                 Text("Evidenz-Quarantäne & Vorprüfung")
             } footer: {
                 Text("Paketrevisionen und unabhängige Review-Snapshots werden separat gespeichert. Weder Import noch Vorprüfung sind mit der Readiness-Auswertung verbunden; ein externer Kandidat kann die Normfreigabe nicht selbst aktivieren.")
+            }
+
+            Section {
+                LabeledContent("Produktiver Norm-Runner") {
+                    Label(
+                        qualificationAvailability.isRunnerRegistered ? "registriert" : "nicht registriert",
+                        systemImage: qualificationAvailability.isRunnerRegistered ? "checkmark.circle.fill" : "lock.fill"
+                    )
+                    .foregroundStyle(qualificationAvailability.isRunnerRegistered ? .green : .orange)
+                }
+                LabeledContent("Manueller PASS-Import") {
+                    Text("Nicht möglich")
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent("Technischer Qualifikations-PASS") {
+                    Text("Kein direkter Gate-Einfluss")
+                        .foregroundStyle(.secondary)
+                }
+                Text(qualificationAvailability.reason)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Technische Qualifikation")
+            } footer: {
+                Text("Der Qualifikations-Harness vergleicht Runner-Istwerte selbst gegen unabhängig geprüfte Sollwerte. Der Runner erhält die Sollwerte nicht. In Batch 45 ist für das reservierte Normprofil bewusst kein produktiver Runner registriert.")
             }
         }
         .navigationTitle("Rechenstatus")
