@@ -11,11 +11,7 @@ import Testing
         valuesByReference: ["CASE-REF-1": ["room.transmissionExteriorW": 1000]]
     )
 
-    let report = HeizBalanceNormativeQualificationHarness.run(
-        package: package,
-        review: review,
-        runner: runner
-    )
+    let report = HeizBalanceNormativeQualificationHarness.run(package: package, review: review, runner: runner)
 
     #expect(report.reviewEligible == false)
     #expect(report.caseResults.isEmpty)
@@ -34,11 +30,7 @@ import Testing
         valuesByReference: ["CASE-REF-1": ["room.transmissionExteriorW": 1000]]
     )
 
-    let report = HeizBalanceNormativeQualificationHarness.run(
-        package: package,
-        review: review,
-        runner: runner
-    )
+    let report = HeizBalanceNormativeQualificationHarness.run(package: package, review: review, runner: runner)
 
     #expect(report.structuralIssues.contains("Runner-Engine stimmt nicht mit dem Evidenzpaket überein"))
     #expect(report.caseResults.isEmpty)
@@ -56,11 +48,7 @@ import Testing
         valuesByReference: ["CASE-REF-1": ["room.transmissionExteriorW": 1000]]
     )
 
-    let report = HeizBalanceNormativeQualificationHarness.run(
-        package: package,
-        review: review,
-        runner: runner
-    )
+    let report = HeizBalanceNormativeQualificationHarness.run(package: package, review: review, runner: runner)
 
     #expect(report.structuralIssues.contains("Runner-Identität, Version oder Implementierungs-Fingerprint fehlt"))
     #expect(runner.executionCount == 0)
@@ -75,11 +63,7 @@ import Testing
         valuesByReference: ["CASE-REF-1": ["room.transmissionExteriorW": 1000.4]]
     )
 
-    let report = HeizBalanceNormativeQualificationHarness.run(
-        package: package,
-        review: review,
-        runner: runner
-    )
+    let report = HeizBalanceNormativeQualificationHarness.run(package: package, review: review, runner: runner)
 
     #expect(report.structuralIssues.isEmpty)
     #expect(report.reviewEligible)
@@ -105,11 +89,7 @@ import Testing
         valuesByReference: ["CASE-REF-1": ["room.transmissionExteriorW": 1001]]
     )
 
-    let report = HeizBalanceNormativeQualificationHarness.run(
-        package: package,
-        review: review,
-        runner: runner
-    )
+    let report = HeizBalanceNormativeQualificationHarness.run(package: package, review: review, runner: runner)
 
     #expect(report.caseResults[0].validation?.passed == false)
     #expect(report.caseResults[0].passed == false)
@@ -124,13 +104,9 @@ import Testing
         valuesByReference: ["CASE-REF-1": [:]]
     )
 
-    let report = HeizBalanceNormativeQualificationHarness.run(
-        package: package,
-        review: review,
-        runner: runner
-    )
-
+    let report = HeizBalanceNormativeQualificationHarness.run(package: package, review: review, runner: runner)
     let validation = try #require(report.caseResults[0].validation)
+
     #expect(validation.failures.contains { failure in
         failure.key == "room.transmissionExteriorW" && failure.reason == .missingActualValue
     })
@@ -150,11 +126,7 @@ import Testing
         ]
     )
 
-    let report = HeizBalanceNormativeQualificationHarness.run(
-        package: package,
-        review: review,
-        runner: runner
-    )
+    let report = HeizBalanceNormativeQualificationHarness.run(package: package, review: review, runner: runner)
 
     #expect(report.caseResults[0].validation?.passed == true)
     #expect(report.caseResults[0].unexpectedActualMetricKeys == ["unreviewed.extraMetric"])
@@ -175,11 +147,7 @@ import Testing
         ]
     )
 
-    let report = HeizBalanceNormativeQualificationHarness.run(
-        package: package,
-        review: review,
-        runner: runner
-    )
+    let report = HeizBalanceNormativeQualificationHarness.run(package: package, review: review, runner: runner)
 
     #expect(report.caseResults[0].duplicateActualMetricKeys == ["room.transmissionExteriorW"])
     #expect(report.caseResults[0].passed == false)
@@ -195,11 +163,7 @@ import Testing
         failingReferences: ["CASE-REF-1"]
     )
 
-    let report = HeizBalanceNormativeQualificationHarness.run(
-        package: package,
-        review: review,
-        runner: runner
-    )
+    let report = HeizBalanceNormativeQualificationHarness.run(package: package, review: review, runner: runner)
 
     #expect(report.caseResults[0].artifact == nil)
     #expect(report.caseResults[0].executionError != nil)
@@ -208,9 +172,7 @@ import Testing
 }
 
 @Test func productionNormativeQualificationRunnerRemainsUnavailable() {
-    let availability = HeizBalanceNormativeQualificationProductionRegistry.availability(
-        for: .deRoomHeatLoad2017_2020
-    )
+    let availability = HeizBalanceNormativeQualificationProductionRegistry.availability(for: .deRoomHeatLoad2017_2020)
 
     #expect(availability.isRunnerRegistered == false)
     #expect(availability.reason.contains("Kein produktiver Norm-Qualifikationsrunner registriert"))
@@ -223,11 +185,7 @@ import Testing
         descriptor: makeQualificationRunnerDescriptor(),
         valuesByReference: ["CASE-REF-1": ["room.transmissionExteriorW": 1000]]
     )
-    let report = HeizBalanceNormativeQualificationHarness.run(
-        package: package,
-        review: review,
-        runner: runner
-    )
+    let report = HeizBalanceNormativeQualificationHarness.run(package: package, review: review, runner: runner)
     #expect(report.technicalQualificationPassed)
     #expect(report.canAffectNormativeReadiness == false)
 
@@ -250,14 +208,12 @@ private final class QualificationTestRunner: HeizBalanceNormativeQualificationRu
         valuesByReference: [String: [String: Double]],
         failingReferences: Set<String> = []
     ) {
-        let metrics = valuesByReference.mapValues { values in
-            values.map { .init(key: $0.key, value: $0.value) }
+        let metrics: [String: [HeizBalanceNormativeQualificationMetric]] = valuesByReference.mapValues { values in
+            values.map { entry in
+                HeizBalanceNormativeQualificationMetric(key: entry.key, value: entry.value)
+            }
         }
-        self.init(
-            descriptor: descriptor,
-            metricsByReference: metrics,
-            failingReferences: failingReferences
-        )
+        self.init(descriptor: descriptor, metricsByReference: metrics, failingReferences: failingReferences)
     }
 
     init(
@@ -378,12 +334,7 @@ private func makeQualificationReview(
         reviewer: "Independent Reviewer",
         reviewedOn: "2026-08-27",
         sourceReviews: package.sources.map {
-            .init(
-                sourceID: $0.id,
-                metadataChecked: true,
-                rightsReferenceChecked: true,
-                note: nil
-            )
+            .init(sourceID: $0.id, metadataChecked: true, rightsReferenceChecked: true, note: nil)
         },
         specificationReviews: package.specifications.map {
             .init(
