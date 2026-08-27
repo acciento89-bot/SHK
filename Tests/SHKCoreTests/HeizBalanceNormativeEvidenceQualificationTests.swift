@@ -67,7 +67,7 @@ import Testing
     #expect(report.technicalQualificationPassed == false)
 }
 
-@Test func controlledRunnerWithinToleranceProducesTechnicalQualificationOnly() {
+@Test func controlledRunnerWithinToleranceProducesTechnicalQualificationOnly() throws {
     let package = makeQualificationPackage()
     let review = makeQualificationReview(for: package)
     let runner = QualificationTestRunner(
@@ -116,7 +116,7 @@ import Testing
     #expect(report.technicalQualificationPassed == false)
 }
 
-@Test func missingActualMetricFailsQualification() {
+@Test func missingActualMetricFailsQualification() throws {
     let package = makeQualificationPackage()
     let review = makeQualificationReview(for: package)
     let runner = QualificationTestRunner(
