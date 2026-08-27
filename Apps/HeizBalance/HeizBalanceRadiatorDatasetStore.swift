@@ -1,0 +1,117 @@
+import Foundation
+import Observation
+
+@Observable
+final class HeizBalanceRadiatorDatasetStore {
+    private(set) var datasets: [HeizBalanceRadiatorProductDataset] = []
+    var persistenceError: String?
+
+    private let fileURL: URL
+
+    init(fileManager: FileManager = .default) {
+        let baseURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? fileManager.temporaryDirectory
+        let directoryURL = baseURL
+            .appendingPathComponent("HeizBalance", isDirectory: true)
+            .appendingPathComponent("RadiatorDatasets", isDirectory: true)
+
+        do {
+            try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        } catch {
+            persistenceError = "Heizkörper-Datensatzordner konnte nicht erstellt werden: \(error.localizedDescription)"
+        }
+
+        fileURL = directoryURL.appendingPathComponent("datasets.json")
+        load()
+    }
+
+    @discardableResult
+    func importDataset(data: Data) throws -> HeizBalanceRadiatorProductDataset {
+        try importDatasetWithReceipt(data: data).dataset
+    }
+
+    @discardableResult
+    func importDatasetWithReceipt(data: Data) throws -> HeizBalanceRadiatorDatasetImportDecoder.Receipt {
+        let receipt = try HeizBalanceRadiatorDatasetImportDecoder.decode(data: data)
+        let dataset = receipt.dataset
+        let previousDatasets = datasets
+
+        if let index = datasets.firstIndex(where: { $0.id == dataset.id }) {
+            datasets[index] = dataset
+        } else {
+            datasets.append(dataset)
+        }
+
+        sortDatasets()
+
+        do {
+            try persistThrowing()
+            persistenceError = nil
+            return receipt
+        } catch {
+            datasets = previousDatasets
+            persistenceError = "Heizkörper-Datensatz konnte nicht gespeichert werden: \(error.localizedDescription)"
+            throw error
+        }
+    }
+
+    func delete(id: String) {
+        let previousDatasets = datasets
+        datasets.removeAll { $0.id == id }
+
+        do {
+            try persistThrowing()
+            persistenceError = nil
+        } catch {
+            datasets = previousDatasets
+            persistenceError = "Heizkörper-Datensätze konnten nicht gespeichert werden: \(error.localizedDescription)"
+        }
+    }
+
+    func dataset(id: String) -> HeizBalanceRadiatorProductDataset? {
+        datasets.first { $0.id == id }
+    }
+
+    func product(compositeID: String) -> (dataset: HeizBalanceRadiatorProductDataset, product: HeizBalanceRadiatorProductDataset.Product)? {
+        guard let separatorRange = compositeID.range(of: HeizBalanceRadiatorProductDataset.compositeIDSeparator) else {
+            return nil
+        }
+        let datasetID = String(compositeID[..<separatorRange.lowerBound])
+        let productID = String(compositeID[separatorRange.upperBound...])
+
+        guard let dataset = dataset(id: datasetID),
+              let product = dataset.products.first(where: { $0.id == productID }) else {
+            return nil
+        }
+        return (dataset, product)
+    }
+
+    private func sortDatasets() {
+        datasets.sort {
+            if $0.manufacturer.localizedCaseInsensitiveCompare($1.manufacturer) == .orderedSame {
+                return $0.datasetName.localizedCaseInsensitiveCompare($1.datasetName) == .orderedAscending
+            }
+            return $0.manufacturer.localizedCaseInsensitiveCompare($1.manufacturer) == .orderedAscending
+        }
+    }
+
+    private func load() {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+
+        do {
+            let data = try Data(contentsOf: fileURL)
+            datasets = try JSONDecoder().decode([HeizBalanceRadiatorProductDataset].self, from: data)
+            sortDatasets()
+            persistenceError = nil
+        } catch {
+            persistenceError = "Heizkörper-Datensätze konnten nicht geladen werden: \(error.localizedDescription)"
+        }
+    }
+
+    private func persistThrowing() throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(datasets)
+        try data.write(to: fileURL, options: .atomic)
+    }
+}
