@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct HeizBalanceCalculationStatusView: View {
+    @Environment(HeizBalanceNormativeEvidenceCandidateStore.self) private var candidateStore
+    @Environment(HeizBalanceNormativeEvidenceReviewStore.self) private var reviewStore
+
     private let previewProfile = HeizBalanceCalculationProfile.technicalPreviewV1
     private let normativeProfile = HeizBalanceCalculationProfile.germanRoomHeatLoad2017_2020
 
@@ -154,9 +157,11 @@ struct HeizBalanceCalculationStatusView: View {
                 NavigationLink {
                     HeizBalanceNormativeEvidenceCandidateManager()
                 } label: {
-                    Label("Evidenzpakete prüfen", systemImage: "tray.full")
+                    Label("Evidenzpakete & Vorprüfung", systemImage: "tray.full")
                 }
 
+                LabeledContent("Kandidaten in Quarantäne", value: "\(candidateStore.candidates.count)")
+                LabeledContent("Review-Snapshots", value: "\(reviewStore.reviews.count)")
                 LabeledContent("Importstatus") {
                     Text("Quarantäne")
                         .foregroundStyle(.orange)
@@ -166,9 +171,9 @@ struct HeizBalanceCalculationStatusView: View {
                         .foregroundStyle(.secondary)
                 }
             } header: {
-                Text("Evidenz-Quarantäne")
+                Text("Evidenz-Quarantäne & Vorprüfung")
             } footer: {
-                Text("Importierte Kandidaten werden separat gespeichert und sind nicht mit der Readiness-Auswertung verbunden. Dadurch kann ein externes JSON-Paket die Normfreigabe nicht selbst aktivieren.")
+                Text("Paketrevisionen und unabhängige Review-Snapshots werden separat gespeichert. Weder Import noch Vorprüfung sind mit der Readiness-Auswertung verbunden; ein externer Kandidat kann die Normfreigabe nicht selbst aktivieren.")
             }
         }
         .navigationTitle("Rechenstatus")
@@ -180,5 +185,7 @@ struct HeizBalanceCalculationStatusView: View {
     NavigationStack {
         HeizBalanceCalculationStatusView()
     }
+    .environment(HeizBalanceNormativeEvidenceCandidateStore())
+    .environment(HeizBalanceNormativeEvidenceReviewStore())
     .preferredColorScheme(.dark)
 }
