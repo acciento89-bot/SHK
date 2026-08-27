@@ -12,6 +12,7 @@ struct HeizBalanceApp: App {
     @State private var valveSettingSelectionStore = HeizBalanceValveSettingSelectionStore()
     @State private var documentationStore = HeizBalanceDocumentationStore()
     @State private var normativeEvidenceCandidateStore = HeizBalanceNormativeEvidenceCandidateStore()
+    @State private var normativeEvidenceReviewStore = HeizBalanceNormativeEvidenceReviewStore()
 
     var body: some Scene {
         WindowGroup {
@@ -26,6 +27,7 @@ struct HeizBalanceApp: App {
                 .environment(valveSettingSelectionStore)
                 .environment(documentationStore)
                 .environment(normativeEvidenceCandidateStore)
+                .environment(normativeEvidenceReviewStore)
                 .preferredColorScheme(.dark)
                 .shkKeyboardDismissal()
         }
