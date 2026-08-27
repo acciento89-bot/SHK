@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 struct HeizBalanceNormativeEvidenceCandidateManager: View {
     @Environment(HeizBalanceNormativeEvidenceCandidateStore.self) private var store
+    @Environment(HeizBalanceNormativeEvidenceReviewStore.self) private var reviewStore
     @State private var showingImporter = false
     @State private var importMessage: String?
 
@@ -11,7 +12,7 @@ struct HeizBalanceNormativeEvidenceCandidateManager: View {
             Section {
                 Label("Importierte Evidenzpakete sind niemals automatisch vertrauenswürdig.", systemImage: "lock.shield")
                     .font(.subheadline.weight(.semibold))
-                Text("Der Import prüft nur Schema, Referenzen und Wertebereiche. Rechteangaben, Spezifikationen und Erwartungswerte bleiben unbestätigte Kandidaten. Diese Quarantäne hat technisch keinen Pfad zur Normfreigabe.")
+                Text("Der Import prüft nur Schema, Referenzen und Wertebereiche. Rechteangaben, Spezifikationen und Erwartungswerte bleiben unbestätigte Kandidaten. Auch getrennte Review-Snapshots haben technisch keinen direkten Pfad zur Normfreigabe.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
@@ -48,7 +49,7 @@ struct HeizBalanceNormativeEvidenceCandidateManager: View {
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
 
-                                Text("Importiert \(candidate.importedAt.formatted(date: .abbreviated, time: .shortened))")
+                                Text("\(reviewStore.reviews(for: candidate.package.identity).count) Review-Snapshots · Importiert \(candidate.importedAt.formatted(date: .abbreviated, time: .shortened))")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
@@ -56,9 +57,9 @@ struct HeizBalanceNormativeEvidenceCandidateManager: View {
                         }
                         .swipeActions {
                             Button(role: .destructive) {
-                                store.delete(id: candidate.id)
+                                store.delete(identity: candidate.id)
                             } label: {
-                                Label("Löschen", systemImage: "trash")
+                                Label("Kandidat löschen", systemImage: "trash")
                             }
                         }
                     }
@@ -66,7 +67,7 @@ struct HeizBalanceNormativeEvidenceCandidateManager: View {
             } header: {
                 Text("Quarantäne")
             } footer: {
-                Text("Auch ein strukturell korrektes Paket bleibt unqualifiziert. Ein erneutes Laden aus dem lokalen Speicher setzt den Trust-State defensiv wieder auf Quarantäne.")
+                Text("Paket-ID und Version bilden eine unveränderliche Identität. Gleicher Inhalt wird wiedererkannt; geänderter Inhalt unter derselben ID+Version wird abgelehnt und benötigt eine neue Paketversion.")
             }
 
             Section {
@@ -87,6 +88,12 @@ struct HeizBalanceNormativeEvidenceCandidateManager: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }
+
+                if let reviewError = reviewStore.persistenceError {
+                    Label(reviewError, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
             } header: {
                 Text("Import")
             } footer: {
@@ -94,7 +101,11 @@ struct HeizBalanceNormativeEvidenceCandidateManager: View {
             }
 
             Section("Normfreigabe") {
-                LabeledContent("Einfluss dieser Quarantäne") {
+                LabeledContent("Einfluss der Quarantäne") {
+                    Text("Keiner")
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent("Einfluss der Vorprüfung") {
                     Text("Keiner")
                         .foregroundStyle(.secondary)
                 }
@@ -127,7 +138,7 @@ struct HeizBalanceNormativeEvidenceCandidateManager: View {
             do {
                 let data = try Data(contentsOf: url)
                 let candidate = try store.importCandidate(data: data)
-                importMessage = "In Quarantäne importiert: \(candidate.package.id) · kein Einfluss auf Normfreigabe"
+                importMessage = "In Quarantäne vorhanden: \(candidate.package.identity.displayValue) · kein Einfluss auf Normfreigabe"
             } catch {
                 importMessage = "Import fehlgeschlagen: \(error.localizedDescription)"
             }
@@ -146,13 +157,28 @@ struct HeizBalanceNormativeEvidenceCandidateManager: View {
 }
 
 private struct HeizBalanceNormativeEvidenceCandidateDetail: View {
+    @Environment(HeizBalanceNormativeEvidenceReviewStore.self) private var reviewStore
+
     let candidate: HeizBalanceNormativeEvidenceCandidateStore.StoredCandidate
+
+    private var latestReview: HeizBalanceNormativeEvidenceReviewStore.StoredReview? {
+        reviewStore.latestReview(for: candidate.package.identity)
+    }
+
+    private var latestAssessment: HeizBalanceNormativeEvidenceReviewAssessment? {
+        guard let latestReview else { return nil }
+        return HeizBalanceNormativeEvidenceReviewEvaluator.evaluate(
+            package: candidate.package,
+            review: latestReview.review
+        )
+    }
 
     var body: some View {
         List {
             Section("Paket") {
                 LabeledContent("ID", value: candidate.package.id)
                 LabeledContent("Version", value: candidate.package.packageVersion)
+                LabeledContent("Identität", value: candidate.package.identity.displayValue)
                 LabeledContent("Schema", value: candidate.package.schema)
                 LabeledContent("Erstellt", value: candidate.package.createdOn)
                 LabeledContent("Einreicher", value: candidate.package.submitter)
@@ -170,6 +196,35 @@ private struct HeizBalanceNormativeEvidenceCandidateDetail: View {
                             .multilineTextAlignment(.trailing)
                     }
                 }
+            }
+
+            Section {
+                NavigationLink {
+                    HeizBalanceNormativeEvidenceReviewWorkspace(package: candidate.package)
+                } label: {
+                    Label("Getrennte Vorprüfung öffnen", systemImage: "person.2.badge.gearshape")
+                }
+
+                LabeledContent("Review-Snapshots", value: "\(reviewStore.reviews(for: candidate.package.identity).count)")
+
+                LabeledContent("Letzter Review-Status") {
+                    if let latestAssessment {
+                        Text(latestAssessment.eligibleForQualificationReview ? "Vorprüfung vollständig" : "Vorprüfung offen")
+                            .foregroundStyle(latestAssessment.eligibleForQualificationReview ? .green : .orange)
+                    } else {
+                        Text("noch keiner")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                LabeledContent("Direkter Gate-Einfluss") {
+                    Text("Keiner")
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Unabhängige Vorprüfung")
+            } footer: {
+                Text("Einreicher und Prüfer müssen getrennt sein. Eine vollständige Vorprüfung ist nur Voraussetzung für einen späteren Qualifikationsschritt und schaltet keine normative Berechnung frei.")
             }
 
             Section {
@@ -270,10 +325,10 @@ private struct HeizBalanceNormativeEvidenceCandidateDetail: View {
             } header: {
                 Text("Referenzfallkandidaten")
             } footer: {
-                Text("Das Paket speichert Erwartungswerte, aber kein bestanden/nicht-bestanden als Vertrauensentscheidung. Die spätere Ausführung und unabhängige Qualifikation sind getrennte Schritte.")
+                Text("Das Paket speichert Erwartungswerte, aber keinen bestanden/nicht-bestanden-Status als Vertrauensentscheidung. Die spätere Ausführung, Qualifikation und Normfreigabe bleiben getrennte Schritte.")
             }
         }
-        .navigationTitle(candidate.package.id)
+        .navigationTitle(candidate.package.identity.displayValue)
         .navigationBarTitleDisplayMode(.inline)
     }
 
