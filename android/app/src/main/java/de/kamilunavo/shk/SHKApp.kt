@@ -233,6 +233,12 @@ private fun HeizkoerperCalc(onShare: (String) -> Unit) {
             Result("Erforderliche Nennleistung ΔT50", "${fmt(requiredNominal, 0)} W")
             Result("Heizkörperanzahl", "$count")
         }
+        CardBlock("Temperaturvergleich") {
+            TemperatureLevel("75 / 65 / 20 °C", nominal)
+            TemperatureLevel("55 / 45 / 20 °C", nominal * (30.0 / 50.0).pow(exponent))
+            TemperatureLevel("45 / 35 / 20 °C", nominal * (20.0 / 50.0).pow(exponent))
+            Text("Vergleich mit arithmetischer mittlerer Übertemperatur.", color = Muted, fontSize = 12.sp)
+        }
         Text("Herstellerdaten zu Nennleistung und Exponent n sowie die objektspezifische Heizlast haben Vorrang.", color = Muted, fontSize = 12.sp)
         ShareButton("Auslegung teilen", "HeizkörperCalc\nBetriebspunkt ${fmt(flow,0)}/${fmt(ret,0)}/${fmt(room,0)} °C\nLeistung ${fmt(actual,0)} W\nErforderlich ΔT50 ${fmt(requiredNominal,0)} W", onShare)
     }
@@ -258,6 +264,7 @@ private fun RohrCalc(onShare: (String) -> Unit) {
     val r=pipeResult(flow,diameter,length,roughness,zeta)
     val q=max(0.0,flow)/1000/3600
     val requiredDiameter=if(q>0 && targetVelocity>0) sqrt(4*q/(PI*targetVelocity))*1000 else 0.0
+    val maximumFlow=if(diameter>0 && targetVelocity>0) PI*(diameter/1000).pow(2)/4*targetVelocity*3600*1000 else 0.0
     val regime=when { r.reynolds<2300 -> "laminar"; r.reynolds<4000 -> "Übergangsbereich"; else -> "turbulent" }
     AppPage("RohrCalc", "HYDRAULIC WORKSHEET", "Freier Innendurchmesser · reale Länge · ζ-Widerstände") {
         CardBlock("Rohrstrecke 01") {
@@ -279,6 +286,14 @@ private fun RohrCalc(onShare: (String) -> Unit) {
         CardBlock("Dimensionierung") {
             MetricField("Zielgeschwindigkeit", "m/s", targetVelocity) { targetVelocity = it }
             Result("Erforderlicher freier Ø", "${fmt(requiredDiameter,1)} mm")
+            Result("Max. Volumenstrom bei vorhandenem Ø", "${fmt(maximumFlow,0)} l/h")
+        }
+        CardBlock("Schnellvergleich") {
+            Text("Freier Ø · Geschwindigkeit · Druckverlust", color = Muted, fontSize = 12.sp)
+            listOf(15.0, 20.0, 25.0, 32.0).forEach { d ->
+                val row = pipeResult(flow, d, 1.0, roughness, 0.0)
+                Text("${fmt(d,0)} mm   ${fmt(row.velocity,2)} m/s   ${fmt(row.dpPerM,0)} Pa/m", color = if(abs(d-diameter)<0.1) Mint else Color.White)
+            }
         }
         Text("Wasserwerte nahe 20 °C. Temperatur, Glykol und andere Medien verändern Reynolds-Zahl und Druckverlust.", color = Muted, fontSize = 12.sp)
         ShareButton("Hydraulikblatt teilen", "RohrCalc\nØi ${fmt(diameter,1)} mm · ${fmt(flow,0)} l/h\nv ${fmt(r.velocity,2)} m/s\nΔp ${fmt(r.total,2)} kPa", onShare)
@@ -296,6 +311,11 @@ private fun AnlagenCheck(onShare: (String) -> Unit) {
     var maxPressure by remember { mutableDoubleStateOf(2.0) }
     var staticHeight by remember { mutableDoubleStateOf(8.0) }
     var safetyValve by remember { mutableDoubleStateOf(3.0) }
+    var tightness by remember { mutableStateOf(false) }
+    var vented by remember { mutableStateOf(false) }
+    var pumpChecked by remember { mutableStateOf(false) }
+    var filtersChecked by remember { mutableStateOf(false) }
+    var notes by remember { mutableStateOf("") }
     val spread=flow-ret; val rise=hot-cold; val minStatic=max(0.0,staticHeight)*0.0980665+0.3; val margin=safetyValve-hot
     val warnings=listOf(spread<0 || spread<5 || spread>20, cold<minPressure || cold>maxPressure, cold<minStatic, rise<0 || rise>1, margin<0.5).count{it}
     AppPage("AnlagenCheck", "SERVICE INSPECTION", "Messwerte erfassen, gegen eigene Vorgaben prüfen und dokumentieren.") {
@@ -320,8 +340,15 @@ private fun AnlagenCheck(onShare: (String) -> Unit) {
             CheckLine("Druckanstieg warm", "+${fmt(rise,2)} bar", rise in 0.0..1.0)
             CheckLine("Reserve Sicherheitsventil", "${fmt(margin,2)} bar", margin>=0.5)
         }
+        CardBlock("Service-Checkliste") {
+            ChecklistRow("Sichtprüfung / Dichtheit", tightness) { tightness = it }
+            ChecklistRow("Anlage entlüftet", vented) { vented = it }
+            ChecklistRow("Umwälzpumpe geprüft", pumpChecked) { pumpChecked = it }
+            ChecklistRow("Filter / Schmutzfänger geprüft", filtersChecked) { filtersChecked = it }
+            OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text("Freie Notizen") }, minLines = 3)
+        }
         Text("Keine Sicherheitsfreigabe. Herstellerangaben, Normen, Messgeräte und fachliche Beurteilung haben Vorrang.", color = Muted, fontSize = 12.sp)
-        ShareButton("Servicebericht teilen", "AnlagenCheck · ${objectName.ifBlank{"Ohne Objektbezeichnung"}}\nVorlauf/Rücklauf ${fmt(flow,1)}/${fmt(ret,1)} °C\nKalt/Warm ${fmt(cold,2)}/${fmt(hot,2)} bar\n$warnings Prüfhinweise", onShare)
+        ShareButton("Servicebericht teilen", "AnlagenCheck · ${objectName.ifBlank{"Ohne Objektbezeichnung"}}\nVorlauf/Rücklauf ${fmt(flow,1)}/${fmt(ret,1)} °C\nKalt/Warm ${fmt(cold,2)}/${fmt(hot,2)} bar\n$warnings Prüfhinweise\nCheckliste ${listOf(tightness,vented,pumpChecked,filtersChecked).count{it}}/4\n${notes.ifBlank{"Keine Notizen"}}", onShare)
     }
 }
 
@@ -330,6 +357,22 @@ private fun CheckLine(title: String, value: String, ok: Boolean) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(if(ok) "✓ $title" else "! $title", color=if(ok) Mint else Color(0xFFFFB74D), fontWeight=FontWeight.SemiBold)
         Text(value, color=Muted)
+    }
+}
+
+@Composable
+private fun TemperatureLevel(label: String, watts: Double) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = Muted)
+        Text("${fmt(watts,0)} W", color = Mint, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun ChecklistRow(label: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = checked, onCheckedChange = onChecked, colors = CheckboxDefaults.colors(checkedColor = Mint))
+        Text(label, modifier = Modifier.weight(1f))
     }
 }
 
