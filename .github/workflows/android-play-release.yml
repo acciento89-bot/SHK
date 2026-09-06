@@ -1,0 +1,46 @@
+name: Android Play Release Suite
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "android/**"
+      - ".github/workflows/android-play-release.yml"
+  push:
+    branches:
+      - android/play-release-suite
+    paths:
+      - "android/**"
+      - ".github/workflows/android-play-release.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+      - name: Build all Play bundles
+        run: >-
+          gradle -p android
+          bundleKaltecalcRelease
+          bundleLueftungscalcRelease
+          bundleHeizkoerpercalcRelease
+          bundleRohrcalcRelease
+          bundleAnlagencheckRelease
+      - name: Upload unsigned app bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: shk-play-aabs
+          path: android/app/build/outputs/bundle/*Release/*.aab
+          if-no-files-found: error
+          retention-days: 7
