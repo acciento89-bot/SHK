@@ -48,7 +48,11 @@ android {
         }
     }
 
-    buildFeatures { compose = true; buildConfig = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+        resValues = true
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
