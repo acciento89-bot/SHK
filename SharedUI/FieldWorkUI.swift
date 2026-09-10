@@ -1,7 +1,7 @@
 import SwiftUI
 
 func tr(_ german: String, _ english: String) -> String {
-    Locale.current.language.languageCode?.identifier == "de" ? german : english
+    Bundle.main.preferredLocalizations.first?.hasPrefix("de") == true ? german : english
 }
 func fieldNumber(_ value: Double, digits: Int = 1) -> String {
     value.formatted(.number.precision(.fractionLength(0...digits)))
@@ -43,6 +43,7 @@ func fieldNumber(_ value: Double, digits: Int = 1) -> String {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             try encoder.encode(next).write(to: url, options: .atomic)
             items = next
+            error = nil
             return true
         } catch {
             self.error = tr("Nicht gespeichert. Bitte freien Gerätespeicher prüfen und erneut versuchen.", "Not saved. Check available device storage and try again.")

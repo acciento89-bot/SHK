@@ -25,6 +25,23 @@ final class FieldWorkflowUITests: XCTestCase {
         name.tap(); name.typeText("Praxisprüfung " + String(UUID().uuidString.prefix(8)))
         let projectName = try XCTUnwrap(name.value as? String)
         app.buttons[variant.2].tap()
+        if variant.0 == "Bestandsaufnahme starten" {
+            app.buttons["Raum 1"].tap()
+            app.textFields["Ermittelte Raumheizlast, W"].tap()
+            app.textFields["Ermittelte Raumheizlast, W"].typeText("800")
+            app.textFields["Gesamte Nennleistung bei ΔT50, W"].tap()
+            app.textFields["Gesamte Nennleistung bei ΔT50, W"].typeText("1600")
+        }
+        if variant.0 == "Serviceverlauf starten" {
+            let disclosure = app.buttons["cold-reading"]
+            disclosure.tap()
+            let fields = [("Sauggastemperatur, °C", "8"), ("Sättigung Verdampfung · Taupunkt, °C", "2"), ("Sättigung Kondensation · Blasenpunkt, °C", "40"), ("Flüssigkeitsleitung, °C", "35")]
+            for (label, number) in fields {
+                let field = app.textFields[label]
+                for _ in 0..<5 where !field.isHittable { app.swipeUp() }
+                field.tap(); field.typeText(number)
+            }
+        }
         capture(app, "02-editor")
         XCTAssertTrue(app.buttons["Speichern"].isEnabled)
         app.buttons["Speichern"].tap()

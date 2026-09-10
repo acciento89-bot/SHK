@@ -110,7 +110,7 @@ private struct AirCommissionEditor: View {
                                 ForEach(AirStream.allCases, id: \.self) { Text(streamTitle($0)).tag($0) }
                             }
                             WorkNumber(title: tr("Sollvolumenstrom", "Target flow"), value: $terminal.targetM3H, unit: "m³/h")
-                            Toggle(tr("Messwert liegt vor", "Measurement available"), isOn: Binding(get: { terminal.measuredM3H != nil }, set: { terminal.measuredM3H = $0 ? 0 : nil }))
+                            Toggle(tr("Messwert liegt vor", "Measurement available"), isOn: Binding(get: { terminal.measuredM3H != nil }, set: { terminal.measuredM3H = $0 ? .nan : nil }))
                             if terminal.measuredM3H != nil {
                                 WorkNumber(title: tr("Gemessener Volumenstrom", "Measured flow"), value: Binding(get: { terminal.measuredM3H ?? 0 }, set: { terminal.measuredM3H = $0 }), unit: "m³/h")
                             }

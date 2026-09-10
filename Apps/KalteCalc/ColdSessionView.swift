@@ -107,9 +107,9 @@ private struct ColdSessionEditor: View {
                             WorkNumber(title: tr("Sättigung Kondensation · Blasenpunkt", "Condensation saturation · bubble point"), value: $reading.condensationC, unit: "°C")
                             WorkNumber(title: tr("Flüssigkeitsleitung", "Liquid line"), value: $reading.liquidC, unit: "°C")
                             TextField(tr("Betriebszustand / Eingriff", "Operating state / adjustment"), text: $reading.note, axis: .vertical)
-                        }
+                        }.accessibilityIdentifier("cold-reading")
                     }.onDelete { initial.readings.remove(atOffsets: $0) }
-                    Button { initial.readings.append(ColdReading()) } label: { Label(tr("Messung hinzufügen", "Add reading"), systemImage: "plus") }
+                    Button { var reading = ColdReading(); reading.suctionC = .nan; reading.evaporationC = .nan; reading.condensationC = .nan; reading.liquidC = .nan; initial.readings.append(reading) } label: { Label(tr("Messung hinzufügen", "Add reading"), systemImage: "plus") }
                 }
                 Section(tr("Einsatznotizen", "Visit notes")) { TextField(tr("Messgerät, Umgebung, Auftrag …", "Instrument, ambient conditions, job …"), text: $initial.notes, axis: .vertical) }
                 if !initial.isValid { WorkValidation(message: tr("Anlage benennen und gültige Temperaturen zwischen −150 und 200 °C eintragen.", "Name the system and enter valid temperatures between −150 and 200 °C.")) }

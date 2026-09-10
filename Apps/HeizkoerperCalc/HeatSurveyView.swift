@@ -113,7 +113,7 @@ private struct HeatSurveyEditor: View {
                             WorkNumber(title: tr("Raumtemperatur", "Room temperature"), value: $room.roomC, unit: "°C")
                         }
                     }.onDelete { initial.rooms.remove(atOffsets: $0) }
-                    Button { var room = HeatRoom(); room.name = tr("Raum", "Room") + " \(initial.rooms.count + 1)"; initial.rooms.append(room) } label: { Label(tr("Raum hinzufügen", "Add room"), systemImage: "plus") }
+                    Button { var room = HeatRoom(); room.demandW = .nan; room.nominalW = .nan; room.name = tr("Raum", "Room") + " \(initial.rooms.count + 1)"; initial.rooms.append(room) } label: { Label(tr("Raum hinzufügen", "Add room"), systemImage: "plus") }
                 }
                 Section(tr("Notizen", "Notes")) { TextField(tr("Heizlastquelle, Heizkörpertyp …", "Heat demand source, radiator type …"), text: $initial.notes, axis: .vertical) }
                 if !initial.isValid { WorkValidation(message: tr("Name und positive Leistungswerte eintragen. Vorlauf ≥ Rücklauf > jede Raumtemperatur; Exponent > 0 bis 5.", "Enter a name and positive capacities. Flow ≥ return > every room temperature; exponent > 0 up to 5.")) }

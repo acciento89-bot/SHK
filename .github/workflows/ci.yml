@@ -39,6 +39,9 @@ jobs:
           grep -Eq "^[[:space:]]*CURRENT_PROJECT_VERSION = ${EXPECTED_BUILD}$" <<<"$SETTINGS"
       - name: Build ${{ matrix.scheme }}
         run: xcodebuild -project KamilunavoSHK.xcodeproj -scheme "${{ matrix.scheme }}" -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
+      - name: Validate unsigned Release compilation
+        if: matrix.scheme != 'AnlagenCheck'
+        run: xcodebuild -project KamilunavoSHK.xcodeproj -scheme "${{ matrix.scheme }}" -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO build
 
   field-device-tests:
     runs-on: macos-26

@@ -16,7 +16,7 @@ public struct HeatRoom: Codable, Identifiable, Equatable, Sendable {
     public var isValid: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         [demandW, nominalW, exponent, roomC].allSatisfy(\.isFinite) &&
-        demandW > 0 && nominalW > 0 && exponent > 0 && exponent <= 5 && roomC >= -20 && roomC <= 40
+        demandW > 0 && demandW <= 100_000_000 && nominalW > 0 && nominalW <= 100_000_000 && exponent > 0 && exponent <= 5 && roomC >= -20 && roomC <= 40
     }
 }
 
