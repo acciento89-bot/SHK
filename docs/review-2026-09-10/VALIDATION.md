@@ -26,10 +26,12 @@ Environment: GitHub-hosted macOS, Xcode 26.6, iOS 26.4 simulators. This is simul
 
 Earlier failed runs exposed missing localization resources, inaccessible test selectors, off-screen form fields and intermittent simulator launch timeouts. The final run above passed without suppressing failed assertions or omitting either device family.
 
-## Distribution state
+## Distribution state — updated 2026-09-10
 
-No signed archive, TestFlight upload or App Review submission was produced from this workspace. Debug and unsigned Release builds do not establish distribution signing.
+All four revised apps were distribution-signed and uploaded as version 1.0, build 5 using the existing App Store Connect credentials in `appideenchatgpt` and GitHub-hosted macOS. The successful upload jobs are in [the release run](https://github.com/acciento89-bot/appideenchatgpt/actions/runs/34503135017). The release packaging now generates the existing app icons and explicitly selects the AppIcon asset catalog; this resolved Apple's missing-icon validation errors.
 
-`scripts/archive-for-app-store.sh` is prepared for a Mac with Xcode and the existing Apple Developer signing setup. It requires the developer team ID through `SHK_DEVELOPMENT_TEAM`; no signing key has been created or replaced. The script has been syntax-checked, but its signing/upload steps have not been run here.
+Fresh native iPhone 17 Pro Max and iPad Pro 13-inch screenshots were captured from the same application source in [the screenshot run](https://github.com/acciento89-bot/appideenchatgpt/actions/runs/34502913598). App-specific German and English descriptions, screenshots and review notes were uploaded, and the exact VALID build 5 was selected before submission.
 
-Use the app-specific text in [APP_REVIEW.md](APP_REVIEW.md) only for the new build 5. In App Store Connect, select the uploaded build, update screenshots and metadata, then submit. Existing rejected build 4 does not contain these workflows. Apple's review decision remains outstanding.
+Apple confirmed `WAITING_FOR_REVIEW` for KälteCalc, RohrCalc and LüftungsCalc in [the submission run](https://github.com/acciento89-bot/appideenchatgpt/actions/runs/34507204308), and for HeizkörperCalc in [its successful finish job](https://github.com/acciento89-bot/appideenchatgpt/actions/runs/34508668954/job/102977038831). The other job in that finish run concerns VolumeCalc and does not change HeizkörperCalc's successful submission.
+
+These are confirmed submissions, not Apple approvals or publication. The credentials were used inside the runner; no secret values were added to the repository or reports.

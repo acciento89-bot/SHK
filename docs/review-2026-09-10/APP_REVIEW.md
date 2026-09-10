@@ -1,6 +1,6 @@
 # Calc field workflows — iOS 1.0 (5)
 
-These are new app capabilities, not changes to icon color or a renamed calculator. Submit only after build 5 has been signed, uploaded and selected in App Store Connect. Do not claim the old build 4 contains them.
+These are new app capabilities, not changes to icon color or a renamed calculator. Build 5 has now been signed, uploaded, selected and submitted for all four apps; Apple confirmed WAITING_FOR_REVIEW on 2026-09-10. Do not claim the old build 4 contains them.
 
 ## HeizkörperCalc
 
@@ -95,10 +95,10 @@ Steps: Sessions (Messverlauf) → Start service session (Serviceverlauf starten)
 ## Release gates
 
 - Core calculation tests, Debug simulator builds, unsigned Release builds and the persisted workflows on iPhone/iPad: passed in CI run 387. See [VALIDATION.md](VALIDATION.md) for the tested commit, scope and limits.
-- Distribution signing/upload: requires the account's existing Xcode signing setup or a configured signing runner. No signing key has been created or replaced.
+- Distribution signing/upload and resubmission: completed through the existing appideenchatgpt credentials and macOS runner. See [VALIDATION.md](VALIDATION.md) for evidence.
 - App Store Connect: select the new build, replace screenshots with actual captures of the new workflows, use the app-specific review note, then submit. Acceptance remains Apple's review decision.
 
 ## Technical references
 
 - Existing calculation definitions are reused from SHKCore. Refrigeration differences are consistent with Danfoss's [Fitters notes: Thermostatic expansion valves](https://assets.danfoss.com/documents/latest/50825/AX266348279899en-000101.pdf), page 5.
-- Apple documents [archive export files and ExportOptions.plist](https://help.apple.com/xcode/mac/current/en.lproj/deva1f2ab5a2.html). The supplied upload script requires a Mac with the existing developer signing access; it has not performed an upload in this workspace.
+- Apple documents [archive export files and ExportOptions.plist](https://help.apple.com/xcode/mac/current/en.lproj/deva1f2ab5a2.html). The release workflow used GitHub-hosted macOS and existing developer access successfully.
