@@ -111,7 +111,7 @@ struct RohrCalcView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)
         .shkKeyboardDismissal()
     }
 

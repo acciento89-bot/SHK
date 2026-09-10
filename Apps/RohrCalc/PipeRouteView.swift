@@ -8,7 +8,9 @@ struct PipeRouteHome: View {
         TabView {
             NavigationStack {
                 List {
+                    if store.items.isEmpty {
                     WorkHero(eyebrow: "RohrCalc", title: tr("Die ganze Strecke zählt.", "Follow the whole route."), description: tr("Rohrabschnitte und Formstücke zu einem Fließweg verbinden. Druckverlust und den größten Verlustbeitrag erkennen.", "Connect pipe sections and fittings into one flow path. See total pressure loss and the largest contribution."), icon: "point.topleft.down.to.point.bottomright.curvepath", color: .blue)
+                    }
                     Button { draft = PipeRoute() } label: { Label(tr("Fließweg anlegen", "Create flow path"), systemImage: "plus.circle.fill").font(.headline).padding(.vertical, 8) }
                     if store.items.isEmpty { WorkEmpty(title: tr("Vom Anschluss bis zum Verbraucher", "From connection to terminal"), detail: tr("Erfasse nacheinander Länge, Innendurchmesser und Formstücke jedes Abschnitts.", "Record each section's length, internal diameter and fittings in sequence."), icon: "point.3.connected.trianglepath.dotted") }
                     ForEach(store.items) { route in
@@ -21,7 +23,7 @@ struct PipeRouteHome: View {
                     }
                 }.navigationTitle(tr("Fließwege", "Flow paths"))
             }.tabItem { Label(tr("Strecken", "Routes"), systemImage: "point.topleft.down.to.point.bottomright.curvepath") }
-            RohrCalcView().preferredColorScheme(.dark).tabItem { Label(tr("Einzelrechner", "Calculator"), systemImage: "function") }
+            RohrCalcView().environment(\.colorScheme, .dark).tabItem { Label(tr("Einzelrechner", "Calculator"), systemImage: "function") }
         }.tint(.blue)
         .sheet(item: $draft) { PipeRouteEditor(initial: $0) { store.save($0) } }.workError($store.error)
     }

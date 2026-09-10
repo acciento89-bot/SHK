@@ -9,7 +9,9 @@ struct AirCommissionHome: View {
         TabView {
             NavigationStack {
                 List {
+                    if store.items.isEmpty {
                     WorkHero(eyebrow: "LüftungsCalc", title: tr("Vom Sollwert zum Messprotokoll.", "From design flow to measured proof."), description: tr("Luftauslässe erfassen, Istwerte vergleichen und offene Messpunkte gezielt nacharbeiten.", "Record air terminals, compare measured flow and revisit the points that still need attention."), icon: "wind", color: .teal)
+                    }
                     Button { draft = AirCommission() } label: { Label(tr("Einmessung beginnen", "Start commissioning"), systemImage: "plus.circle.fill").font(.headline).padding(.vertical, 8) }
                     if store.items.isEmpty { WorkEmpty(title: tr("Jeder Auslass zählt", "Every terminal counts"), detail: tr("Beginne mit den geplanten Volumenströmen. Messwerte kannst du später ergänzen.", "Start with the design flow rates. Add measurements when you are on site."), icon: "checklist") }
                     ForEach(store.items) { project in
@@ -24,7 +26,7 @@ struct AirCommissionHome: View {
                 }.navigationTitle(tr("Einmessungen", "Commissioning"))
             }.tabItem { Label(tr("Protokolle", "Records"), systemImage: "checklist") }
             LueftungsCalcView().tabItem { Label(tr("Auslegung", "Sizing"), systemImage: "ruler") }
-        }.tint(Color(red: 0, green: 0.40, blue: 0.43))
+        }.tint(.primary)
             .sheet(item: $draft) { AirCommissionEditor(initial: $0) { store.save($0) } }.workError($store.error)
     }
 }

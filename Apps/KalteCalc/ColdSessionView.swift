@@ -8,7 +8,9 @@ struct ColdSessionHome: View {
         TabView {
             NavigationStack {
                 List {
+                    if store.items.isEmpty {
                     WorkHero(eyebrow: "KälteCalc", title: tr("Ein Messwert ist nur der Anfang.", "One reading is only the start."), description: tr("Überhitzung und Unterkühlung über einen Serviceeinsatz verfolgen. Eingriffe und Betriebszustände direkt am Messpunkt festhalten.", "Track superheat and subcooling throughout a service visit. Attach adjustments and operating conditions to each reading."), icon: "waveform.path.ecg", color: .indigo)
+                    }
                     Button { draft = ColdSession() } label: { Label(tr("Serviceverlauf starten", "Start service session"), systemImage: "plus.circle.fill").font(.headline).padding(.vertical, 8) }
                     if store.items.isEmpty { WorkEmpty(title: tr("Vorher. Eingriff. Nachher.", "Before. Adjustment. After."), detail: tr("Dokumentiere die Stabilisierung mit mehreren zeitgestempelten Messungen.", "Document stabilization with a sequence of timestamped readings."), icon: "clock.arrow.circlepath") }
                     ForEach(store.items) { session in
@@ -22,7 +24,7 @@ struct ColdSessionHome: View {
                     }
                 }.navigationTitle(tr("Serviceverläufe", "Service sessions"))
             }.tabItem { Label(tr("Messverlauf", "Sessions"), systemImage: "waveform.path.ecg") }
-            KalteCalcView().preferredColorScheme(.dark).tabItem { Label(tr("Werkzeuge", "Tools"), systemImage: "wrench.and.screwdriver") }
+            KalteCalcView().environment(\.colorScheme, .dark).tabItem { Label(tr("Werkzeuge", "Tools"), systemImage: "wrench.and.screwdriver") }
         }.tint(.indigo)
             .sheet(item: $draft) { ColdSessionEditor(initial: $0) { store.save($0) } }.workError($store.error)
     }

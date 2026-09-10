@@ -7,8 +7,10 @@ struct HeatSurveyHome: View {
         TabView {
             NavigationStack {
                 List {
+                    if store.items.isEmpty {
                     WorkHero(eyebrow: "HeizkörperCalc", title: tr("Passt der Bestand zur Wärmepumpe?", "Ready for lower temperatures?"),
                         description: tr("Raumweise prüfen, wo vorhandene Heizkörper bei deiner Zieltemperatur ausreichen und wo Leistung fehlt.", "Check each room's existing radiators at your target temperatures and identify capacity shortfalls."), icon: "house.and.flag", color: .orange)
+                    }
                     Button { draft = HeatSurvey() } label: { Label(tr("Bestandsaufnahme starten", "Start a survey"), systemImage: "plus.circle.fill").font(.headline).padding(.vertical, 8) }
                     if store.items.isEmpty {
                         WorkEmpty(title: tr("Dein erster Raumvergleich", "Your first room comparison"), detail: tr("Halte Raumheizlast und die gesamte ΔT50-Nennleistung der Heizkörper bereit.", "Have the room heat demand and total ΔT50 radiator rating ready."), icon: "rectangle.split.3x1")

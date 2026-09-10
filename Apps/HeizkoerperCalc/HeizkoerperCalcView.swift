@@ -167,7 +167,7 @@ struct HeizkoerperCalcView: View {
                 }
             }
         }
-        .preferredColorScheme(.light)
+        .environment(\.colorScheme, .light)
         .shkKeyboardDismissal()
     }
 

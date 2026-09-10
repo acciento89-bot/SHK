@@ -9,6 +9,9 @@ for family in ['iPhone', 'iPad']:
     device = next((d for d in devices if d['name'].startswith(family)), None)
     if not device:
         raise SystemExit(f'No available {family} simulator; cannot complete device validation')
+    if device.get('state') != 'Booted':
+        subprocess.run(['xcrun', 'simctl', 'boot', device['udid']], check=True)
+    subprocess.run(['xcrun', 'simctl', 'bootstatus', device['udid'], '-b'], check=True)
     result = out / f'{scheme}-{family}.xcresult'
     command = ['xcodebuild', 'test', '-project', 'KamilunavoSHK.xcodeproj', '-scheme', scheme,
                '-destination', 'platform=iOS Simulator,id=' + device['udid'], '-parallel-testing-enabled', 'NO',

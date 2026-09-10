@@ -54,9 +54,11 @@ final class FieldWorkflowUITests: XCTestCase {
         app.terminate()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL", "-AppleInterfaceStyle", "Dark"]
         app.launch()
-        XCTAssertTrue(app.staticTexts[projectName].waitForExistence(timeout: 10))
         capture(app, "04-accessibility-home")
-        app.staticTexts[projectName].tap()
+        let savedProject = app.staticTexts[projectName]
+        for _ in 0..<8 where !savedProject.isHittable { app.swipeUp() }
+        XCTAssertTrue(savedProject.exists)
+        savedProject.tap()
         capture(app, "05-accessibility-detail")
     }
 }
