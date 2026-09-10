@@ -4,8 +4,7 @@ import SwiftUI
 struct RohrCalcApp: App {
     var body: some Scene {
         WindowGroup {
-            RohrCalcView()
-                .preferredColorScheme(.dark)
+            PipeRouteHome()
                 .shkKeyboardDismissal()
         }
     }
