@@ -34,6 +34,28 @@ jobs:
           set -euo pipefail
           SETTINGS=$(xcodebuild -project KamilunavoSHK.xcodeproj -scheme "${{ matrix.scheme }}" -showBuildSettings)
           grep -Eq '^[[:space:]]*INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO$' <<<"$SETTINGS"
-          grep -Eq '^[[:space:]]*CURRENT_PROJECT_VERSION = 2$' <<<"$SETTINGS"
+          EXPECTED_BUILD=5
+          if [ "${{ matrix.scheme }}" = AnlagenCheck ]; then EXPECTED_BUILD=2; fi
+          grep -Eq "^[[:space:]]*CURRENT_PROJECT_VERSION = ${EXPECTED_BUILD}$" <<<"$SETTINGS"
       - name: Build ${{ matrix.scheme }}
         run: xcodebuild -project KamilunavoSHK.xcodeproj -scheme "${{ matrix.scheme }}" -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
+
+  field-device-tests:
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        scheme: [KalteCalc, LueftungsCalc, HeizkoerperCalc, RohrCalc]
+    steps:
+      - uses: actions/checkout@v5
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Validate persisted workflow on iPhone and iPad
+        run: python3 scripts/review-device-tests.py "${{ matrix.scheme }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: review-${{ matrix.scheme }}
+          path: review-results
+          if-no-files-found: error
+          retention-days: 14
