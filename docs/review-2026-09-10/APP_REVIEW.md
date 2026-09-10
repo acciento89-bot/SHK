@@ -22,7 +22,7 @@ Die App berechnet keine Raumheizlast. Herstellerdaten und eine extern ermittelte
 
 The new primary workflow is a building survey for low-temperature radiator suitability. It persists multiple named building inventories, compares each room against its own heat demand, reports uncompensated room shortfalls and compares system-temperature scenarios. The single radiator calculator is now a secondary tool.
 
-Steps: Bestand → Bestandsaufnahme starten → name the building → Raum hinzufügen → enter room heat demand and radiator rating → Speichern → open the building. Change target flow/return under Bearbeiten. Review room coverage and temperature scenarios, then use Bestandsbericht teilen. Data persists after relaunch; no account is required.
+Steps (English labels, German in parentheses): Survey (Bestand) → Start a survey (Bestandsaufnahme starten) → name the building → Add room (Raum hinzufügen) → enter room heat demand and radiator rating → Save (Speichern) → open the building. Change target flow/return under Edit (Bearbeiten). Review room coverage and temperature scenarios, then use Share survey report (Bestandsbericht teilen). Data persists after relaunch; no account is required.
 
 ## RohrCalc
 
@@ -44,7 +44,7 @@ Die Streckenrechnung gilt für einen seriellen Fließweg mit gleichem Volumenstr
 
 The new primary workflow assembles a serial hydraulic route from editable, reorderable pipe sections. It sums distributed friction and fitting losses, visualizes each section's contribution and identifies the largest loss contributor. This is a persisted multi-section analysis, distinct from our room-capacity, air-commissioning and refrigeration-service apps.
 
-Steps: Strecken → Fließweg anlegen → name the route → Abschnitt hinzufügen (repeat for different sections) → Speichern → open the route. Review total loss, contribution chart and section results. Bearbeiten allows reordering. Streckenbericht teilen exports the full assumptions and inputs. No account is required.
+Steps: Routes (Strecken) → Create flow path (Fließweg anlegen) → name the route → Add section (Abschnitt hinzufügen), repeated for different sections → Save (Speichern) → open the route. Review total loss, contribution chart and section results. Edit (Bearbeiten) allows reordering. Share route report (Streckenbericht teilen) exports the assumptions and inputs. No account is required.
 
 ## LüftungsCalc
 
@@ -68,7 +68,7 @@ We replaced the previous dense sizing interface with native vertically arranged 
 
 The new primary feature is air-terminal commissioning: target/measured flow, supply/extract classification, configurable project tolerance, missing-measurement tracking, an attention filter and full measurement reports. Partial measured totals are never shown as complete.
 
-Steps: Protokolle → Einmessung beginnen → name project → Auslass hinzufügen → expand terminal → enter target and enable Messwert liegt vor → enter measured flow → Speichern. Open the project to review exceptions and totals. Auslegung opens the redesigned sizing forms. No login is required.
+Steps: Records (Protokolle) → Start commissioning (Einmessung beginnen) → name project → Add terminal (Auslass hinzufügen) → expand terminal → enter target and enable Measurement available (Messwert liegt vor) → enter measured flow → Save (Speichern). Open the project to review exceptions and totals. Sizing (Auslegung) opens the redesigned sizing forms. No login is required.
 
 ## KälteCalc
 
@@ -90,12 +90,11 @@ Sättigungstemperaturen werden aus geeigneten Messgeräten oder Herstellerdaten 
 
 The app now centers on a persisted refrigeration-service time series. Each timestamped reading stores original temperatures and an intervention note. Superheat/subcooling trends, chronological history and first-to-last superheat change support before/after service documentation. Negative values remain visible with a check indication rather than being clipped.
 
-Steps: Messverlauf → Serviceverlauf starten → name the system → Messung hinzufügen → expand and enter readings → add a second reading with a later time → Speichern. Open the session for trend and chronology, then Serviceprotokoll teilen. No refrigerant pressure-temperature table is inferred from a refrigerant name. No login is required.
+Steps: Sessions (Messverlauf) → Start service session (Serviceverlauf starten) → name the system → Add reading (Messung hinzufügen) → expand and enter readings → add a second reading with a later time → Save (Speichern). Open the session for trend and chronology, then Share service report (Serviceprotokoll teilen). No refrigerant pressure-temperature table is inferred from a refrigerant name. No login is required.
 
 ## Release gates
 
-- Core calculation tests and Debug simulator compilation: passed for the first implementation.
-- iPhone/iPad UI tests, screenshots, final Release validation: see CI and VALIDATION.md; do not infer completion from this document.
+- Core calculation tests, Debug simulator builds, unsigned Release builds and the persisted workflows on iPhone/iPad: passed in CI run 387. See [VALIDATION.md](VALIDATION.md) for the tested commit, scope and limits.
 - Distribution signing/upload: requires the account's existing Xcode signing setup or a configured signing runner. No signing key has been created or replaced.
 - App Store Connect: select the new build, replace screenshots with actual captures of the new workflows, use the app-specific review note, then submit. Acceptance remains Apple's review decision.
 
