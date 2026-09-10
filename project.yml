@@ -28,14 +28,13 @@ targetTemplates:
         TARGETED_DEVICE_FAMILY: '1,2'
         SUPPORTS_MACCATALYST: NO
 
-schemes: {}
-
 targets:
   KalteCalc:
     templates: [SHKApp]
     sources: [Apps/KalteCalc]
     settings:
       base:
+        CURRENT_PROJECT_VERSION: '5'
         PRODUCT_BUNDLE_IDENTIFIER: de.kamilunav.kaltecalc
         PRODUCT_NAME: KalteCalc
         INFOPLIST_KEY_CFBundleDisplayName: KälteCalc
@@ -44,6 +43,7 @@ targets:
     sources: [Apps/LueftungsCalc]
     settings:
       base:
+        CURRENT_PROJECT_VERSION: '5'
         PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.luftungscalc
         PRODUCT_NAME: LueftungsCalc
         INFOPLIST_KEY_CFBundleDisplayName: LüftungsCalc
@@ -52,6 +52,7 @@ targets:
     sources: [Apps/HeizkoerperCalc]
     settings:
       base:
+        CURRENT_PROJECT_VERSION: '5'
         PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.heizkorpercalc
         PRODUCT_NAME: HeizkoerperCalc
         INFOPLIST_KEY_CFBundleDisplayName: HeizkörperCalc
@@ -60,6 +61,7 @@ targets:
     sources: [Apps/RohrCalc]
     settings:
       base:
+        CURRENT_PROJECT_VERSION: '5'
         PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.rohrcalc
         PRODUCT_NAME: RohrCalc
         INFOPLIST_KEY_CFBundleDisplayName: RohrCalc
@@ -71,3 +73,77 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.servicecheck
         PRODUCT_NAME: AnlagenCheck
         INFOPLIST_KEY_CFBundleDisplayName: AnlagenCheck
+
+  KalteCalcUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [Tests/FieldWorkflowUITests]
+    dependencies:
+      - target: KalteCalc
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: KalteCalc
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.tests.kaltecalc
+
+  LueftungsCalcUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [Tests/FieldWorkflowUITests]
+    dependencies:
+      - target: LueftungsCalc
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: LueftungsCalc
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.tests.lueftungscalc
+
+  HeizkoerperCalcUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [Tests/FieldWorkflowUITests]
+    dependencies:
+      - target: HeizkoerperCalc
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: HeizkoerperCalc
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.tests.heizkoerpercalc
+
+  RohrCalcUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [Tests/FieldWorkflowUITests]
+    dependencies:
+      - target: RohrCalc
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: RohrCalc
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.tests.rohrcalc
+
+schemes:
+  KalteCalc:
+    build:
+      targets:
+        KalteCalc: all
+    test:
+      targets: [KalteCalcUITests]
+  LueftungsCalc:
+    build:
+      targets:
+        LueftungsCalc: all
+    test:
+      targets: [LueftungsCalcUITests]
+  HeizkoerperCalc:
+    build:
+      targets:
+        HeizkoerperCalc: all
+    test:
+      targets: [HeizkoerperCalcUITests]
+  RohrCalc:
+    build:
+      targets:
+        RohrCalc: all
+    test:
+      targets: [RohrCalcUITests]

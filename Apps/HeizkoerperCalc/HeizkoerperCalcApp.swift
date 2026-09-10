@@ -4,8 +4,7 @@ import SwiftUI
 struct HeizkoerperCalcApp: App {
     var body: some Scene {
         WindowGroup {
-            HeizkoerperCalcView()
-                .preferredColorScheme(.dark)
+            HeatSurveyHome()
                 .shkKeyboardDismissal()
         }
     }

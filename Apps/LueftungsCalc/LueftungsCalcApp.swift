@@ -4,8 +4,7 @@ import SwiftUI
 struct LueftungsCalcApp: App {
     var body: some Scene {
         WindowGroup {
-            LueftungsCalcView()
-                .preferredColorScheme(.dark)
+            AirCommissionHome()
                 .shkKeyboardDismissal()
         }
     }

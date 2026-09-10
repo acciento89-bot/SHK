@@ -4,8 +4,7 @@ import SwiftUI
 struct KalteCalcApp: App {
     var body: some Scene {
         WindowGroup {
-            KalteCalcView()
-                .preferredColorScheme(.dark)
+            ColdSessionHome()
                 .shkKeyboardDismissal()
         }
     }

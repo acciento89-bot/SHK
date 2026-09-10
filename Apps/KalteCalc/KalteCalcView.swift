@@ -128,7 +128,7 @@ struct KalteCalcView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)
         .shkKeyboardDismissal()
     }
 
