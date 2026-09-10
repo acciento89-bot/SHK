@@ -16,7 +16,7 @@ final class FieldWorkflowUITests: XCTestCase {
             ("Einmessung beginnen", "Anlage / Projekt", "Auslass hinzufügen"),
             ("Serviceverlauf starten", "Anlage / Auftrag", "Messung hinzufügen")
         ]
-        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label IN %@", variants.map { $0.0 })).firstMatch.waitForExistence(timeout: 15))
         capture(app, "01-home")
         let variant = try XCTUnwrap(variants.first { app.buttons[$0.0].exists })
         app.buttons[variant.0].tap()
