@@ -33,7 +33,7 @@ final class FieldWorkflowUITests: XCTestCase {
             app.textFields["Gesamte Nennleistung bei ΔT50, W"].typeText("1600")
         }
         if variant.0 == "Serviceverlauf starten" {
-            let disclosure = app.buttons["cold-reading"]
+            let disclosure = app.buttons.matching(NSPredicate(format: "label CONTAINS ':'")).firstMatch
             disclosure.tap()
             let fields = [("Sauggastemperatur, °C", "8"), ("Sättigung Verdampfung · Taupunkt, °C", "2"), ("Sättigung Kondensation · Blasenpunkt, °C", "40"), ("Flüssigkeitsleitung, °C", "35")]
             for (label, number) in fields {

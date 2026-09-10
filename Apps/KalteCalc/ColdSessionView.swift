@@ -109,7 +109,7 @@ private struct ColdSessionEditor: View {
                             WorkNumber(title: tr("Sättigung Kondensation · Blasenpunkt", "Condensation saturation · bubble point"), value: $reading.condensationC, unit: "°C")
                             WorkNumber(title: tr("Flüssigkeitsleitung", "Liquid line"), value: $reading.liquidC, unit: "°C")
                             TextField(tr("Betriebszustand / Eingriff", "Operating state / adjustment"), text: $reading.note, axis: .vertical)
-                        }.accessibilityIdentifier("cold-reading")
+                        }
                     }.onDelete { initial.readings.remove(atOffsets: $0) }
                     Button { var reading = ColdReading(); reading.suctionC = .nan; reading.evaporationC = .nan; reading.condensationC = .nan; reading.liquidC = .nan; initial.readings.append(reading) } label: { Label(tr("Messung hinzufügen", "Add reading"), systemImage: "plus") }
                 }
