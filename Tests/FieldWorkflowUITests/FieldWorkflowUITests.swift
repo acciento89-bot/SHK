@@ -6,7 +6,20 @@ final class FieldWorkflowUITests: XCTestCase {
         attachment.name = name; attachment.lifetime = .keepAlways
         add(attachment)
     }
+    private func enter(_ value: String, in label: String, app: XCUIApplication) {
+        let field = app.textFields[label]
+        let form = app.collectionViews.firstMatch.exists ? app.collectionViews.firstMatch : app.scrollViews.firstMatch
+        // Start at the top: opening a disclosure can leave its first fields above the viewport.
+        for _ in 0..<4 { form.swipeDown() }
+        for _ in 0..<16 where !field.isHittable {
+            form.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
+                .press(forDuration: 0.05, thenDragTo: form.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)))
+        }
+        XCTAssertTrue(field.isHittable, "Input must be reachable: " + label)
+        field.tap(); field.typeText(value)
+    }
     func testCreatePersistAndReadFieldProject() throws {
+        continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-AppleLanguages", "(de)", "-AppleLocale", "de_DE"]
         app.launch()
@@ -27,19 +40,15 @@ final class FieldWorkflowUITests: XCTestCase {
         app.buttons[variant.2].tap()
         if variant.0 == "Bestandsaufnahme starten" {
             app.buttons["Raum 1"].tap()
-            app.textFields["Ermittelte Raumheizlast, W"].tap()
-            app.textFields["Ermittelte Raumheizlast, W"].typeText("800")
-            app.textFields["Gesamte Nennleistung bei ΔT50, W"].tap()
-            app.textFields["Gesamte Nennleistung bei ΔT50, W"].typeText("1600")
+            enter("800", in: "Ermittelte Raumheizlast, W", app: app)
+            enter("1600", in: "Gesamte Nennleistung bei ΔT50, W", app: app)
         }
         if variant.0 == "Serviceverlauf starten" {
             let disclosure = app.buttons.matching(NSPredicate(format: "label CONTAINS ':'")).firstMatch
             disclosure.tap()
             let fields = [("Sauggastemperatur, °C", "8"), ("Sättigung Verdampfung · Taupunkt, °C", "2"), ("Sättigung Kondensation · Blasenpunkt, °C", "40"), ("Flüssigkeitsleitung, °C", "35")]
             for (label, number) in fields {
-                let field = app.textFields[label]
-                for _ in 0..<5 where !field.isHittable { app.swipeUp() }
-                field.tap(); field.typeText(number)
+                enter(number, in: label, app: app)
             }
         }
         capture(app, "02-editor")
