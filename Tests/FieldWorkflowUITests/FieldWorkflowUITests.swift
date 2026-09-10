@@ -2,13 +2,16 @@ import XCTest
 
 final class FieldWorkflowUITests: XCTestCase {
     private func capture(_ app: XCUIApplication, _ name: String) {
+        // UIKit navigation transitions may still be compositing after the tap returns.
+        Thread.sleep(forTimeInterval: 1)
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways
         add(attachment)
     }
     private func enter(_ value: String, in label: String, app: XCUIApplication) {
         let field = app.textFields[label]
-        let form = app.collectionViews.firstMatch.exists ? app.collectionViews.firstMatch : app.scrollViews.firstMatch
+        let forms = app.collectionViews.count > 0 ? app.collectionViews : app.scrollViews
+        let form = forms.element(boundBy: forms.count - 1)
         // Start at the top: opening a disclosure can leave its first fields above the viewport.
         for _ in 0..<4 { form.swipeDown() }
         for _ in 0..<16 where !field.isHittable {
