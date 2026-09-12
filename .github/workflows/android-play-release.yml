@@ -34,18 +34,23 @@ jobs:
           - app: kaltecalc
             package: de.kamilunav.kaltecalc
             sha1: B9EB4B6BD26968A1FB49E4B19D38833A0EBD0CEB
+            signing: legacy
           - app: lueftungscalc
             package: de.kamilunavo.luftungscalc
             sha1: B9EB4B6BD26968A1FB49E4B19D38833A0EBD0CEB
+            signing: legacy
           - app: heizkoerpercalc
             package: de.kamilunavo.heizkorpercalc
             sha1: B9EB4B6BD26968A1FB49E4B19D38833A0EBD0CEB
+            signing: legacy
           - app: rohrcalc
             package: de.kamilunavo.rohrcalc
-            sha1: 20239FD226FBA03E6A059ED32E416213722BD958
+            sha1: BCF2337D41E617C03BCAE698C09D1523654BD790
+            signing: central
           - app: anlagencheck
             package: de.kamilunavo.servicecheck
             sha1: B9EB4B6BD26968A1FB49E4B19D38833A0EBD0CEB
+            signing: legacy
     env:
       APP_ID: ${{ matrix.app }}
       PACKAGE_NAME: ${{ matrix.package }}
@@ -99,13 +104,35 @@ jobs:
           else
             echo 'ALREADY_PRESENT=false' >> "$GITHUB_ENV"
           fi
-      - name: Restore app-specific upload identity
-        if: env.ALREADY_PRESENT != 'true'
+      - name: Mark legacy upload identities ready
+        if: env.ALREADY_PRESENT != 'true' && matrix.signing == 'legacy'
+        shell: bash
+        run: echo 'SIGNING_READY=true' >> "$GITHUB_ENV"
+      - name: Check central upload-key migration gate for RohrCalc
+        if: env.ALREADY_PRESENT != 'true' && matrix.signing == 'central'
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=$(curl -fsSL https://raw.githubusercontent.com/acciento89-bot/maengelfix/main/generated/signing-central/android-upload-key-migration.json)
+          status=$(jq -er --arg p "$PACKAGE_NAME" '.apps[] | select(.package == $p) | .status' <<<"$state")
+          target=$(jq -er '.target_upload_certificate_sha1' <<<"$state")
+          test "$target" = "$EXPECTED_CERT_SHA1"
+          if [ "$status" = 'ACTIVE' ]; then
+            echo 'SIGNING_READY=true' >> "$GITHUB_ENV"
+          else
+            echo 'SIGNING_READY=false' >> "$GITHUB_ENV"
+            echo "RohrCalc central upload-key reset is prepared but not marked ACTIVE yet ($status). No build/upload attempted." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Restore app-specific legacy upload identity
+        if: env.ALREADY_PRESENT != 'true' && env.SIGNING_READY == 'true' && matrix.signing == 'legacy'
         uses: acciento89-bot/maengelfix/.github/actions/restore-android-signing@main
         with:
           app-id: ${{ matrix.app }}
+      - name: Restore central Kamilunavo upload identity
+        if: env.ALREADY_PRESENT != 'true' && env.SIGNING_READY == 'true' && matrix.signing == 'central'
+        uses: acciento89-bot/maengelfix/.github/actions/restore-central-android-signing@main
       - name: Reject an unexpected upload key before building
-        if: env.ALREADY_PRESENT != 'true'
+        if: env.ALREADY_PRESENT != 'true' && env.SIGNING_READY == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -113,17 +140,16 @@ jobs:
           actual=$(sed -n 's/^[[:space:]]*SHA1: //p' "$RUNNER_TEMP/selected-certificate.txt" | tr -d ':\r\n ')
           if [ "$actual" != "$EXPECTED_CERT_SHA1" ]; then
             echo "::error::$APP_ID requires certificate SHA-1 $EXPECTED_CERT_SHA1; restored $actual. No build or upload performed."
-            echo "$APP_ID: original upload key recovery required. Expected SHA-1 $EXPECTED_CERT_SHA1; found $actual." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
       - uses: android-actions/setup-android@v3
-        if: env.ALREADY_PRESENT != 'true'
+        if: env.ALREADY_PRESENT != 'true' && env.SIGNING_READY == 'true'
         with: {log-accepted-android-sdk-licenses: false, packages: platform-tools}
       - uses: gradle/actions/setup-gradle@v4
-        if: env.ALREADY_PRESENT != 'true'
+        if: env.ALREADY_PRESENT != 'true' && env.SIGNING_READY == 'true'
         with: {gradle-version: '9.5.0'}
       - name: Build and verify this app only
-        if: env.ALREADY_PRESENT != 'true'
+        if: env.ALREADY_PRESENT != 'true' && env.SIGNING_READY == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -139,7 +165,7 @@ jobs:
           grep -Fq "versionCode = $EXPECTED_VERSION_CODE" android/app/build.gradle.kts
           echo "AAB_PATH=$AAB" >> "$GITHUB_ENV"
       - name: Preserve this app's release bundle
-        if: env.ALREADY_PRESENT != 'true'
+        if: env.ALREADY_PRESENT != 'true' && env.SIGNING_READY == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: shk-play-${{ matrix.app }}-v2
@@ -147,7 +173,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Upload and independently verify this Play bundle
-        if: env.ALREADY_PRESENT != 'true'
+        if: env.ALREADY_PRESENT != 'true' && env.SIGNING_READY == 'true'
         env: {TOKEN: '${{ steps.google-auth.outputs.access_token }}'}
         shell: bash
         run: |
@@ -172,7 +198,6 @@ jobs:
           status=$(curl -sS --max-time 120 -o "$body" -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$api/applications/$PACKAGE_NAME/edits/$edit:commit")
           if [[ "$status" != 2* ]] && grep -Fq 'changesNotSentForReview' "$body"; then
             status=$(curl -sS --max-time 120 -o "$body" -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$api/applications/$PACKAGE_NAME/edits/$edit:commit?changesNotSentForReview=true")
-            echo 'Play requires a separate review submission; upload does not change a release track.' >> "$GITHUB_STEP_SUMMARY"
           fi
           [[ "$status" == 2* ]] || { cat "$body" >&2; exit 1; }
           edit=''
@@ -184,5 +209,5 @@ jobs:
         if: always()
         shell: bash
         run: |
-          rm -f "$RUNNER_TEMP/kamilunavo-upload.jks" "$RUNNER_TEMP/selected-certificate.txt" "$RUNNER_TEMP/bundle-certificate.txt" "$RUNNER_TEMP/bundle-verification.txt"
-          rm -rf "$RUNNER_TEMP/kamilunavo-signing-vault"
+          rm -f "$RUNNER_TEMP/kamilunavo-upload.jks" "$RUNNER_TEMP/kamilunavo-central-upload.p12" "$RUNNER_TEMP/selected-certificate.txt" "$RUNNER_TEMP/bundle-certificate.txt" "$RUNNER_TEMP/bundle-verification.txt"
+          rm -rf "$RUNNER_TEMP/kamilunavo-signing-vault" "$RUNNER_TEMP/kamilunavo-central-signing"
