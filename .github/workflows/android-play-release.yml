@@ -30,20 +30,35 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.5.0"
-      - name: Verify RohrCalc launcher and Play icon identity
+      - name: Verify all launcher and Play icon sources
         shell: bash
         run: |
           set -euo pipefail
-          LAUNCHER='android/app/src/rohrcalc/res/drawable/ic_launcher.xml'
-          PLAY='android/store/google-play/rohrcalc.svg'
-          for token in '#07182A' '#225460' '#68F0CA' '#ECF7FA' '#5AD2FF'; do
-            grep -Fq "$token" "$LAUNCHER"
-            grep -Fq "$token" "$PLAY"
-          done
-          grep -Fq 'M30,42H67V73' "$LAUNCHER"
-          grep -Fq 'M30 42H67V73' "$PLAY"
-          grep -Fq 'M25,42H34M67,68V78' "$LAUNCHER"
-          grep -Fq 'M25 42H34M67 68V78' "$PLAY"
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          pairs = {
+              'kaltecalc': ('android/app/src/kaltecalc/res/drawable/ic_launcher.xml', 'android/store/google-play/kaltecalc.svg'),
+              'lueftungscalc': ('android/app/src/lueftungscalc/res/drawable/ic_launcher.xml', 'android/store/google-play/lueftungscalc.svg'),
+              'heizkoerpercalc': ('android/app/src/heizkoerpercalc/res/drawable/ic_launcher.xml', 'android/store/google-play/heizkoerpercalc.svg'),
+              'rohrcalc': ('android/app/src/rohrcalc/res/drawable/ic_launcher.xml', 'android/store/google-play/rohrcalc.svg'),
+              'anlagencheck': ('android/app/src/anlagencheck/res/drawable/ic_launcher.xml', 'android/store/google-play/anlagencheck.svg'),
+          }
+          for app, (launcher_path, play_path) in pairs.items():
+              launcher = Path(launcher_path).read_text()
+              play = Path(play_path).read_text()
+              launcher_colors = sorted(set(re.findall(r'#[0-9A-Fa-f]{6}', launcher)))
+              play_colors = sorted(set(re.findall(r'#[0-9A-Fa-f]{6}', play)))
+              if launcher_colors != play_colors:
+                  raise SystemExit(f'{app}: color palette differs: {launcher_colors} != {play_colors}')
+              launcher_paths = [re.sub(r'[ ,]', '', p) for p in re.findall(r'android:pathData="([^"]+)"', launcher)]
+              play_paths = [re.sub(r'[ ,]', '', p) for p in re.findall(r'<path[^>]*\bd="([^"]+)"', play)]
+              for path in launcher_paths:
+                  if path not in play_paths:
+                      raise SystemExit(f'{app}: launcher path missing from Play SVG: {path}')
+              print(f'{app}: launcher/store source parity OK')
+          PY
       - name: Build all Play bundles
         run: >-
           gradle -p android
@@ -52,24 +67,26 @@ jobs:
           bundleHeizkoerpercalcRelease
           bundleRohrcalcRelease
           bundleAnlagencheckRelease
-      - name: Render canonical RohrCalc Play icon
+      - name: Render canonical Play icons
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq imagemagick
-          mkdir -p android/play-assets/rohrcalc
-          convert -background none android/store/google-play/rohrcalc.svg android/play-assets/rohrcalc/icon-512.png
-          identify -format '%wx%h' android/play-assets/rohrcalc/icon-512.png | grep -Fx '512x512'
-          test "$(stat -c%s android/play-assets/rohrcalc/icon-512.png)" -lt 1048576
-          sha256sum android/play-assets/rohrcalc/icon-512.png > android/play-assets/rohrcalc/icon-512.png.sha256
+          for app in kaltecalc lueftungscalc heizkoerpercalc rohrcalc anlagencheck; do
+            mkdir -p "android/play-assets/$app"
+            convert -background none "android/store/google-play/$app.svg" "android/play-assets/$app/icon-512.png"
+            identify -format '%wx%h' "android/play-assets/$app/icon-512.png" | grep -Fx '512x512'
+            test "$(stat -c%s "android/play-assets/$app/icon-512.png")" -lt 1048576
+            sha256sum "android/play-assets/$app/icon-512.png" > "android/play-assets/$app/icon-512.png.sha256"
+          done
       - name: Upload Play release assets
         uses: actions/upload-artifact@v4
         with:
           name: shk-play-release-assets
           path: |
             android/app/build/outputs/bundle/*Release/*.aab
-            android/play-assets/rohrcalc/icon-512.png
-            android/play-assets/rohrcalc/icon-512.png.sha256
+            android/play-assets/*/icon-512.png
+            android/play-assets/*/icon-512.png.sha256
           if-no-files-found: error
           retention-days: 14
