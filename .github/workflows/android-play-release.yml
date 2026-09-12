@@ -10,6 +10,7 @@ on:
       - ".github/workflows/android-play-release.yml"
   push:
     branches:
+      - main
       - android/play-release-suite
     paths:
       - "android/**"
@@ -29,6 +30,20 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.5.0"
+      - name: Verify RohrCalc launcher and Play icon identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          LAUNCHER='android/app/src/rohrcalc/res/drawable/ic_launcher.xml'
+          PLAY='android/store/google-play/rohrcalc.svg'
+          for token in '#07182A' '#225460' '#68F0CA' '#ECF7FA' '#5AD2FF'; do
+            grep -Fq "$token" "$LAUNCHER"
+            grep -Fq "$token" "$PLAY"
+          done
+          grep -Fq 'M30,42H67V73' "$LAUNCHER"
+          grep -Fq 'M30 42H67V73' "$PLAY"
+          grep -Fq 'M25,42H34M67,68V78' "$LAUNCHER"
+          grep -Fq 'M25 42H34M67 68V78' "$PLAY"
       - name: Build all Play bundles
         run: >-
           gradle -p android
@@ -37,10 +52,24 @@ jobs:
           bundleHeizkoerpercalcRelease
           bundleRohrcalcRelease
           bundleAnlagencheckRelease
-      - name: Upload unsigned app bundles
+      - name: Render canonical RohrCalc Play icon
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq imagemagick
+          mkdir -p android/play-assets/rohrcalc
+          convert -background none android/store/google-play/rohrcalc.svg android/play-assets/rohrcalc/icon-512.png
+          identify -format '%wx%h' android/play-assets/rohrcalc/icon-512.png | grep -Fx '512x512'
+          test "$(stat -c%s android/play-assets/rohrcalc/icon-512.png)" -lt 1048576
+          sha256sum android/play-assets/rohrcalc/icon-512.png > android/play-assets/rohrcalc/icon-512.png.sha256
+      - name: Upload Play release assets
         uses: actions/upload-artifact@v4
         with:
-          name: shk-play-aabs
-          path: android/app/build/outputs/bundle/*Release/*.aab
+          name: shk-play-release-assets
+          path: |
+            android/app/build/outputs/bundle/*Release/*.aab
+            android/play-assets/rohrcalc/icon-512.png
+            android/play-assets/rohrcalc/icon-512.png.sha256
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
