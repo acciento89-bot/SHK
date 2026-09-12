@@ -1,0 +1,36 @@
+name: Probe SHK Android signing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/probe-android-signing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report configured signing aliases only
+        shell: bash
+        env:
+          K1: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          K2: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_B64 }}
+          P1: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          P2: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          A1: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          KP: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [ -n "$K1" ] && echo 'configured:ANDROID_UPLOAD_KEYSTORE_BASE64' || true
+          [ -n "$K2" ] && echo 'configured:ANDROID_UPLOAD_KEYSTORE_B64' || true
+          [ -n "$P1" ] && echo 'configured:ANDROID_UPLOAD_KEYSTORE_PASSWORD' || true
+          [ -n "$P2" ] && echo 'configured:ANDROID_UPLOAD_STORE_PASSWORD' || true
+          [ -n "$A1" ] && echo 'configured:ANDROID_UPLOAD_KEY_ALIAS' || true
+          [ -n "$KP" ] && echo 'configured:ANDROID_UPLOAD_KEY_PASSWORD' || true
+          if [ -z "$K1$K2$P1$P2$A1$KP" ]; then
+            echo 'No Android upload-signing secrets are configured for SHK.'
+          fi
