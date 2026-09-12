@@ -3,6 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val uploadKeystorePath = System.getenv("ANDROID_UPLOAD_KEYSTORE_PATH")
+val uploadStorePassword = System.getenv("ANDROID_UPLOAD_STORE_PASSWORD")
+val uploadKeyAlias = System.getenv("ANDROID_UPLOAD_KEY_ALIAS")
+val uploadKeyPassword = System.getenv("ANDROID_UPLOAD_KEY_PASSWORD")
+
 android {
     namespace = "de.kamilunavo.shk"
     compileSdk = 36
@@ -10,8 +15,8 @@ android {
     defaultConfig {
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
     flavorDimensions += "calculator"
@@ -57,10 +62,24 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    signingConfigs {
+        create("releaseUpload") {
+            if (!uploadKeystorePath.isNullOrBlank()) {
+                storeFile = file(uploadKeystorePath)
+                storeType = "JKS"
+                storePassword = uploadStorePassword
+                keyAlias = uploadKeyAlias
+                keyPassword = uploadKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (!uploadKeystorePath.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("releaseUpload")
+            }
         }
     }
 }
