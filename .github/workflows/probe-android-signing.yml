@@ -9,29 +9,44 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
-# Rechecked after org-wide Google Play WIF access was enabled.
 jobs:
   probe:
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        app_id:
+          - kaltecalc
+          - lueftungscalc
+          - heizkoerpercalc
+          - rohrcalc
+          - anlagencheck
+          - servicecheck
     runs-on: ubuntu-latest
     steps:
-      - name: Report configured signing aliases only
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Restore candidate identity from KMS vault
+        uses: acciento89-bot/maengelfix/.github/actions/restore-android-signing@main
+        with:
+          app-id: ${{ matrix.app_id }}
+      - name: Report certificate fingerprint
         shell: bash
-        env:
-          K1: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
-          K2: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_B64 }}
-          P1: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
-          P2: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
-          A1: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
-          KP: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          [ -n "$K1" ] && echo 'configured:ANDROID_UPLOAD_KEYSTORE_BASE64' || true
-          [ -n "$K2" ] && echo 'configured:ANDROID_UPLOAD_KEYSTORE_B64' || true
-          [ -n "$P1" ] && echo 'configured:ANDROID_UPLOAD_KEYSTORE_PASSWORD' || true
-          [ -n "$P2" ] && echo 'configured:ANDROID_UPLOAD_STORE_PASSWORD' || true
-          [ -n "$A1" ] && echo 'configured:ANDROID_UPLOAD_KEY_ALIAS' || true
-          [ -n "$KP" ] && echo 'configured:ANDROID_UPLOAD_KEY_PASSWORD' || true
-          if [ -z "$K1$K2$P1$P2$A1$KP" ]; then
-            echo 'No Android upload-signing secrets are configured for SHK.'
-          fi
+          keytool -list -v \
+            -keystore "$ANDROID_UPLOAD_KEYSTORE_PATH" \
+            -storepass "$ANDROID_UPLOAD_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_UPLOAD_KEY_ALIAS" \
+            | grep -E 'SHA1:|SHA256:'
+      - name: Destroy restored signing material
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/kamilunavo-upload.jks"
+          rm -rf "$RUNNER_TEMP/kamilunavo-signing-vault"
