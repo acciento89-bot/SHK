@@ -3,15 +3,18 @@ name: Android Play Release Suite
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - "android/**"
-      - ".github/workflows/android-play-release.yml"
+      - 'android/**'
+      - '.github/workflows/android-play-release.yml'
 
 permissions:
   contents: read
   id-token: write
+
+concurrency:
+  group: shk-google-play-release
+  cancel-in-progress: false
 
 env:
   EXPECTED_VERSION_CODE: '2'
@@ -20,90 +23,58 @@ env:
 
 jobs:
   build-and-upload:
+    name: Play ${{ matrix.app }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - app: kaltecalc
+            package: de.kamilunav.kaltecalc
+            sha1: B9EB4B6BD26968A1FB49E4B19D38833A0EBD0CEB
+          - app: lueftungscalc
+            package: de.kamilunavo.luftungscalc
+            sha1: B9EB4B6BD26968A1FB49E4B19D38833A0EBD0CEB
+          - app: heizkoerpercalc
+            package: de.kamilunavo.heizkorpercalc
+            sha1: B9EB4B6BD26968A1FB49E4B19D38833A0EBD0CEB
+          - app: rohrcalc
+            package: de.kamilunavo.rohrcalc
+            sha1: 20239FD226FBA03E6A059ED32E416213722BD958
+          - app: anlagencheck
+            package: de.kamilunavo.servicecheck
+            sha1: B9EB4B6BD26968A1FB49E4B19D38833A0EBD0CEB
+    env:
+      APP_ID: ${{ matrix.app }}
+      PACKAGE_NAME: ${{ matrix.package }}
+      EXPECTED_CERT_SHA1: ${{ matrix.sha1 }}
     steps:
       - uses: actions/checkout@v5
+        with: {persist-credentials: false}
       - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "17"
-      - uses: android-actions/setup-android@v3
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "9.5.0"
-      - name: Restore shared SHK upload identity from KMS vault
-        uses: acciento89-bot/maengelfix/.github/actions/restore-android-signing@main
-        with:
-          app-id: kaltecalc
-      - name: Verify all launcher and Play icon sources
+        with: {distribution: temurin, java-version: '17'}
+      - name: Verify canonical launcher and store source parity
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          python3 - <<'PYCODE'
           from pathlib import Path
-          import re
-          pairs = {
-              'kaltecalc': ('android/app/src/kaltecalc/res/drawable/ic_launcher.xml', 'android/store/google-play/kaltecalc.svg'),
-              'lueftungscalc': ('android/app/src/lueftungscalc/res/drawable/ic_launcher.xml', 'android/store/google-play/lueftungscalc.svg'),
-              'heizkoerpercalc': ('android/app/src/heizkoerpercalc/res/drawable/ic_launcher.xml', 'android/store/google-play/heizkoerpercalc.svg'),
-              'rohrcalc': ('android/app/src/rohrcalc/res/drawable/ic_launcher.xml', 'android/store/google-play/rohrcalc.svg'),
-              'anlagencheck': ('android/app/src/anlagencheck/res/drawable/ic_launcher.xml', 'android/store/google-play/anlagencheck.svg'),
-          }
-          for app, (launcher_path, play_path) in pairs.items():
-              launcher = Path(launcher_path).read_text()
-              play = Path(play_path).read_text()
-              launcher_colors = sorted(set(re.findall(r'#[0-9A-Fa-f]{6}', launcher)))
-              play_colors = sorted(set(re.findall(r'#[0-9A-Fa-f]{6}', play)))
-              if launcher_colors != play_colors:
-                  raise SystemExit(f'{app}: color palette differs: {launcher_colors} != {play_colors}')
-              launcher_paths = [re.sub(r'[ ,]', '', p) for p in re.findall(r'android:pathData="([^"]+)"', launcher)]
-              play_paths = [re.sub(r'[ ,]', '', p) for p in re.findall(r'<path[^>]*\bd="([^"]+)"', play)]
-              for path in launcher_paths:
-                  if path not in play_paths:
-                      raise SystemExit(f'{app}: launcher path missing from Play SVG: {path}')
-              print(f'{app}: launcher/store source parity OK')
-          PY
-      - name: Install Android SDK and icon renderer
-        shell: bash
-        run: |
-          set -euo pipefail
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' >/dev/null
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq librsvg2-bin
-      - name: Build all signed Play bundles
-        run: >-
-          gradle -p android
-          bundleKaltecalcRelease
-          bundleLueftungscalcRelease
-          bundleHeizkoerpercalcRelease
-          bundleRohrcalcRelease
-          bundleAnlagencheckRelease
-          --stacktrace
-      - name: Verify signed bundles and render canonical Play icons
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -Fq 'versionCode = 2' android/app/build.gradle.kts
-          for app in kaltecalc lueftungscalc heizkoerpercalc rohrcalc anlagencheck; do
-            aab="android/app/build/outputs/bundle/${app}Release/app-${app}-release.aab"
-            test -s "$aab"
-            jarsigner -verify "$aab" | grep -Fq 'jar verified.'
-            mkdir -p "android/play-assets/$app"
-            rsvg-convert -w 512 -h 512 "android/store/google-play/$app.svg" -o "android/play-assets/$app/icon-512.png"
-            test "$(file -b --mime-type "android/play-assets/$app/icon-512.png")" = 'image/png'
-            test "$(stat -c%s "android/play-assets/$app/icon-512.png")" -lt 1048576
-            sha256sum "android/play-assets/$app/icon-512.png" > "android/play-assets/$app/icon-512.png.sha256"
-          done
-      - uses: actions/upload-artifact@v4
-        with:
-          name: shk-play-1.0.1-2-release-assets
-          path: |
-            android/app/build/outputs/bundle/*Release/*.aab
-            android/play-assets/*/icon-512.png
-            android/play-assets/*/icon-512.png.sha256
-          if-no-files-found: error
-          retention-days: 30
+          import os, re
+          app = os.environ['APP_ID']
+          launcher = Path(f'android/app/src/{app}/res/drawable/ic_launcher.xml').read_text()
+          play = Path(f'android/store/google-play/{app}.svg').read_text()
+          colors = lambda text: sorted(set(c.upper() for c in re.findall(r'#[0-9A-Fa-f]{6}', text)))
+          if colors(launcher) != colors(play):
+              raise SystemExit(f'{app}: launcher/store color palette differs')
+          normalize = lambda value: re.sub(r'[ ,\s]', '', value)
+          launcher_paths = [normalize(p) for p in re.findall(r'android:pathData="([^"]+)"', launcher)]
+          play_paths = [normalize(p) for p in re.findall(r'<path[^>]*\bd="([^"]+)"', play)]
+          if not launcher_paths or any(path not in play_paths for path in launcher_paths):
+              raise SystemExit(f'{app}: launcher path missing from canonical Play SVG')
+          print(f'{app}: canonical launcher/store parity verified')
+          PYCODE
       - id: google-auth
         uses: google-github-actions/auth@v3
         with:
@@ -111,44 +82,107 @@ jobs:
           service_account: ${{ env.GOOGLE_SERVICE_ACCOUNT }}
           token_format: access_token
           access_token_scopes: https://www.googleapis.com/auth/androidpublisher
-      - name: Upload missing version 2 bundles to Google Play
-        env:
-          TOKEN: ${{ steps.google-auth.outputs.access_token }}
+      - name: Avoid rebuilding an already uploaded version
+        env: {TOKEN: '${{ steps.google-auth.outputs.access_token }}'}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://androidpublisher.googleapis.com/androidpublisher/v3'
+          edit=''
+          cleanup() { if [ -n "$edit" ]; then curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $TOKEN" "$api/applications/$PACKAGE_NAME/edits/$edit" >/dev/null || true; fi; }
+          trap cleanup EXIT
+          edit=$(curl -fsS --max-time 60 -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$api/applications/$PACKAGE_NAME/edits" | jq -er '.id')
+          bundles=$(curl -fsS --max-time 60 -H "Authorization: Bearer $TOKEN" "$api/applications/$PACKAGE_NAME/edits/$edit/bundles")
+          if jq -e --argjson code "$EXPECTED_VERSION_CODE" '[.bundles[]? | select(.versionCode == $code)] | length == 1' <<<"$bundles" >/dev/null; then
+            echo 'ALREADY_PRESENT=true' >> "$GITHUB_ENV"
+            jq -r --argjson code "$EXPECTED_VERSION_CODE" '.bundles[]? | select(.versionCode == $code) | "Existing Play bundle: version \(.versionCode), SHA-256 \(.sha256)"' <<<"$bundles" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'ALREADY_PRESENT=false' >> "$GITHUB_ENV"
+          fi
+      - name: Restore app-specific upload identity
+        if: env.ALREADY_PRESENT != 'true'
+        uses: acciento89-bot/maengelfix/.github/actions/restore-android-signing@main
+        with:
+          app-id: ${{ matrix.app }}
+      - name: Reject an unexpected upload key before building
+        if: env.ALREADY_PRESENT != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -J-Duser.language=en -list -v -keystore "$ANDROID_UPLOAD_KEYSTORE_PATH" -storepass:env ANDROID_UPLOAD_KEYSTORE_PASSWORD -alias "$ANDROID_UPLOAD_KEY_ALIAS" > "$RUNNER_TEMP/selected-certificate.txt"
+          actual=$(sed -n 's/^[[:space:]]*SHA1: //p' "$RUNNER_TEMP/selected-certificate.txt" | tr -d ':\r\n ')
+          if [ "$actual" != "$EXPECTED_CERT_SHA1" ]; then
+            echo "::error::$APP_ID requires certificate SHA-1 $EXPECTED_CERT_SHA1; restored $actual. No build or upload performed."
+            echo "$APP_ID: original upload key recovery required. Expected SHA-1 $EXPECTED_CERT_SHA1; found $actual." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - uses: android-actions/setup-android@v3
+        if: env.ALREADY_PRESENT != 'true'
+        with: {log-accepted-android-sdk-licenses: false, packages: platform-tools}
+      - uses: gradle/actions/setup-gradle@v4
+        if: env.ALREADY_PRESENT != 'true'
+        with: {gradle-version: '9.5.0'}
+      - name: Build and verify this app only
+        if: env.ALREADY_PRESENT != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' >/dev/null
+          gradle -p android "bundle${APP_ID^}Release" --stacktrace
+          AAB="android/app/build/outputs/bundle/${APP_ID}Release/app-${APP_ID}-release.aab"
+          test -s "$AAB"
+          jarsigner -verify "$AAB" > "$RUNNER_TEMP/bundle-verification.txt"
+          grep -Fq 'jar verified.' "$RUNNER_TEMP/bundle-verification.txt"
+          keytool -J-Duser.language=en -printcert -jarfile "$AAB" > "$RUNNER_TEMP/bundle-certificate.txt"
+          actual=$(sed -n 's/^[[:space:]]*SHA1: //p' "$RUNNER_TEMP/bundle-certificate.txt" | tr -d ':\r\n ')
+          test "$actual" = "$EXPECTED_CERT_SHA1"
+          grep -Fq "versionCode = $EXPECTED_VERSION_CODE" android/app/build.gradle.kts
+          echo "AAB_PATH=$AAB" >> "$GITHUB_ENV"
+      - name: Preserve this app's release bundle
+        if: env.ALREADY_PRESENT != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: shk-play-${{ matrix.app }}-v2
+          path: ${{ env.AAB_PATH }}
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload and independently verify this Play bundle
+        if: env.ALREADY_PRESENT != 'true'
+        env: {TOKEN: '${{ steps.google-auth.outputs.access_token }}'}
         shell: bash
         run: |
           set -euo pipefail
           api='https://androidpublisher.googleapis.com/androidpublisher/v3'
           upload='https://androidpublisher.googleapis.com/upload/androidpublisher/v3'
-          cat > "$RUNNER_TEMP/shk-targets.tsv" <<'EOF'
-          kaltecalc|de.kamilunav.kaltecalc
-          lueftungscalc|de.kamilunavo.luftungscalc
-          heizkoerpercalc|de.kamilunavo.heizkorpercalc
-          rohrcalc|de.kamilunavo.rohrcalc
-          anlagencheck|de.kamilunavo.servicecheck
-          EOF
-          while IFS='|' read -r app package; do
-            aab="android/app/build/outputs/bundle/${app}Release/app-${app}-release.aab"
-            edit=$(curl -fsS -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$api/applications/$package/edits" | jq -r '.id')
-            bundles=$(curl -fsS -H "Authorization: Bearer $TOKEN" "$api/applications/$package/edits/$edit/bundles")
-            if jq -e --argjson code "$EXPECTED_VERSION_CODE" '.bundles | any(.versionCode == $code)' <<<"$bundles" >/dev/null; then
-              echo "$package versionCode $EXPECTED_VERSION_CODE already exists; skipping upload"
-              curl -fsS -X DELETE -H "Authorization: Bearer $TOKEN" "$api/applications/$package/edits/$edit" >/dev/null
-              continue
-            fi
-            body=$(mktemp)
-            status=$(curl -sS -o "$body" -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/octet-stream' --data-binary "@$aab" "$upload/applications/$package/edits/$edit/bundles?uploadType=media")
-            if [[ "$status" != 200 ]]; then cat "$body" >&2; curl -sS -X DELETE -H "Authorization: Bearer $TOKEN" "$api/applications/$package/edits/$edit" >/dev/null || true; exit 1; fi
-            test "$(jq -r '.versionCode' "$body")" = "$EXPECTED_VERSION_CODE"
-            status=$(curl -sS -o "$body" -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$api/applications/$package/edits/$edit:commit")
-            [[ "$status" == 2* ]] || { cat "$body" >&2; exit 1; }
-            fresh=$(curl -fsS -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$api/applications/$package/edits" | jq -r '.id')
-            curl -fsS -H "Authorization: Bearer $TOKEN" "$api/applications/$package/edits/$fresh/bundles" | jq -e --argjson code "$EXPECTED_VERSION_CODE" '.bundles | any(.versionCode == $code)' >/dev/null
-            curl -fsS -X DELETE -H "Authorization: Bearer $TOKEN" "$api/applications/$package/edits/$fresh" >/dev/null
-            echo "$package versionCode $EXPECTED_VERSION_CODE uploaded and verified"
-          done < "$RUNNER_TEMP/shk-targets.tsv"
+          edit=''; body=$(mktemp)
+          cleanup() { if [ -n "$edit" ]; then curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $TOKEN" "$api/applications/$PACKAGE_NAME/edits/$edit" >/dev/null || true; fi; rm -f "$body"; }
+          trap cleanup EXIT
+          edit=$(curl -fsS --max-time 60 -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$api/applications/$PACKAGE_NAME/edits" | jq -er '.id')
+          curl -fsS --max-time 60 -H "Authorization: Bearer $TOKEN" "$api/applications/$PACKAGE_NAME/edits/$edit/bundles" > "$body"
+          if jq -e --argjson code "$EXPECTED_VERSION_CODE" '[.bundles[]? | select(.versionCode == $code)] | length == 1' "$body" >/dev/null; then
+            echo "Version $EXPECTED_VERSION_CODE already present; no duplicate upload." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          status=$(curl -sS --max-time 600 -o "$body" -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/octet-stream' --data-binary "@$AAB_PATH" "$upload/applications/$PACKAGE_NAME/edits/$edit/bundles?uploadType=media")
+          if [[ "$status" != 200 ]]; then cat "$body" >&2; exit 1; fi
+          test "$(jq -r '.versionCode' "$body")" = "$EXPECTED_VERSION_CODE"
+          local_sha=$(sha256sum "$AAB_PATH" | cut -d' ' -f1)
+          remote_sha=$(jq -er '.sha256' "$body" | tr '[:upper:]' '[:lower:]')
+          test "$remote_sha" = "$local_sha"
+          status=$(curl -sS --max-time 120 -o "$body" -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$api/applications/$PACKAGE_NAME/edits/$edit:commit")
+          if [[ "$status" != 2* ]] && grep -Fq 'changesNotSentForReview' "$body"; then
+            status=$(curl -sS --max-time 120 -o "$body" -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$api/applications/$PACKAGE_NAME/edits/$edit:commit?changesNotSentForReview=true")
+            echo 'Play requires a separate review submission; upload does not change a release track.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          [[ "$status" == 2* ]] || { cat "$body" >&2; exit 1; }
+          edit=''
+          edit=$(curl -fsS --max-time 60 -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$api/applications/$PACKAGE_NAME/edits" | jq -er '.id')
+          curl -fsS --max-time 60 -H "Authorization: Bearer $TOKEN" "$api/applications/$PACKAGE_NAME/edits/$edit/bundles" > "$body"
+          jq -e --argjson code "$EXPECTED_VERSION_CODE" --arg sha "$local_sha" '[.bundles[]? | select(.versionCode == $code and (.sha256 | ascii_downcase) == $sha)] | length == 1' "$body" >/dev/null
+          echo "$APP_ID version $EXPECTED_VERSION_CODE uploaded and independently verified, SHA-256 $local_sha. Release tracks unchanged." | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Destroy restored signing material
         if: always()
         shell: bash
         run: |
-          rm -f "$RUNNER_TEMP/kamilunavo-upload.jks"
+          rm -f "$RUNNER_TEMP/kamilunavo-upload.jks" "$RUNNER_TEMP/selected-certificate.txt" "$RUNNER_TEMP/bundle-certificate.txt" "$RUNNER_TEMP/bundle-verification.txt"
           rm -rf "$RUNNER_TEMP/kamilunavo-signing-vault"
