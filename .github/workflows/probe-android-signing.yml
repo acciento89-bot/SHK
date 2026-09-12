@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
 
-# Rechecked after Google Play administrator access was enabled.
+# Rechecked after org-wide Google Play WIF access was enabled.
 jobs:
   probe:
     runs-on: ubuntu-latest
