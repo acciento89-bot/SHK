@@ -99,6 +99,7 @@ case "$SECOND_ACTION" in
     ;;
 esac
 
+WAIT_TEXT="${SECOND_WAIT_TEXT:-$WAIT_TEXT}"
 wait_for_ready_ui
 assert_clean_foreground
 adb exec-out screencap -p > "$output_dir/02-current-ui-detail.png"
