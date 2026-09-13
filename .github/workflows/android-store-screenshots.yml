@@ -31,26 +31,31 @@ jobs:
             apk: android/app/build/outputs/apk/heizkoerpercalc/debug/app-heizkoerpercalc-debug.apk
             package: de.kamilunavo.heizkorpercalc
             wait_text: HeizkörperCalc
+            second_wait_text: AUSLEGUNG
           - label: rohrcalc
             task: assembleRohrcalcDebug
             apk: android/app/build/outputs/apk/rohrcalc/debug/app-rohrcalc-debug.apk
             package: de.kamilunavo.rohrcalc
             wait_text: RohrCalc
+            second_wait_text: HYDRAULIK
           - label: anlagencheck
             task: assembleAnlagencheckDebug
             apk: android/app/build/outputs/apk/anlagencheck/debug/app-anlagencheck-debug.apk
             package: de.kamilunavo.servicecheck
             wait_text: AnlagenCheck
+            second_wait_text: PLAUSIBILISIERUNG
           - label: lueftungscalc
             task: assembleLueftungscalcDebug
             apk: android/app/build/outputs/apk/lueftungscalc/debug/app-lueftungscalc-debug.apk
             package: de.kamilunavo.luftungscalc
             wait_text: LüftungsCalc
+            second_wait_text: RECHTECKKANAL
           - label: kaltecalc
             task: assembleKaltecalcDebug
             apk: android/app/build/outputs/apk/kaltecalc/debug/app-kaltecalc-debug.apk
             package: de.kamilunav.kaltecalc
             wait_text: KälteCalc
+            second_wait_text: VERDICHTER
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -78,7 +83,7 @@ jobs:
           profile: pixel_7
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: WAIT_TEXT='${{ matrix.wait_text }}' PACKAGE_NAME='${{ matrix.package }}' APK_PATH='${{ matrix.apk }}' OUTPUT_DIR='android/store/google-play/screenshots/${{ matrix.label }}/de-DE' SECOND_ACTION='swipe' bash "$GITHUB_WORKSPACE/.github/scripts/capture-android-store-screenshots.sh"
+          script: WAIT_TEXT='${{ matrix.wait_text }}' SECOND_WAIT_TEXT='${{ matrix.second_wait_text }}' PACKAGE_NAME='${{ matrix.package }}' APK_PATH='${{ matrix.apk }}' OUTPUT_DIR='android/store/google-play/screenshots/${{ matrix.label }}/de-DE' SECOND_ACTION='swipe' bash "$GITHUB_WORKSPACE/.github/scripts/capture-android-store-screenshots.sh"
       - uses: actions/upload-artifact@v4
         with:
           name: SHK-${{ matrix.label }}-authentic-Android-screenshots
