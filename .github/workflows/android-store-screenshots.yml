@@ -1,0 +1,121 @@
+name: SHK Android Store Screenshots
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - '.github/scripts/capture-android-store-screenshots.sh'
+      - '.github/workflows/android-store-screenshots.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/scripts/capture-android-store-screenshots.sh'
+      - '.github/workflows/android-store-screenshots.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: heizkoerpercalc
+            task: assembleHeizkoerpercalcDebug
+            apk: android/app/build/outputs/apk/heizkoerpercalc/debug/app-heizkoerpercalc-debug.apk
+            package: de.kamilunavo.heizkorpercalc
+            wait_text: HeizkörperCalc
+            second_wait_text: AUSLEGUNG
+          - label: rohrcalc
+            task: assembleRohrcalcDebug
+            apk: android/app/build/outputs/apk/rohrcalc/debug/app-rohrcalc-debug.apk
+            package: de.kamilunavo.rohrcalc
+            wait_text: RohrCalc
+            second_wait_text: HYDRAULIK
+          - label: anlagencheck
+            task: assembleAnlagencheckDebug
+            apk: android/app/build/outputs/apk/anlagencheck/debug/app-anlagencheck-debug.apk
+            package: de.kamilunavo.servicecheck
+            wait_text: AnlagenCheck
+            second_wait_text: PLAUSIBILISIERUNG
+          - label: lueftungscalc
+            task: assembleLueftungscalcDebug
+            apk: android/app/build/outputs/apk/lueftungscalc/debug/app-lueftungscalc-debug.apk
+            package: de.kamilunavo.luftungscalc
+            wait_text: LüftungsCalc
+            second_wait_text: RECHTECKKANAL
+          - label: kaltecalc
+            task: assembleKaltecalcDebug
+            apk: android/app/build/outputs/apk/kaltecalc/debug/app-kaltecalc-debug.apk
+            package: de.kamilunav.kaltecalc
+            wait_text: KälteCalc
+            second_wait_text: VERDICHTER
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Enable KVM acceleration
+        run: |
+          test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Build current flavor APK
+        run: |
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          gradle -p android "${{ matrix.task }}" --stacktrace
+          test -s "${{ matrix.apk }}"
+      - name: Capture real flavor UI
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: WAIT_TEXT='${{ matrix.wait_text }}' SECOND_WAIT_TEXT='${{ matrix.second_wait_text }}' PACKAGE_NAME='${{ matrix.package }}' APK_PATH='${{ matrix.apk }}' OUTPUT_DIR='android/store/google-play/screenshots/${{ matrix.label }}/de-DE' SECOND_ACTION='swipe' bash "$GITHUB_WORKSPACE/.github/scripts/capture-android-store-screenshots.sh"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SHK-${{ matrix.label }}-authentic-Android-screenshots
+          path: android/store/google-play/screenshots/${{ matrix.label }}/de-DE/*.png
+          if-no-files-found: error
+          retention-days: 30
+
+  persist:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: capture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: SHK-*-authentic-Android-screenshots
+          path: downloaded
+          merge-multiple: false
+      - name: Persist all verified emulator screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          for flavor in heizkoerpercalc rohrcalc anlagencheck lueftungscalc kaltecalc; do
+            source_dir="downloaded/SHK-${flavor}-authentic-Android-screenshots"
+            target_dir="android/store/google-play/screenshots/${flavor}/de-DE"
+            test -d "$source_dir"
+            mkdir -p "$target_dir"
+            cp "$source_dir"/*.png "$target_dir/"
+          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add android/store/google-play/screenshots
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'store(android): refresh authentic SHK screenshots'
+          git push

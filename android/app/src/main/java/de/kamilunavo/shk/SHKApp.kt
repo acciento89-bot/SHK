@@ -23,16 +23,28 @@ private val BgTop = Color(0xFF040C0E)
 private val BgBottom = Color(0xFF051717)
 private val Panel = Color(0x18FFFFFF)
 private val Muted = Color(0xFFAAB9BA)
+private val TextMain = Color(0xFFF1F6F5)
 
 @Composable
 fun SHKApp(kind: String, onShare: (String) -> Unit) {
-    MaterialTheme(colorScheme = darkColorScheme(primary = Mint, surface = BgTop)) {
-        when (kind) {
-            "kaltecalc" -> KalteCalc(onShare)
-            "lueftungscalc" -> LueftungsCalc(onShare)
-            "heizkoerpercalc" -> HeizkoerperCalc(onShare)
-            "rohrcalc" -> RohrCalc(onShare)
-            else -> AnlagenCheck(onShare)
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            primary = Mint,
+            background = BgTop,
+            surface = BgTop,
+            onBackground = TextMain,
+            onSurface = TextMain,
+            onSurfaceVariant = Muted
+        )
+    ) {
+        CompositionLocalProvider(LocalContentColor provides TextMain) {
+            when (kind) {
+                "kaltecalc" -> KalteCalc(onShare)
+                "lueftungscalc" -> LueftungsCalc(onShare)
+                "heizkoerpercalc" -> HeizkoerperCalc(onShare)
+                "rohrcalc" -> RohrCalc(onShare)
+                else -> AnlagenCheck(onShare)
+            }
         }
     }
 }
@@ -41,14 +53,16 @@ fun SHKApp(kind: String, onShare: (String) -> Unit) {
 private fun AppPage(title: String, eyebrow: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(BgTop, BgBottom)))) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing),
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(eyebrow, color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                    Text(title, fontSize = 31.sp, fontWeight = FontWeight.Bold)
+                    Text(title, color = TextMain, fontSize = 31.sp, fontWeight = FontWeight.Bold)
                     Text(subtitle, color = Muted, fontSize = 15.sp)
                 }
             }
@@ -59,7 +73,7 @@ private fun AppPage(title: String, eyebrow: String, subtitle: String, content: @
 
 @Composable
 private fun CardBlock(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(24.dp)) {
+    Card(colors = CardDefaults.cardColors(containerColor = Panel, contentColor = TextMain), shape = RoundedCornerShape(24.dp)) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(title.uppercase(Locale.GERMANY), color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             content()
@@ -71,7 +85,7 @@ private fun CardBlock(title: String, content: @Composable ColumnScope.() -> Unit
 private fun MetricField(title: String, unit: String, value: Double, onChange: (Double) -> Unit) {
     var text by remember(value) { mutableStateOf(fmt(value, 2)) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(title, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
+        Text(title, color = TextMain, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
         OutlinedTextField(
             value = text,
             onValueChange = { raw ->
@@ -372,7 +386,7 @@ private fun TemperatureLevel(label: String, watts: Double) {
 private fun ChecklistRow(label: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Checkbox(checked = checked, onCheckedChange = onChecked, colors = CheckboxDefaults.colors(checkedColor = Mint))
-        Text(label, modifier = Modifier.weight(1f))
+        Text(label, color = TextMain, modifier = Modifier.weight(1f))
     }
 }
 
