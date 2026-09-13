@@ -31,10 +31,10 @@ wait_for_ready_ui() {
   local attempt focus dump
   for attempt in $(seq 1 90); do
     focus="$(current_focus)"
-    if [[ "$focus" == *"$PACKAGE_NAME"* ]]; then
-      dump="$(ui_dump)"
-      reject_system_dialog "$dump"
-      if grep -Fq "$WAIT_TEXT" <<<"$dump"; then return 0; fi
+    dump="$(ui_dump)"
+    reject_system_dialog "$dump"
+    if [[ "$focus" == *"$PACKAGE_NAME"* ]] && grep -Fq "$WAIT_TEXT" <<<"$dump"; then
+      return 0
     fi
     sleep 2
   done
