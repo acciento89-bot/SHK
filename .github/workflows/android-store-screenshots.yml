@@ -30,22 +30,27 @@ jobs:
             task: assembleHeizkoerpercalcDebug
             apk: android/app/build/outputs/apk/heizkoerpercalc/debug/app-heizkoerpercalc-debug.apk
             package: de.kamilunavo.heizkorpercalc
+            wait_text: HeizkörperCalc
           - label: rohrcalc
             task: assembleRohrcalcDebug
             apk: android/app/build/outputs/apk/rohrcalc/debug/app-rohrcalc-debug.apk
             package: de.kamilunavo.rohrcalc
+            wait_text: RohrCalc
           - label: anlagencheck
             task: assembleAnlagencheckDebug
             apk: android/app/build/outputs/apk/anlagencheck/debug/app-anlagencheck-debug.apk
             package: de.kamilunavo.servicecheck
+            wait_text: AnlagenCheck
           - label: lueftungscalc
             task: assembleLueftungscalcDebug
             apk: android/app/build/outputs/apk/lueftungscalc/debug/app-lueftungscalc-debug.apk
             package: de.kamilunavo.luftungscalc
+            wait_text: LüftungsCalc
           - label: kaltecalc
             task: assembleKaltecalcDebug
             apk: android/app/build/outputs/apk/kaltecalc/debug/app-kaltecalc-debug.apk
             package: de.kamilunav.kaltecalc
+            wait_text: KälteCalc
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -53,6 +58,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+      - name: Enable KVM acceleration
+        run: |
+          test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
@@ -69,7 +78,7 @@ jobs:
           profile: pixel_7
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: PACKAGE_NAME='${{ matrix.package }}' APK_PATH='${{ matrix.apk }}' OUTPUT_DIR='android/store/google-play/screenshots/${{ matrix.label }}/de-DE' SECOND_ACTION='swipe' bash "$GITHUB_WORKSPACE/.github/scripts/capture-android-store-screenshots.sh"
+          script: WAIT_TEXT='${{ matrix.wait_text }}' PACKAGE_NAME='${{ matrix.package }}' APK_PATH='${{ matrix.apk }}' OUTPUT_DIR='android/store/google-play/screenshots/${{ matrix.label }}/de-DE' SECOND_ACTION='swipe' bash "$GITHUB_WORKSPACE/.github/scripts/capture-android-store-screenshots.sh"
       - uses: actions/upload-artifact@v4
         with:
           name: SHK-${{ matrix.label }}-authentic-Android-screenshots
