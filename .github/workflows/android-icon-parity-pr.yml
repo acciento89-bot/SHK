@@ -1,0 +1,57 @@
+name: SHK Android icon parity PR
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'store/apple/**'
+      - 'scripts/generate_app_icon.py'
+      - '.github/workflows/android-icon-parity-pr.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [kaltecalc, lueftungscalc, heizkoerpercalc, rohrcalc, anlagencheck]
+    env:
+      APP_ID: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v3
+        with: {log-accepted-android-sdk-licenses: false, packages: platform-tools}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '9.5.0'}
+      - name: Verify iOS and Android icon bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          generated="$RUNNER_TEMP/generated-$APP_ID"
+          python3 scripts/generate_app_icon.py --app "$APP_ID" --source-dir "$generated"
+          expected="$generated/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
+          ios_icon="store/apple/$APP_ID-1024.png"
+          android_icon="android/app/src/$APP_ID/res/drawable-nodpi/ic_launcher.png"
+          play_icon="android/store/google-play/$APP_ID.png"
+          cmp -s "$expected" "$ios_icon"
+          cmp -s "$ios_icon" "$android_icon"
+          test -s "$play_icon"
+          test ! -e "android/app/src/$APP_ID/res/drawable/ic_launcher.xml"
+          test ! -e android/app/src/main/res/drawable/ic_launcher.xml
+          ! grep -Fq 'android:roundIcon=' android/app/src/main/AndroidManifest.xml
+          sha256sum "$expected" "$ios_icon" "$android_icon" "$play_icon"
+      - name: Test and build this flavor
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' >/dev/null
+          flavor="${APP_ID^}"
+          gradle -p android "test${flavor}DebugUnitTest" "bundle${flavor}Debug" --stacktrace

@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - 'android/**'
+      - 'store/apple/**'
+      - 'scripts/generate_app_icon.py'
       - '.github/workflows/android-play-release.yml'
 
 permissions:
@@ -60,26 +62,22 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-java@v5
         with: {distribution: temurin, java-version: '17'}
-      - name: Verify canonical launcher and store source parity
+      - name: Verify exact generated iOS and Android launcher identity
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PYCODE'
-          from pathlib import Path
-          import os, re
-          app = os.environ['APP_ID']
-          launcher = Path(f'android/app/src/{app}/res/drawable/ic_launcher.xml').read_text()
-          play = Path(f'android/store/google-play/{app}.svg').read_text()
-          colors = lambda text: sorted(set(c.upper() for c in re.findall(r'#[0-9A-Fa-f]{6}', text)))
-          if colors(launcher) != colors(play):
-              raise SystemExit(f'{app}: launcher/store color palette differs')
-          normalize = lambda value: re.sub(r'[ ,\s]', '', value)
-          launcher_paths = [normalize(p) for p in re.findall(r'android:pathData="([^"]+)"', launcher)]
-          play_paths = [normalize(p) for p in re.findall(r'<path[^>]*\bd="([^"]+)"', play)]
-          if not launcher_paths or any(path not in play_paths for path in launcher_paths):
-              raise SystemExit(f'{app}: launcher path missing from canonical Play SVG')
-          print(f'{app}: canonical launcher/store parity verified')
-          PYCODE
+          generated="$RUNNER_TEMP/generated-$APP_ID"
+          python3 scripts/generate_app_icon.py --app "$APP_ID" --source-dir "$generated"
+          expected="$generated/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
+          ios_icon="store/apple/$APP_ID-1024.png"
+          android_icon="android/app/src/$APP_ID/res/drawable-nodpi/ic_launcher.png"
+          play_icon="android/store/google-play/$APP_ID.png"
+          cmp -s "$expected" "$ios_icon"
+          cmp -s "$ios_icon" "$android_icon"
+          test -s "$play_icon"
+          test ! -e "android/app/src/$APP_ID/res/drawable/ic_launcher.xml"
+          test ! -e android/app/src/main/res/drawable/ic_launcher.xml
+          sha256sum "$expected" "$ios_icon" "$android_icon" "$play_icon"
       - id: google-auth
         uses: google-github-actions/auth@v3
         with:
