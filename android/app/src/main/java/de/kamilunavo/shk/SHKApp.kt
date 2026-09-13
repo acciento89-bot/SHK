@@ -53,7 +53,9 @@ fun SHKApp(kind: String, onShare: (String) -> Unit) {
 private fun AppPage(title: String, eyebrow: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(BgTop, BgBottom)))) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing),
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
