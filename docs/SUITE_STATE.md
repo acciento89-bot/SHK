@@ -1,3 +1,15 @@
+# SHK Werkstatt — current portfolio state, 16 October 2026
+
+Six rejected tools are consolidated in SHK Werkstatt, using the original AnlagenCheck host 6804749223 and bundle de.kamilunavo.servicecheck. RohrCalc, KälteCalc, LüftungsCalc, HeizkörperCalc and VolumeCalc were removed from the normal App Store Connect list at the owner’s explicit request. Their code/history are retained; do not restore or upload them independently without a new instruction. See QA/rejected-calculators-removed-20261016.json.
+
+SHK Werkstatt 1.0 (6) remains READY_FOR_REVIEW with the first permanent Pro purchase prepared together. It is not yet submitted or approved. Source audit for Duo passes; actual pose/state/device validation remains open. See CURRENT_TASK.md and DUO_READINESS.md.
+
+Approved HydroCalc SHK, MAGCalc and BrennerCalc remain separate, unchanged and READY_FOR_DISTRIBUTION. Approved Rising Steps and Perfect Drop are outside this cleanup. Repository targets below describe historical implementations, not active independent release instructions.
+
+---
+
+## Historical state recorded 24 August 2026
+
 # SHK Suite – Projektstand
 
 Stand: 2026-08-24

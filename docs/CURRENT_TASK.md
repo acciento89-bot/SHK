@@ -1,3 +1,15 @@
+# Calculator listing cleanup — 16 October 2026
+
+The user explicitly authorized removing the rejected single-purpose calculator listings now. This supersedes the older instruction to wait until the consolidated replacement is publicly available. Completed normal removal in App Store Connect after canceling each stale unresolved review submission. RohrCalc (6804748249), KälteCalc (6804747292), LüftungsCalc (6804747588), HeizkörperCalc (6804748049) and VolumeCalc (6804672773) all read back `removed: true`. Each actual App Information page offers App wiederherstellen. VolumeCalc required removing its existing 175-territory sale availability first; its only app version was REJECTED, with no live DE/US lookup result. Local projects, source and historical builds were retained. Removed listings remain under Apple's Removed Apps and their names are released.
+
+Protected app records were independently read back: SHK Werkstatt (6804749223) `removed:false`, READY_FOR_REVIEW; MAGCalc (6801678865), BrennerCalc (6801656652) and HydroCalc SHK (6801788464) `removed:false`, READY_FOR_DISTRIBUTION. No approved listing was modified. Evidence: QA/rejected-calculators-removed-20261016.json.
+
+SHK Werkstatt build 6 and the joint App+Pro draft remain prepared, not submitted or approved. Actual Duo validation remains open. The Mac rebooted twice: after the first reboot, actual built-in Settings rendered on the Duo, but SHK launch still stalled and the host later required the owner's second restart. Do not repeat the old claim that every post-restart Duo capture stayed at the Apple logo; do not count Settings as SHK validation. No new native Duo pass or badge exists. Production source and signed build 6 are unchanged by this documentation cleanup.
+
+One More Floor received a renewed 4.3(a) rejection on 16 October at 20:04 Berlin. After explicit owner approval, the clarification was sent at 20:30 Berlin and exact published text read back. No new Floor resubmission. Its dedicated repository has the receipt/current status.
+
+---
+
 # Authorized Mac restart — 2026-10-16T19:24:53.153415+02:00
 
 User replied "versuch es jetzt mal" to the explicit Mac restart question, authorizing the restart now. A bounded Duo retry launched the app process (PID45846), but native UI remained at launcher/blank white and the native two-case entry/share test harness did not begin cases after approximately3minutes. Interrupted this test deliberately; never count it as a native pass. Diagnostics retained. No product source was changed. Preparing normal macOS restart after committing/pushing this checkpoint; do not force-close unrelated unsaved documents. No new confirmation required. On resumption, verify actual new boot time, mount SSD and continue actual Duo testing. Build6 and joint review draft remain prepared, not submitted. Proof guard remains in place. Restart marker outside Git: Artifacts/AppPortfolio-20261016/MAC-RESTART-CHECKPOINT-20261016.json.

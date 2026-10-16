@@ -1,0 +1,141 @@
+{
+  "checkedUTC": "2026-10-16T18:51:19.784764+00:00",
+  "userRequestedRejectedListingRemoval": true,
+  "apps": [
+    {
+      "appID": "6804748249",
+      "name": "RohrCalc",
+      "bundleID": "de.kamilunavo.rohrcalc",
+      "removed": true,
+      "removedDate": "2026-10-16T11:46:41-07:00",
+      "versions": [
+        {
+          "id": "d1ee1062-019c-4912-930b-c4ce157f8cf8",
+          "version": "1.0",
+          "state": "REJECTED"
+        }
+      ]
+    },
+    {
+      "appID": "6804747292",
+      "name": "KälteCalc",
+      "bundleID": "de.kamilunav.kaltecalc",
+      "removed": true,
+      "removedDate": "2026-10-16T11:48:08-07:00",
+      "versions": [
+        {
+          "id": "23ae65bf-7ca2-4a8e-9267-769b45cdf9b7",
+          "version": "1.0",
+          "state": "REJECTED"
+        }
+      ]
+    },
+    {
+      "appID": "6804747588",
+      "name": "LüftungsCalc",
+      "bundleID": "de.kamilunavo.luftungscalc",
+      "removed": true,
+      "removedDate": "2026-10-16T11:48:18-07:00",
+      "versions": [
+        {
+          "id": "7e9257aa-603b-4d2c-be12-94dd47e39a5e",
+          "version": "1.0",
+          "state": "REJECTED"
+        }
+      ]
+    },
+    {
+      "appID": "6804748049",
+      "name": "HeizkörperCalc",
+      "bundleID": "de.kamilunavo.heizkorpercalc",
+      "removed": true,
+      "removedDate": "2026-10-16T11:48:28-07:00",
+      "versions": [
+        {
+          "id": "2e9469a7-16e6-4ed5-9ecb-1591247cfd4f",
+          "version": "1.0",
+          "state": "REJECTED"
+        }
+      ]
+    },
+    {
+      "appID": "6804672773",
+      "name": "VolumeCalc",
+      "bundleID": "de.kamilunavo.volumecalc",
+      "removed": true,
+      "removedDate": "2026-10-16T11:50:32-07:00",
+      "versions": [
+        {
+          "id": "ca53ae3a-fb00-4a93-9203-b69b2c6845d5",
+          "version": "1.0",
+          "state": "REJECTED"
+        }
+      ]
+    },
+    {
+      "appID": "6804749223",
+      "name": "SHK Werkstatt",
+      "bundleID": "de.kamilunavo.servicecheck",
+      "removed": false,
+      "removedDate": null,
+      "versions": [
+        {
+          "id": "3d763324-d055-426e-9554-0c441eabc82d",
+          "version": "1.0",
+          "state": "READY_FOR_REVIEW"
+        }
+      ]
+    },
+    {
+      "appID": "6801678865",
+      "name": "MAGCalc",
+      "bundleID": "de.kamilunavo.magcalc",
+      "removed": false,
+      "removedDate": null,
+      "versions": [
+        {
+          "id": "804e7857-672e-4223-be6f-25f6dc531e40",
+          "version": "1.0.0",
+          "state": "READY_FOR_DISTRIBUTION"
+        }
+      ]
+    },
+    {
+      "appID": "6801656652",
+      "name": "BrennerCalc",
+      "bundleID": "de.kamilunavo.brennercalc",
+      "removed": false,
+      "removedDate": null,
+      "versions": [
+        {
+          "id": "c6f99c1a-e80f-4315-9a4d-b9fadbe11fee",
+          "version": "1.0.0",
+          "state": "READY_FOR_DISTRIBUTION"
+        }
+      ]
+    },
+    {
+      "appID": "6801788464",
+      "name": "HydroCalc SHK",
+      "bundleID": "de.kamilunavo.hydrocalc",
+      "removed": false,
+      "removedDate": null,
+      "versions": [
+        {
+          "id": "b21fd78c-c554-49e1-8f9e-d3e905ebac4c",
+          "version": "1.0.0",
+          "state": "READY_FOR_DISTRIBUTION"
+        }
+      ]
+    }
+  ],
+  "fiveRejectedListingsRemoved": true,
+  "protectedListingsRetained": true,
+  "notes": [
+    "Removed via normal App Information removal flow after canceling stale unresolved submissions.",
+    "VolumeCalc also required its existing 175-territory sale availability to be removed. Its only version was REJECTED; no live DE/US lookup result.",
+    "No approved calculator listing, SHK host, source repository, local project, or build was deleted.",
+    "Apple retains removed app records under Removed Apps; name reservation is released.",
+    "SHK Werkstatt remains READY_FOR_REVIEW, not submitted or approved in this cleanup."
+  ]
+}
