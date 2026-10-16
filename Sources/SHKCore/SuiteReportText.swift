@@ -16,7 +16,7 @@ extension SuiteProject {
             t("Kunde: ", "Customer: ") + (customer.isEmpty ? missing : customer),
             t("Objekt: ", "Site: ") + (address.isEmpty ? missing : address),
             t("Stand: ", "Updated: ") + updatedAt.formatted(.dateTime.year().month().day().hour().minute().locale(locale)), "",
-            "1 · " + t("Wärme", "Heating"), "VL \(n(heat.flowC)) °C / RL \(n(heat.returnC)) °C · ΔT \(n(heat.flowC-heat.returnC)) K"]
+            "1 · " + t("Wärme", "Heating"), t("Auslegung: ", "Design: ") + "VL \(n(heat.flowC)) °C / RL \(n(heat.returnC)) °C · ΔT \(n(heat.flowC-heat.returnC)) K"]
         if heat.rooms.isEmpty { lines.append(missing) }
         for room in heat.rooms {
             lines.append("\(room.name): " + t("Bedarf", "Demand") + " \(n(room.demandW)) W; ΔT50 \(n(room.nominalW)) W; n=\(n(room.exponent, 3)); " + t("Raum", "Room") + " \(n(room.roomC)) °C; " + t("Leistung", "Output") + " \(n(room.power(flow: heat.flowC, returning: heat.returnC))) W")
@@ -34,22 +34,37 @@ extension SuiteProject {
         for item in volume.components {
             lines.append("\(item.name): \(n(item.quantity)) × \(n(item.unitVolumeLiters)) l = \(n(item.totalLiters)) l; " + t("Quelle: ", "Source: ") + (item.source?.isEmpty == false ? item.source! : missing) + (item.note.map { " · " + $0 } ?? ""))
         }
-        lines += [t("Realer Wasserinhalt: ", "Calculated water volume: ") + "\(n(volume.calculatedVolumeLiters)) l",
-            t("Planungsreserve separat: ", "Planning reserve, separately: ") + "\(n(volume.reservePercent)) % / \(n(volume.reserveLiters)) l", "", "4 · " + t("Lüftung", "Ventilation")]
+        if !volume.components.isEmpty {
+            lines += [t("Berechneter Wasserinhalt: ", "Calculated water volume: ") + "\(n(volume.calculatedVolumeLiters)) l",
+                t("Planungsreserve separat: ", "Planning reserve, separately: ") + "\(n(volume.reservePercent)) % / \(n(volume.reserveLiters)) l"]
+        }
+        for check in volume.fillChecks ?? [] {
+            lines += [t("Füllnachweis: ", "Fill verification: ") + check.date.formatted(.dateTime.year().month().day().hour().minute().locale(locale)),
+                t("Zähler vorher / nachher: ", "Meter before / after: ") + "\(n(check.meterStartL)) / \(n(check.meterEndL)) l; " + t("abgelassen", "drained") + " \(n(check.drainedL)) l; " + t("netto", "net") + " \(n(check.netFillL)) l",
+                t("Festgehaltene Inventar-Basis: ", "Frozen inventory baseline: ") + "\(n(check.calculatedBaselineL)) l / \(check.componentCount) " + t("Bauteile", "components") + "; " + t("Abweichung", "deviation") + " \(n(check.deviationL)) l / \(check.deviationPercent.map { n($0) } ?? missing) %; ±\(n(check.tolerancePercent)) %",
+                t("Anlage anfangs leer und gleiche Systemgrenzen bestätigt. ", "Initially empty system and matching boundaries confirmed. ") + (check.isWithinTolerance ? t("Innerhalb Projekttoleranz.", "Within project tolerance.") : t("Abweichung untersuchen.", "Investigate deviation."))]
+            if !check.note.isEmpty { lines.append(check.note) }
+        }
+        lines += ["", "4 · " + t("Lüftung", "Ventilation")]
         if air.terminals.isEmpty { lines.append(missing) }
         for terminal in air.terminals {
             let measured = terminal.measuredM3H.map { n($0) + " m³/h" } ?? missing
-            lines.append("\(terminal.name) [\(terminal.stream.rawValue)]: " + t("Soll", "Target") + " \(n(terminal.targetM3H)) m³/h; " + t("Ist", "Measured") + " \(measured); " + t("Abweichung", "Deviation") + " \(terminal.deviationPercent.map { n($0) + " %" } ?? missing)")
+            let stream = terminal.stream == .supply ? t("Zuluft", "Supply") : t("Abluft", "Extract")
+            lines.append("\(terminal.name) [\(stream)]: " + t("Soll", "Target") + " \(n(terminal.targetM3H)) m³/h; " + t("Ist", "Measured") + " \(measured); " + t("Abweichung", "Deviation") + " \(terminal.deviationPercent.map { n($0) + " %" } ?? missing)")
+            if !terminal.note.isEmpty { lines.append(terminal.note) }
         }
         lines += [t("Projekttoleranz: ", "Project tolerance: ") + "±\(n(air.tolerancePercent)) %", "", "5 · " + t("Kälte", "Refrigeration"), t("Kältemittel: ", "Refrigerant: ") + (cold.refrigerant.isEmpty ? missing : cold.refrigerant)]
         if cold.readings.isEmpty { lines.append(missing) }
         for reading in cold.chronological {
             lines.append(reading.date.formatted(.dateTime.year().month().day().hour().minute().locale(locale)) + ": " + t("Sauggas", "Suction") + " \(n(reading.suctionC)) °C; " + t("Verdampfung", "Evaporation") + " \(n(reading.evaporationC)) °C; " + t("Verflüssigung", "Condensation") + " \(n(reading.condensationC)) °C; " + t("Flüssigkeit", "Liquid") + " \(n(reading.liquidC)) °C; SH \(n(reading.superheatK)) K; SC \(n(reading.subcoolingK)) K")
+            if !reading.note.isEmpty { lines.append(reading.note) }
         }
-        lines += ["", "6 · Service", t("Druck kalt: ", "Cold pressure: ") + pressure(service.coldPressureBar), t("Druck warm: ", "Hot pressure: ") + pressure(service.hotPressureBar),
+        lines += ["", "6 · Service", t("Vorlauf gemessen: ", "Measured supply: ") + (service.measuredFlowC.map { n($0) + " °C" } ?? missing),
+            t("Rücklauf gemessen: ", "Measured return: ") + (service.measuredReturnC.map { n($0) + " °C" } ?? missing),
+            t("Druck kalt: ", "Cold pressure: ") + pressure(service.coldPressureBar), t("Druck warm: ", "Hot pressure: ") + pressure(service.hotPressureBar),
             t("Eingestellte Vorgaben: ", "Entered criteria: ") + "\(n(service.minimumPressureBar))–\(n(service.maximumPressureBar)) bar; ΔT \(n(service.minimumSpreadK))–\(n(service.maximumSpreadK)) K; h \(n(service.staticHeightM)) m; " + t("statische Reserve", "static reserve") + " \(n(service.staticReserveBar)) bar; SV \(n(service.safetyValveBar)) bar; " + t("SV-Reserve", "safety margin") + " \(n(service.safetyMarginBar)) bar; max. Δp \(n(service.maximumPressureRiseBar)) bar"]
-        let checks = service.localizedChecks(flowC: heat.flowC, returnC: heat.returnC, language: language)
-        if checks.isEmpty { lines.append(t("Prüfung unvollständig: beide Druckmessungen erforderlich.", "Incomplete check: both pressure measurements required.")) }
+        let checks = service.recordedChecks(language: language)
+        if checks.isEmpty { lines.append(t("Prüfung unvollständig: tatsächliche Vorlauf-, Rücklauf- und beide Druckmessungen erforderlich.", "Incomplete check: actual supply, return and both pressure measurements required.")) }
         for check in checks {
             let severity = de ? check.severity.rawValue : (check.severity == .ok ? "OK" : check.severity == .notice ? "Note" : "Check")
             lines.append("[\(severity)] \(check.title): \(check.detail)")

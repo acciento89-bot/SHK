@@ -1,0 +1,42 @@
+{
+  "appID": "6804749223",
+  "bundleID": "de.kamilunavo.servicecheck",
+  "version": "1.0",
+  "build": "5",
+  "localizations": {
+    "de-DE": {
+      "name": "SHK Werkstatt",
+      "subtitle": "Sechs Bereiche. Ein Projekt.",
+      "keywords": "SHK,Heizung,Rohrnetz,Wasserinhalt,Lüftung,Kälte,Service,Handwerk,Messung,Projektbericht,Heizkörper",
+      "promotionalText": "Vom Wärmebedarf über Rohrnetz und Wasserinhalt bis zur Messung: eine gemeinsame Projektakte. Ein Projekt und alle Grundrechner kostenlos.",
+      "description": "Deine Anlage. Sechs Fachbereiche. Ein gemeinsamer Bericht.\n\nSHK Werkstatt verbindet Berechnung und Dokumentation für den technischen Einsatz. Erfasse Kunde und Standort einmal und behalte Auslegung, Bauteile und tatsächliche Messwerte im selben Projekt.\n\n• Wärme: Räume, Heizkörperleistung, Wärmebedarf und Volumenstrom bei deinen Systemtemperaturen.\n• Rohrnetz: serielle Abschnitte mit Innendurchmesser, Rauheit, Einzelwiderständen und Druckverlust. Übernimm den Volumenstrom bewusst aus der Wärmeauslegung.\n• Wasserinhalt: Bauteile und Rohrgeometrie mit Datenquellen. Verknüpfte Rohre aktualisieren, ohne doppelt zu zählen. Tatsächliche Befüllung mit der festgehaltenen Inventar-Basis vergleichen.\n• Lüftung: Soll- und Istwerte je Auslass, fehlende Messungen, Abweichungen, Raumbedarf und Kanalquerschnitte.\n• Kälte: zeitlich geordnete Überhitzung und Unterkühlung, Druckverhältnis und sensible luftseitige Leistung. Sättigungstemperaturen stammen aus deinen verifizierten Stoffdaten.\n• Service: tatsächliche Temperaturen und Drücke, eigene Prüfvorgaben, Checkliste und Übergabenotizen.\n\nKOSTENLOS\nAlle Grundrechner, ein gespeichertes Projekt und ein teilbarer Textbericht. Keine Anmeldung, keine Werbung und kein Tracking. Projektdaten bleiben auf deinem Gerät; du entscheidest beim Export über den Empfänger.\n\nPRO – EINMAL KAUFEN\nZusätzliche Projekte und mehrseitige PDF-Berichte dauerhaft freischalten. Kein Abo. Der aktuelle Preis erscheint vor dem Kauf im Pro-Bereich. „Käufe wiederherstellen“ ist dort direkt erreichbar.\n\nFür iPhone und iPad, auf Deutsch und Englisch. Verwende Herstellerdaten und überprüfte Messwerte. Die App unterstützt Berechnung und Dokumentation; sie ersetzt keine fachliche Prüfung und erteilt keine automatische Sicherheits- oder Normfreigabe.\n\nDatenschutz: https://acciento89-bot.github.io/SHK/privacy/\nNutzungsbedingungen: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/",
+      "privacyPolicyUrl": "https://acciento89-bot.github.io/SHK/privacy/",
+      "supportUrl": "https://kamilunavo.com/support"
+    },
+    "en-US": {
+      "name": "SHK Werkstatt",
+      "subtitle": "Six disciplines. One project.",
+      "keywords": "HVAC,heating,pipe,water,ventilation,refrigeration,service,commissioning,project,report,radiator",
+      "promotionalText": "Connect heat demand, pipe routes, water inventories and actual readings in one project notebook. One saved project and all basic calculators are free.",
+      "description": "Your system. Six disciplines. One connected report.\n\nSHK Werkstatt brings calculation and documentation together for technical site visits. Enter the customer and site once, then keep design values, components and actual readings in the same project.\n\n• Heating: rooms, radiator output, heat demand and flow rate at your system temperatures.\n• Pipe routes: series sections with internal diameter, roughness, local resistance and pressure loss. Explicitly transfer flow from the heating design.\n• Water volume: components and pipe geometry with data sources. Update linked pipes without counting them twice. Compare actual filling with a frozen inventory baseline.\n• Ventilation: target and measured flow per terminal, missing readings, deviations, room demand and duct sizes.\n• Refrigeration: chronological superheat and subcooling, pressure ratio and air-side sensible capacity. Saturation temperatures come from your verified refrigerant data.\n• Service: actual temperatures and pressures, adjustable check criteria, work checklist and handover notes.\n\nFREE\nAll basic calculators, one saved project and a shareable text report. No account, advertising or tracking. Project data stay on your device; you choose the recipient when exporting.\n\nPRO – ONE-TIME PURCHASE\nPermanently unlock additional projects and multipage PDF reports. No subscription. The current price appears in Pro before purchase. Restore Purchases is directly accessible there.\n\nBuilt for iPhone and iPad, in German and English. Use manufacturer information and verified measurements. This calculation and documentation aid does not replace professional assessment or provide automatic safety or standards approval.\n\nPrivacy: https://acciento89-bot.github.io/SHK/privacy/\nTerms: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/",
+      "privacyPolicyUrl": "https://acciento89-bot.github.io/SHK/privacy/",
+      "supportUrl": "https://kamilunavo.com/support"
+    }
+  },
+  "iap": {
+    "productID": "de.kamilunavo.servicecheck.pro",
+    "type": "NON_CONSUMABLE",
+    "referenceName": "SHK Werkstatt Pro",
+    "targetPriceEUR": "9.99",
+    "localizations": {
+      "de-DE": {
+        "name": "SHK Werkstatt Pro",
+        "description": "Mehr Projekte und PDF-Berichte dauerhaft freischalten."
+      },
+      "en-US": {
+        "name": "SHK Werkstatt Pro",
+        "description": "Unlock additional projects and PDF reports permanently."
+      }
+    }
+  }
+}

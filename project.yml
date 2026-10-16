@@ -122,7 +122,94 @@ targets:
         TEST_TARGET_NAME: RohrCalc
         PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.tests.rohrcalc
 
+  SHKWerkstatt:
+    type: application
+    platform: iOS
+    sources:
+      - Apps/SHKWerkstatt
+      - Sources/SHKCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.servicecheck
+        PRODUCT_NAME: SHKWerkstatt
+        DEVELOPMENT_TEAM: TKG684N5GL
+        MARKETING_VERSION: '1.0'
+        CURRENT_PROJECT_VERSION: '5'
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: SHK Werkstatt
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: 'UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight'
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: 'UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight'
+        TARGETED_DEVICE_FAMILY: '1,2'
+        SUPPORTS_MACCATALYST: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_EMIT_LOC_STRINGS: YES
+
+  SHKWerkstattCommerceTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests/SuiteCommerceTests
+      - path: StoreKit/SHKWerkstatt.storekit
+        buildPhase: resources
+    dependencies:
+      - target: SHKWerkstatt
+      - sdk: StoreKitTest.framework
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.tests.shkcommerce
+        TEST_HOST: '$(BUILT_PRODUCTS_DIR)/SHKWerkstatt.app/SHKWerkstatt'
+        BUNDLE_LOADER: '$(TEST_HOST)'
+        FRAMEWORK_SEARCH_PATHS: '$(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks'
+
+  SHKWerkstattUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - Tests/SuiteWorkflowUITests
+      - path: StoreKit/SHKWerkstatt.storekit
+        buildPhase: resources
+    dependencies:
+      - target: SHKWerkstatt
+      - sdk: StoreKitTest.framework
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: SHKWerkstatt
+        PRODUCT_BUNDLE_IDENTIFIER: de.kamilunavo.tests.shkwerkstatt
+        FRAMEWORK_SEARCH_PATHS: '$(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks'
+
 schemes:
+  SHKWerkstatt:
+    build:
+      targets:
+        SHKWerkstatt: all
+    test:
+      targets: [SHKWerkstattUITests]
+  SHKWerkstattScreenshots:
+    build:
+      targets:
+        SHKWerkstatt: all
+    run:
+      storeKitConfiguration: StoreKit/SHKWerkstatt.storekit
+    test:
+      targets:
+        - name: SHKWerkstattUITests
+          selectedTests: [SuiteStoreScreenshots]
+      environmentVariables:
+        SHK_STORE_CAPTURE: '1'
+      captureScreenshotsAutomatically: false
+  SHKWerkstattCommerce:
+    build:
+      targets:
+        SHKWerkstatt: all
+    run:
+      storeKitConfiguration: StoreKit/SHKWerkstatt.storekit
+    test:
+      targets: [SHKWerkstattCommerceTests]
   KalteCalc:
     build:
       targets:

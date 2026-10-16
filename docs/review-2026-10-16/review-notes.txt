@@ -1,0 +1,17 @@
+SHK Werkstatt 1.0 (5) replaces the previous AnlagenCheck submission with one integrated native iPhone/iPad project application.
+
+The six previously separate rejected tools are consolidated here. This is a connected project workflow rather than a collection of independent app shells: enter the customer/system once; size heating rooms; explicitly transfer the resulting flow into a serial pipe route; update linked pipe-water quantities in the component inventory without duplicate entries; compare actual filling against a frozen inventory; document ventilation and refrigeration measurements; and produce one six-discipline handover report. Design inputs and missing actual measurements remain distinct. Existing approved products are separate and have not been removed.
+
+REVIEW PATH — NO ACCOUNT REQUIRED
+1. Launch -> New project -> enter a project name -> Create.
+2. Open the saved project. Its six sections are Heating, Pipe route, Water volume, Ventilation, Refrigeration and Service. Each section has native parent navigation.
+3. Heating: add a named room and enter manufacturer output/design data. The explicit flow-transfer action is below the results.
+4. Pipe route: add a section with actual internal diameter, length and resistance data. Use Update pipe volume in inventory; repeating it updates the linked item rather than duplicating it. Manual inventory components remain.
+5. Water volume: add manufacturer components or pipe geometry. Fill recording requires both actual meter readings and confirmation of an initially empty system with matching boundaries.
+6. Service: actual temperatures/pressures and project-specific checking criteria are entered independently. This is a documentation/calculation aid, not a safety certificate.
+7. Return to the project -> View project report -> Share text report. This presents the standard system sharing interface on iPhone and iPad. Use Save in the project toolbar to retain edits. Data are stored locally.
+
+FREE AND PRO
+The download, all six basic calculators, one saved project and text sharing are free. The directly visible Pro tab offers the non-consumable de.kamilunavo.servicecheck.pro (SHK Werkstatt Pro): additional saved projects and complete multipage PDF reports, permanently, with no subscription. The localized StoreKit price is displayed before purchase. Restore Purchases is directly available in the Pro toolbar and on the page. PDF export also explains the Pro requirement. No alternative payment method, ads, tracking, login or server account is used.
+
+The first non-consumable is submitted with this app version. Review and store screenshots show the actual native interface with clearly labeled example data. The new icon represents its project notebook, pipe and water-measurement functions.

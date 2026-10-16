@@ -1,0 +1,57 @@
+{
+  "identifier": "6726ecea-2790-4b20-8157-e1d327a666cc",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "9.99",
+      "familyShareable": false,
+      "internalID": "dae07ee6-a9cd-4747-a91b-763d7c4007a5",
+      "localizations": [
+        {
+          "description": "Permanent access to additional projects and PDF reports.",
+          "displayName": "SHK Werkstatt Pro",
+          "locale": "en_US"
+        },
+        {
+          "description": "Zus\u00e4tzliche Projekte und PDF-Berichte dauerhaft freischalten.",
+          "displayName": "SHK Werkstatt Pro",
+          "locale": "de_DE"
+        }
+      ],
+      "productID": "de.kamilunavo.servicecheck.pro",
+      "referenceName": "SHK Werkstatt Pro",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "3f3d9ea6-e553-4637-a7bc-a585af813346",
+      "localizations": [
+        {
+          "description": "Permanent access to additional projects and PDF reports.",
+          "displayName": "Unrelated test product",
+          "locale": "en_US"
+        },
+        {
+          "description": "Zus\u00e4tzliche Projekte und PDF-Berichte dauerhaft freischalten.",
+          "displayName": "Unrelated test product",
+          "locale": "de_DE"
+        }
+      ],
+      "productID": "de.kamilunavo.tests.unrelated",
+      "referenceName": "Unrelated test product",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_failTransactionsEnabled": false,
+    "_locale": "de_DE",
+    "_storefront": "DEU",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

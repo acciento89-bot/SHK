@@ -1,6 +1,10 @@
 import Foundation
 
 extension SuiteService {
+    public func recordedChecks(language: SuiteLanguage) -> [SystemCheckResult] {
+        guard let measuredFlowC, let measuredReturnC else { return [] }
+        return localizedChecks(flowC: measuredFlowC, returnC: measuredReturnC, language: language)
+    }
     /// Reuse the existing grading. Translate presentation, never re-grade here.
     public func localizedChecks(flowC: Double, returnC: Double, language: SuiteLanguage) -> [SystemCheckResult] {
         let values = checks(flowC: flowC, returnC: returnC)

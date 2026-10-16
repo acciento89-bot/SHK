@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Run on a Mac with Xcode and the existing developer account/signing access.
 set -euo pipefail
+echo "Legacy batch release disabled: rejected calculators are unified in SHKWerkstatt. Use scripts/archive-suite.sh." >&2
+exit 2
 : "${SHK_DEVELOPMENT_TEAM:?Set SHK_DEVELOPMENT_TEAM to your Apple Developer team ID}"
 command -v xcodebuild >/dev/null
 command -v xcodegen >/dev/null
