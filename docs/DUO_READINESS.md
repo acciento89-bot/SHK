@@ -20,6 +20,12 @@ Existing simulatorC29D1BDB-6FCC-4C2F-BDB1-B2324BF43CA3 failed data migration bef
 
 Runtime diagnostics and retained interrupted launch result: external Build directory WorkshopR6. Device shut down after the investigation. Host was under substantial memory pressure (8GBRAM, about9.6GBswap); cause not conclusively established. SSD had293GB free and internal disk3.5GB free. Do not describe SSD storage as the blocker.
 
+## Final attempt and saved release
+
+Restarting the idle CoreSimulator service allowed bootstatus to report Finished at17:27:10Berlin. Nonetheless, after more than10minutes the real outer display still showed the Apple boot logo, the inner display was black and no SHK app process existed. The test device was shut down. A Mac restart was proposed as the next environment recovery attempt; user response is pending. This is a proposal, not a verified fix. No Mac restart is permitted without an explicit answer because other user apps are active.
+
+SHK build6 was signed, exported, uploaded and processed VALID. All36new public store images and the new Pro review image are COMPLETE. App+Pro are prepared together as draft5ae9147d-4dfd-47c6-8c0a-3894c4a1a94d, READY_FOR_REVIEW, not submitted. No Duo badge or compatibility marketing claim was added. Native Duo verification remains the release gate for this prepared submission.
+
 ## Required next native checks
 
 1. Closed outer display: navigation, every calculator, Pro and restore, input keyboard and sheets.
