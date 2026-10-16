@@ -1,0 +1,15 @@
+{
+  "repository": "acciento89-bot/AnlagenVolumen",
+  "commit": "4bd2992",
+  "sourceSha256": {
+    "AnlagenVolumen/Core/VolumeModels.swift": "e874b31a7c7c9933cdab74966d0a23a070506d350de45e5a97594097e59de9e9",
+    "AnlagenVolumen/Core/VolumeCalculator.swift": "188247811787037c819dce9cdb1f3b86402ff4a3f97125a9f7575fc801b607f7",
+    "AnlagenVolumen/Core/ReferenceData.swift": "b10d8e315231f5657d7c4c01f3b7bd36059484ee7897a71b7de6d0791a7c4256",
+    "AnlagenVolumenTests/VolumeCalculatorTests.swift": "90bcdc9109655277aca5f7723d8b4a2ebb34b4524427877f36ad5d130e55c4ca"
+  },
+  "modifications": [
+    "VolumeModels: optional sourcePipeSectionID UUID links a combined-project pipe entry; original volume formulas unchanged.",
+    "Tests: module import changed from AnlagenVolumenCore to SHKCore only."
+  ],
+  "userAuthorization": "Consolidate only six rejected apps, approved calculator sources untouched."
+}

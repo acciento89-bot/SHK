@@ -1,0 +1,13 @@
+{
+  "tool": "built-in image_gen",
+  "intent": "New original logo-brand iOS app icon, opaque full bleed square.",
+  "sourceFile": "/Users/piotrkaminski/.codex/generated_images/01a11788-3eb6-7e32-963e-51b37d78e2ed/exec-2bce006b-413b-4c3d-bd23-8c61491b83d7.png",
+  "sourceSha256": "10d5645090352ff60d03ff995aa3ca8ae5061a8c78c3e560aa416e5c7bd912fe",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "visualReview": "Generated and viewed: ivory folded project sheet, one connected copper pipe and gauge, blue water droplet on deep petrol. Relevant to calculator/project app; no unrelated game imagery.",
+  "prompt": "Use case: logo-brand. Asset type: final iOS app icon for an original professional offline heating, plumbing, ventilation and refrigeration calculation / project notebook app named SHK Werkstatt. Generate exactly one finished square 1024x1024 full-bleed app icon, no phone mockup, no border, no externally rounded square corners (iOS will mask). Premium precise industrial product design, subtle polished 3D depth but extremely clear at small size. Background rich deep petrol/teal softly lit, opaque edge-to-edge. Center a single warm ivory technical project sheet with a restrained folded upper corner. On the sheet a simple continuous copper pipe circuit with two right-angle bends, one small blue water droplet and a concise gauge dial integrated into the same circuit. Elegant technically credible arrangement, no crowded assortment of symbols. Rounded machined copper edges, soft natural contact shadows, crisp ivory and teal contrast, premium native app character. This is a technical calculator and project documentation tool, not a repair-driving game: no vehicle, person, house mascot, tools crossed over gears, coins, AI sparkle, batteries, generic calculator keypad, construction scene or photorealistic real hardware. No text, no letters, no numerals, no watermarks, no branded products. Generous roughly 15 percent safe inset for the central symbol, simple silhouette. Background fully opaque.",
+  "nativeIconValidation": "Pending actual exported1024andnativevariants."
+}

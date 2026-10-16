@@ -27,18 +27,18 @@
 - iPad share sheet must actually appear; rotation, keyboard and large text cannot cover Save/Back.
 - Wrong/unverified/pending/refunded purchase cannot unlockPro; previously saved projects survive entitlement loss.
 
-### Task1: Shared project and archive
+### Task 1: Shared project and archive
 
 Files: Sources/SHKCore/VolumeModels.swift,VolumeCalculator.swift,ReferenceData.swift (owned import); SuiteProject.swift,SuiteArchive.swift,SuiteAccess.swift; Tests/SHKCoreTests/SuiteProjectTests.swift,SuiteArchiveTests.swift,SuiteAccessTests.swift plus importedVolume tests.
 
 Interfaces: SuiteProject.init(name:customer:), heating/pipe/volume/air/cold/service typed values, transferHeatingFlow(), synchronizePipeVolumes(), reportText(language:); SuiteArchive(url:).load()/save(_:); SuiteAccess.canCreateProject(count:hasPro:).
 
-- [ ] Run existing swift test --jobs2 baseline and retain exact result.
-- [ ] Write failing tests: six modules persist with UUIDs; source sync repeated twice same volume and manual component; invalid source leaves destination unchanged; missing!=zero; future/corrupt archive does not overwrite; free count0allows/1blocks,Proallows; report contains all actual sections/units.
-- [ ] Run new tests RED, implement minimum typed model/archive/access policy and imported tested math, then run full swift test GREEN.
-- [ ] Commit coherent core integration with exact imported source provenance.
+- [x] Run existing swift test --jobs2 baseline and retain exact result.
+- [x] Write failing tests: six modules persist with UUIDs; source sync repeated twice same volume and manual component; invalid source leaves destination unchanged; missing!=zero; future/corrupt archive does not overwrite; free count0allows/1blocks,Proallows; report contains all actual sections/units.
+- [x] Run new tests RED, implement minimum typed model/archive/access policy and imported tested math, then run full swift test GREEN.
+- [x] Commit coherent core integration with exact imported source provenance.
 
-### Task2: Unified native product and commerce
+### Task 2: Unified native product and commerce
 
 Files: Apps/SHKWerkstatt/SHKWerkstattApp.swift,SuiteTheme.swift,SuiteHome.swift,SuiteProjectViews.swift,SuiteModuleEditors.swift,SuiteCalculators.swift,SuiteStore.swift,SuiteProView.swift,SuiteReport.swift,Assets.xcassets,PrivacyInfo.xcprivacy,DE/EN resources; project.yml; UI tests; scripts/archive-suite.sh; suite StoreKit config.
 
@@ -51,7 +51,7 @@ Interfaces: projectStore.save()returnsBool/error preserves last file; module edi
 - [ ] Generate Xcode project, build/UITest phone then tablet serially, fix actual regressions; inspect screenshots and actual native icon variants.
 - [ ] Independent read-only review, full core tests, Release compilation/archive and exact artifact/source binding; commit/push verified slices.
 
-### Task3: Single host metadata and review
+### Task 3: Single host metadata and review
 
 Files: docs/review-2026-10-16/ (metadata/review notes/proof), scripts for scoped archive only, current task handoff.
 

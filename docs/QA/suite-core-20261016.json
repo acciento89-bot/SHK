@@ -1,0 +1,32 @@
+{
+  "scope": "Shared six-discipline project, explicit idempotent transfers, safe atomic local archive, verified-purchase access policy, DE/EN complete report text. Not UI/StoreKit/native release acceptance.",
+  "baseline": {
+    "swiftTesting": 25,
+    "xctest": 13,
+    "pass": true
+  },
+  "current": {
+    "swiftTesting": 41,
+    "xctest": 22,
+    "total": 63,
+    "failures": 0,
+    "processExitCode": 0
+  },
+  "redEvidence": [
+    "task1-red.log: missing new types before implementation",
+    "task1-boundaries-red.log: duplicate section source mutated/double-counted volume and English service text was German; six real assertion issues before fixes."
+  ],
+  "source": {
+    "ownedVolumeRepository": "acciento89-bot/AnlagenVolumen",
+    "ownedVolumeCommit": "4bd2992",
+    "originalSHKMathFilesUnchanged": true,
+    "originalVolumeFormulasUnchanged": true
+  },
+  "testsLogSha256": "2c51cfcb5de23a58e810cc6923916f07ae5d17dba9dbb17b7f5e778e70105b3b",
+  "limits": [
+    "No app UI compiled or native run yet.",
+    "StoreKit policy unit tests are not real purchase/restore tests.",
+    "New icon viewed and opaque source resized mechanically to1024; nativeexport/iconvariantsnotvalidatedyet.",
+    "No AppStoreConnect writes/submission/removal performed."
+  ]
+}
