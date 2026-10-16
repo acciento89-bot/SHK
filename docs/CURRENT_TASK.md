@@ -1,3 +1,9 @@
+# Authorized Mac restart — 2026-10-16T19:24:53.153415+02:00
+
+User replied "versuch es jetzt mal" to the explicit Mac restart question, authorizing the restart now. A bounded Duo retry launched the app process (PID45846), but native UI remained at launcher/blank white and the native two-case entry/share test harness did not begin cases after approximately3minutes. Interrupted this test deliberately; never count it as a native pass. Diagnostics retained. No product source was changed. Preparing normal macOS restart after committing/pushing this checkpoint; do not force-close unrelated unsaved documents. No new confirmation required. On resumption, verify actual new boot time, mount SSD and continue actual Duo testing. Build6 and joint review draft remain prepared, not submitted. Proof guard remains in place. Restart marker outside Git: Artifacts/AppPortfolio-20261016/MAC-RESTART-CHECKPOINT-20261016.json.
+
+---
+
 # Latest prepared release — 16 October 2026, 17:40 Berlin
 
 Design sourcef098cd5 pushed.69core tests pass, final9nativephone workflows pass,48native DE/EN phone+iPad captures and4localStoreKitUI purchases pass. Archive/export build6 succeeded; signed distribution verified, SHA25683b99cad5490d484ce3dc326c22ff2640bc0c5a06efc7276da9a40d79371280d. Build6 b9338387-7e8b-422d-95af-2dc2fd1ce07e uploaded and VALID. All36actual public store screenshots COMPLETE with local checksum verification. Current Pro review imagecd26dbf2-6612-4453-888e-af3a1e155628 COMPLETE. Selected build6. Removed ONLY old rejected review item, preserved listing. New joint AppVersion+ProVersion draft5ae9147d-4dfd-47c6-8c0a-3894c4a1a94d has exactly2items, READY_FOR_REVIEW, NOT submitted. No approved app touched.
