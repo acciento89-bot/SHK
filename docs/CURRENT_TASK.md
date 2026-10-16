@@ -1,3 +1,27 @@
+# Latest user steering — iPhone Duo, 16 October 2026
+
+SHK Werkstatt remains first; audit and improve other apps individually afterward for Duo updates. No approved calculator is to be merged, removed or silently changed. Adopted Apple app-resizability skill exported to Artifacts/AppPortfolio-20261016/AppleSkills-20261016. Source audit (including independent read-only review) passes all five categories: no fixed screen/orientation/idiom layout, SwiftUI scene lifecycle, native safe areas; launch screen and all four iPad orientations configured. SDK27.1. Actual Duo pose/state verification is NOT complete. Existing device C29D1BDB boot migration failed; separate fresh simulator7CF19FC3-EA2A-4A6D-A028-B3690A1F6E4B was created without erasing existing data. First boot migrated, subsequent clean boot again reported Data Migration Failed, app installation succeeded but launch and SpringBoard stalled. Native outer display showed the Apple boot logo; inner was black. DeviceHub Open control was exercised through actual accessibility. Retain diagnostics; do not call these screenshots app screenshots or claim native Duo readiness/badge. Device shut down after investigation to release host pressure (8GB RAM, approximately9.6GB swap,3.5GB internal free). SSD itself has293GB free.
+
+The current source fingerprint07a37649e58972744a776eaae1d9ccdac8b8920b4e4505622d5765393cd78b63 remains unchanged. Final native phone9/9 workflows PASS (PhoneWorkflowsGreen.xcresult,238.860sec; wrapper's trailing shutdown returned149 because Xcode had already shut the device; TEST EXECUTE SUCCEEDED and zero failures). Final DE/EN phone+iPad capture tests all PASS,48 actual native screenshots plus four actual local StoreKit UI purchase assertions. Phone69 updated dark screenshots now uploaded9per locale, both COMPLETE; iPad upload in progress. Apple intermittent500 recovered. Build5 remains explicitly blocked from submission. Build6 is not yet archived/uploaded/submitted. Duo work must remain explicitly pending if simulator cannot launch.
+
+---
+
+## Latest verification during workshop revision
+
+Production source final fingerprint07a37649e58972744a776eaae1d9ccdac8b8920b4e4505622d5765393cd78b63. Native build6 succeeds. First DE/EN phone+iPad captures passed (48 actual images) before minor Pro symbol correction. Native9-phone workflow run:8passed, original max-text landscape scroll failed from test flick oscillation. Evidence retained PhoneWorkflowsFinal.xcresult. Fixed test driver only (slow measured deltas inside usable viewport), scoped partial-card opt-in requiring title fully visible, actual destination/back checks for all6 max-text cards. Focused LargestTextTargetedScroll.xcresult PASSED54.019sec. Independent code review clears product visual changes and final test-driver delta. Production data/math/StoreKit unchanged. Old one-symbol typo iphone.and.ipad corrected to ipad.and.iphone; final captures and actual UI purchase tap assertions under local SKTest now running. Source stays frozen during native jobs.
+
+Safari auth restored and current rejected SHK version read200. User is actively browsing other tabs; helpers now target the existing ASC tab by exact origin/window without changing the user's front tab. A prior relative GET hit a foreign front tab and returned404; no writes sent. Initial500 errors also occurred on official public API and subsequently recovered. Old build5 remains on design hold; do not execute old submission helper.
+
+# ACTIVE VISUAL REVISION — user correction after the 14:00 checkpoint
+
+User has resumed work and explicitly rejected the mostly white SHK Werkstatt design. The new brief is a cohesive SHK workshop look. Bounded visual revision under way: deep petrol/steel surfaces, copper actions with dark ink, original generated HVAC workbench banner and six native scalable equipment illustrations; root, quick tools, project/module forms, report preview and Pro aligned. Default native dark scheme, full Dynamic Type. Calculations/data/commerce behavior retained. Host source build is now 6; old VALID uploaded build5 is NOT to be submitted. Design hold marker /Artifacts/AppPortfolio-20261016/SHK-DESIGN-HOLD.json blocks the old finish helper.
+
+On user relogin Safari left login, but actual normal App Store Connect page and authenticated/public API reads returned HTTP500 UNEXPECTED_ERROR / timeouts. No submission changes sent. Developer Portal session restored; exact NavoOps App Store profile 49ZRAU2VXH was generated with existing local W4WP547TR8 certificate, confirmed Download page, but not yet downloaded/installed/exported. Public profile read also500. NavoOps remains paused while SHK design is priority. No approved calculators touched. Heartbeat stays PAUSED; this work is directly resumed by current user feedback, not a new scheduled run.
+
+Native design build/captures pending. Old validation below belongs to build5 and is not proof of build6.
+
+---
+
 # Current checkpoint — 16 October 2026, 14:00 Berlin deadline
 
 ## Binding scope

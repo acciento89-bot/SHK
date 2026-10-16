@@ -18,6 +18,8 @@ struct SuiteRootView: View {
             NavigationStack { SuiteProView() }
                 .tabItem { Label("Pro", systemImage: "checkmark.seal") }.tag(2)
         }
+        .toolbarBackground(SuiteTheme.canvas, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
         .sheet(isPresented: $settings) { SuiteSettingsView() }
         .alert(S("SHK Werkstatt", "SHK Workshop"), isPresented: Binding(get: { store.message != nil }, set: { if !$0 { store.message = nil } })) {
             Button("OK") { store.message = nil }
@@ -33,31 +35,26 @@ struct SuiteProjectsHome: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                if notebook.projects.isEmpty {
-                    SuiteCard {
-                        VStack(alignment: .leading, spacing: 15) {
-                            Text(S("DEIN TECHNISCHER BEGLEITER", "YOUR TECHNICAL NOTEBOOK")).font(.caption.weight(.semibold)).tracking(1.2).foregroundStyle(SuiteTheme.teal)
-                            Text(S("Von der Messung\nzum fertigen Bericht.", "From measurement\nto a finished report."))
-                                .font(.system(.largeTitle, design: .rounded).weight(.bold)).fixedSize(horizontal: false, vertical: true)
-                            Text(S("Sechs Fachbereiche. Eine gemeinsame Projektakte. Alles Wichtige für deinen nächsten Einsatz.", "Six disciplines. One shared project record. Everything you need for your next site visit."))
-                                .foregroundStyle(SuiteTheme.secondary).fixedSize(horizontal: false, vertical: true)
-                            SuiteCircuitIllustration().frame(height: 150).accessibilityHidden(true)
-                        }
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text(S("Gut vorbereitet.\nSauber dokumentiert.", "Ready for the job.\nClearly documented."))
-                            .font(.system(.title, design: .rounded).weight(.bold))
-                        Text(S("Deine Anlagen, Berechnungen und Messwerte an einem Ort.", "Your systems, calculations and measurements in one place.")).foregroundStyle(SuiteTheme.secondary)
-                    }.padding(.top, 6)
-                }
+                SuiteWorkshopHero()
                 Button {
                     if SuiteAccess.canCreateProject(count: notebook.projects.count, hasPro: store.hasPro) { creating = true }
                     else { openPro() }
                 } label: {
-                    Label(S("Neues Projekt", "New project"), systemImage: "plus").font(.headline).frame(maxWidth: .infinity, minHeight: 34)
-                }.buttonStyle(.borderedProminent).tint(SuiteTheme.action).controlSize(.large).accessibilityIdentifier("project-new")
+                    Label(S("Neues Projekt", "New project"), systemImage: "plus")
+                }.buttonStyle(SuitePrimaryButtonStyle()).accessibilityIdentifier("project-new")
                 if let error = notebook.error { Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true) }
+                SuiteSectionHeading(title: S("DEINE PROJEKTAKTEN", "YOUR PROJECT RECORDS"), detail: String(notebook.projects.count))
+                if notebook.projects.isEmpty {
+                    SuiteCard {
+                        HStack(alignment: .top, spacing: 14) {
+                            Image(systemName: "folder.badge.plus").font(.title2).foregroundStyle(SuiteTheme.copper)
+                            VStack(alignment: .leading, spacing: 7) {
+                                Text(S("Bereit für den ersten Auftrag.", "Ready for your first job.")).font(.headline)
+                                Text(S("Lege eine Anlage an und halte Berechnungen, Messwerte und Service zusammen fest.", "Create a system record and keep calculations, readings and service together.")).font(.subheadline).foregroundStyle(SuiteTheme.secondary)
+                            }
+                        }
+                    }
+                }
                 ForEach(notebook.projects.sorted { $0.updatedAt > $1.updatedAt }) { project in
                     NavigationLink {
                         SuiteProjectDetail(initial: project)
@@ -72,21 +69,26 @@ struct SuiteProjectsHome: View {
                                     Spacer(minLength: 12)
                                     Image(systemName: "arrow.up.right").foregroundStyle(SuiteTheme.teal).padding(8).background(SuiteTheme.teal.opacity(0.08), in: Circle())
                                 }
-                                Divider()
+                                Rectangle().fill(SuiteTheme.line).frame(height: 1)
                                 HStack(spacing: 13) {
                                     ForEach(SuiteModule.allCases) { module in
                                         Image(systemName: module.symbol).foregroundStyle(module.count(in: project) > 0 ? module.tint : .secondary.opacity(0.35)).font(.body)
                                     }
                                     Spacer(minLength: 0)
                                 }.accessibilityLabel(S("Sechs Fachbereiche im Projekt", "Six disciplines in this project"))
-                                Text(project.updatedAt, format: .dateTime.day().month().year()).font(.caption).foregroundStyle(SuiteTheme.secondary)
+                                HStack {
+                                    Label(S("Lokal gespeichert", "Saved on device"), systemImage: "internaldrive").font(.caption)
+                                    Spacer()
+                                    Text(project.updatedAt, format: .dateTime.day().month().year()).font(.caption.monospacedDigit())
+                                }.foregroundStyle(SuiteTheme.secondary)
                             }
                         }
                     }.buttonStyle(.plain).accessibilityIdentifier("project-card-" + project.name)
                 }
                 if !store.hasPro { Text(S("Ein Projekt und alle Grundrechner sind kostenlos. Pro erweitert deine Werkstatt dauerhaft.", "One project and all basic calculators are free. Pro permanently expands your workshop.")).font(.footnote).foregroundStyle(SuiteTheme.secondary) }
             }.padding(20).frame(maxWidth: 900).frame(maxWidth: .infinity)
-        }.background(SuiteTheme.canvas).navigationTitle("SHK Werkstatt")
+        }.background(SuiteTheme.canvas).navigationTitle("SHK Werkstatt").navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(SuiteTheme.canvas, for: .navigationBar).toolbarBackground(.visible, for: .navigationBar)
             .sheet(isPresented: $creating) { SuiteNewProjectView() }
     }
 }
@@ -109,7 +111,7 @@ private struct SuiteNewProjectView: View {
                         .font(.subheadline).foregroundStyle(SuiteTheme.secondary)
                 }
                 if let error = notebook.error { Text(error).foregroundStyle(.red) }
-            }.navigationTitle(S("Neues Projekt", "New project"))
+            }.suiteFormSurface().navigationTitle(S("Neues Projekt", "New project"))
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button(S("Abbrechen", "Cancel")) { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {
@@ -123,20 +125,36 @@ private struct SuiteNewProjectView: View {
 }
 
 struct SuiteCalculatorsHome: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text(S("Schnell etwas nachrechnen.", "Work out a quick answer.")).font(.system(.title2, design: .rounded).bold())
-                Text(S("Alle sechs Bereiche frei verwenden. Einzelberechnungen bleiben hier, deine gespeicherten Anlagen findest du unter Projekte.", "Use all six disciplines for free. Quick calculations stay here; saved systems live in Projects.")).foregroundStyle(SuiteTheme.secondary)
-                ForEach(SuiteModule.allCases) { module in
-                    NavigationLink { SuiteQuickCalculator(module: module) } label: { SuiteCard { SuiteModuleLabel(module: module) } }
-                        .buttonStyle(.plain).accessibilityIdentifier("calculator-" + module.rawValue)
+                SuiteSectionHeading(title: S("DEINE FACHWERKZEUGE", "YOUR TRADE TOOLS"), detail: S("6 BEREICHE", "6 DISCIPLINES"))
+                Text(S("Passendes Werkzeug.\nKlare Ergebnisse.", "The right tool.\nClear results.")).font(.system(.title, design: .rounded).bold())
+                Text(S("Alle Grundrechner kostenlos nutzen. Für zusammenhängende Anlagen arbeitest du in deiner Projektakte.", "Use all basic calculators for free. For connected systems, work in your project record.")).font(.subheadline).foregroundStyle(SuiteTheme.secondary)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 280 : 165), spacing: 14)], alignment: .leading, spacing: 14) {
+                    ForEach(SuiteModule.allCases) { module in
+                        NavigationLink { SuiteQuickCalculator(module: module) } label: {
+                            SuiteCard {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        SuiteEquipmentIcon(module: module).frame(width: 76, height: 76).accessibilityHidden(true)
+                                        Spacer(minLength: 0)
+                                        Image(systemName: "arrow.up.right").font(.caption.weight(.semibold)).foregroundStyle(module.tint)
+                                    }
+                                    Text(module.title).font(.headline).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
+                                    Text(module.detail).font(.caption).foregroundStyle(SuiteTheme.secondary).fixedSize(horizontal: false, vertical: true)
+                                }.frame(maxWidth: .infinity, minHeight: typeSize.isAccessibilitySize ? 0 : 156, alignment: .topLeading)
+                            }
+                        }.buttonStyle(.plain).accessibilityIdentifier("calculator-" + module.rawValue)
+                    }
                 }
                 NavigationLink { SuiteUnitConversions() } label: {
                     SuiteCard { Label(S("Einheiten umrechnen", "Unit conversions"), systemImage: "arrow.left.arrow.right").font(.headline).foregroundStyle(SuiteTheme.teal) }
                 }.buttonStyle(.plain).accessibilityIdentifier("calculator-units")
             }.padding(20).frame(maxWidth: 900).frame(maxWidth: .infinity)
-        }.background(SuiteTheme.canvas).navigationTitle(S("Rechner", "Calculators"))
+        }.background(SuiteTheme.canvas).navigationTitle(S("Rechner", "Calculators")).navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(SuiteTheme.canvas, for: .navigationBar).toolbarBackground(.visible, for: .navigationBar)
     }
 }
 
@@ -144,22 +162,4 @@ struct SuiteQuickCalculator: View {
     let module: SuiteModule
     @State private var draft = SuiteProject(name: "Direktberechnung")
     var body: some View { SuiteModuleEditor(module: module, project: $draft, quick: true) }
-}
-
-private struct SuiteCircuitIllustration: View {
-    var body: some View {
-        GeometryReader { proxy in
-            let width = proxy.size.width, height = proxy.size.height
-            let points = [CGPoint(x: width*0.15, y: height*0.25), CGPoint(x: width*0.5, y: height*0.25), CGPoint(x: width*0.85, y: height*0.25), CGPoint(x: width*0.85, y: height*0.77), CGPoint(x: width*0.5, y: height*0.77), CGPoint(x: width*0.15, y: height*0.77)]
-            ZStack {
-                Path { path in path.addLines(points) }.stroke(SuiteTheme.teal.opacity(0.16), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
-                ForEach(Array(SuiteModule.allCases.enumerated()), id: \.element.id) { index, module in
-                    Image(systemName: module.symbol).font(.title2).foregroundStyle(module.tint)
-                        .frame(width: 52, height: 52).background(SuiteTheme.paper, in: RoundedRectangle(cornerRadius: 16))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(module.tint.opacity(0.18)))
-                        .position(points[index])
-                }
-            }
-        }
-    }
 }

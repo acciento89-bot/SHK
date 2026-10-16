@@ -55,5 +55,22 @@ final class SuiteStoreScreenshots: XCTestCase {
         XCTAssertTrue(app.buttons["store-restore"].waitForExistence(timeout: 4))
         reach(app.buttons["store-purchase"])
         shot(language + "-10-pro-review")
+        tab(de ? "Rechner" : "Calculators").tap()
+        XCTAssertTrue(app.buttons["calculator-heat"].waitForExistence(timeout: 4))
+        shot(language + "-11-workshop-tools")
+        tab(de ? "Projekte" : "Projects").tap()
+        let projectBack = app.navigationBars.buttons[de ? "Projekte" : "Projects"]
+        if projectBack.exists { projectBack.tap() }
+        let settings = app.buttons[de ? "Einstellungen" : "Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 4)); settings.tap()
+        XCTAssertTrue(app.buttons[de ? "Fertig" : "Done"].waitForExistence(timeout: 4))
+        shot(language + "-12-workshop-settings")
+        app.buttons[de ? "Fertig" : "Done"].tap()
+        XCTAssertTrue(app.buttons["project-new"].waitForExistence(timeout: 4))
+        tab("Pro").tap()
+        let purchase = app.buttons["store-purchase"]
+        XCTAssertTrue(purchase.waitForExistence(timeout: 4)); XCTAssertTrue(purchase.isEnabled)
+        purchase.tap()
+        XCTAssertTrue(app.staticTexts[de ? "Pro ist freigeschaltet" : "Pro is unlocked"].waitForExistence(timeout: 8), "The custom copper button must perform the actual local StoreKit purchase")
     }
 }

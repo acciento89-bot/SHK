@@ -42,8 +42,8 @@ final class SuiteWorkflowUITests: XCTestCase {
         app.terminate(); app.launch()
         XCTAssertTrue(app.buttons["project-card-Haus Lindenweg"].waitForExistence(timeout: 5))
     }
-    @MainActor private func scrollTo(_ element: XCUIElement) {
-        for _ in 0..<10 {
+    @MainActor private func scrollTo(_ element: XCUIElement, allowPartialCard: Bool = false) {
+        for _ in 0..<18 {
             // A native iPad sheet is smaller than the application window. Scroll
             // its own viewport; a window-wide swipe can move the background.
             let fillBar = app.navigationBars["Befüllung erfassen"]
@@ -57,16 +57,31 @@ final class SuiteWorkflowUITests: XCTestCase {
                 viewport = CGRect(x: bar.minX, y: bar.maxY, width: bar.width, height: min(550, app.frame.maxY - bar.maxY - 34))
             } else { viewport = (container?.frame ?? app.frame).intersection(app.frame) }
             let top = modal ? viewport.minY + 8 : max(viewport.minY, app.navigationBars.firstMatch.frame.maxY) + 8
+            let tabBar = app.tabBars.firstMatch
+            let bottom = !modal && tabBar.exists ? min(viewport.maxY - 8, tabBar.frame.minY - 8) : viewport.maxY - 8
+            let bounds = CGRect(x: viewport.minX, y: top, width: viewport.width, height: max(1, bottom - top))
             func swipe(up: Bool) {
-                if let container { if up { container.swipeUp() } else { container.swipeDown() }; return }
+                if container != nil {
+                    // A native flick skips a short button between tall, fully
+                    // wrapped accessibility cards, then oscillates past it.
+                    let distance = element.exists ? abs(element.frame.midY - bounds.midY) : 180
+                    let step = min(min(180, bounds.height * 0.55), max(12, distance))
+                    let a = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: bounds.midX, dy: bounds.midY + (up ? step/2 : -step/2)))
+                    let b = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: bounds.midX, dy: bounds.midY + (up ? -step/2 : step/2)))
+                    a.press(forDuration: 0.1, thenDragTo: b, withVelocity: .slow, thenHoldForDuration: 0.1)
+                    return
+                }
                 let near = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: viewport.midX, dy: viewport.minY + 100))
                 let far = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: viewport.midX, dy: viewport.minY + min(400, viewport.height - 30)))
                 if up { far.press(forDuration: 0.05, thenDragTo: near) } else { near.press(forDuration: 0.05, thenDragTo: far) }
             }
-            let bounds = CGRect(x: viewport.minX, y: top, width: viewport.width, height: max(1, viewport.maxY - 8 - top))
             if element.exists {
                 let frame = element.frame
                 if element.isHittable && frame.minY >= bounds.minY && frame.maxY <= bounds.maxY { return }
+                if allowPartialCard && element.isHittable {
+                    let title = element.staticTexts.firstMatch
+                    if title.exists && title.isHittable && title.frame.minY >= bounds.minY && title.frame.maxY <= bounds.maxY { return }
+                }
                 if frame.minY < bounds.minY { swipe(up: false); continue }
             }
             swipe(up: true)
@@ -189,6 +204,16 @@ final class SuiteWorkflowUITests: XCTestCase {
         XCTAssertTrue(restore.waitForExistence(timeout: 3)); XCTAssertTrue(restore.isHittable)
         scrollTo(app.buttons["store-purchase"])
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "English-LargestText-Landscape"; shot.lifetime = .keepAlways; add(shot)
+        tab("Calculators").tap()
+        for (module, title) in [("heat", "Heating"), ("pipe", "Pipe route"), ("volume", "Water volume"), ("air", "Ventilation"), ("cold", "Refrigeration"), ("service", "Service")] {
+            let card = app.buttons["calculator-" + module]
+            scrollTo(card, allowPartialCard: true); XCTAssertTrue(card.isHittable)
+            card.tap()
+            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 4))
+            let back = app.navigationBars.buttons["Calculators"]
+            XCTAssertTrue(back.exists); back.tap()
+        }
+        let tools = XCTAttachment(screenshot: app.screenshot()); tools.name = "English-LargestText-Tools"; tools.lifetime = .keepAlways; add(tools)
     }
 
 }

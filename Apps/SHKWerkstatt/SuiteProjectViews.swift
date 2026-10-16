@@ -28,7 +28,7 @@ struct SuiteProjectDetail: View {
                         VStack(alignment: .leading, spacing: 5) {
                             SuiteModuleLabel(module: module)
                             if module.count(in: project) > 0 {
-                                Text("\(module.count(in: project)) " + S("Einträge", "entries")).font(.caption.weight(.medium)).foregroundStyle(module.tint).padding(.leading, 62)
+                                Text("\(module.count(in: project)) " + S("Einträge", "entries")).font(.caption.weight(.medium)).foregroundStyle(module.tint).padding(.leading, 72)
                             }
                         }
                     }.accessibilityIdentifier("module-" + module.rawValue)
@@ -43,7 +43,7 @@ struct SuiteProjectDetail: View {
                 if let error = notebook.error { Text(error).font(.subheadline).foregroundStyle(.red) }
                 Button(S("Projekt löschen", "Delete project"), role: .destructive) { deleting = true }.buttonStyle(SuiteRowButtonStyle())
             }
-        }.navigationTitle(project.name).navigationBarTitleDisplayMode(.inline)
+        }.suiteFormSurface().navigationTitle(project.name).navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -101,7 +101,7 @@ struct SuiteModuleEditor: View {
             case .cold: SuiteColdFields(project: $project, addReading: { entrySheet = .cold })
             case .service: SuiteServiceFields(project: $project)
             }
-        }.navigationTitle(module.title).navigationBarTitleDisplayMode(.inline).suiteKeyboard()
+        }.suiteFormSurface().navigationTitle(module.title).navigationBarTitleDisplayMode(.inline).suiteKeyboard()
             .sheet(item: $entrySheet) { sheet in
                 switch sheet {
                 case .cold: SuiteColdReadingSheet { project.cold.readings.append($0) }

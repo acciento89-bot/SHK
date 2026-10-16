@@ -35,7 +35,7 @@ struct SuiteReportView: View {
                         .accessibilityIdentifier("report-share-pdf")
                 } footer: { Text(S("Der Bericht enthält deine erfassten Werte und ihre Berechnungsgrundlagen. Du wählst selbst, wohin du ihn teilst.", "The report contains recorded values and calculation assumptions. You choose where to share it.")) }
                 Section { Text(text).font(.body).textSelection(.enabled).accessibilityIdentifier("report-body") }
-            }.navigationTitle(S("Projektbericht", "Project report")).navigationBarTitleDisplayMode(.inline)
+            }.suiteFormSurface().navigationTitle(S("Projektbericht", "Project report")).navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button(S("Fertig", "Done")) { dismiss() } } }
         }
         .sheet(item: $shared, onDismiss: {

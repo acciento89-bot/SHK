@@ -78,7 +78,7 @@ struct SuiteColdReadingSheet: View {
                     }
                 }
                 TextField(S("Messgerät / Beobachtung", "Instrument / observation"), text: $note, axis: .vertical)
-            }.navigationTitle(S("Neue Messung", "New reading")).navigationBarTitleDisplayMode(.inline).suiteKeyboard()
+            }.suiteFormSurface().navigationTitle(S("Neue Messung", "New reading")).navigationBarTitleDisplayMode(.inline).suiteKeyboard()
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button(S("Abbrechen", "Cancel")) { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) { Button(S("Übernehmen", "Use reading")) { if let value = completed { add(value); dismiss() } }.disabled(completed == nil).accessibilityIdentifier("cold-save-reading") }

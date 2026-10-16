@@ -12,7 +12,9 @@ Navigation: Projekte / Rechner / Pro, with visible settings/help in the header. 
 
 ## Visual direction
 
-Warm near-white canvas, deep ink text, restrained teal primary action and copper accents. Comfortable native typography, full labels at Dynamic Type, rectangular diagram cards and generous rhythm; no forced dark mode, huge all-caps panels or decorative dashboard walls. Relevant native diagrams accompany technical outputs. Responsive iPhone portrait/landscape and iPad split width;44ptminimum controls. All new UI and reports DE/EN. Original icon depicts one technical project plan and pipe/measurement mark, not unrelated imagery or third-party hardware branding. Use generated raster artwork only for the app icon; data graphics remain SwiftUI-native and readable.
+User correction 16October2026 after native preview: the mostly white design is explicitly rejected. This supersedes the original near-white direction. Bounded visual revision within the existing app and navigation: a deep petrol workshop canvas, layered steel/petrol cards, legible warm white labels, copper primary actions with dark text, and consistent teal measurement accents. The project landing page gets an original SHK workbench illustration; six distinct native scalable equipment illustrations identify the disciplines. Real input forms, project records, report preview and Pro share the palette. Native navigation, identifiers, calculation/data/purchase behavior remain intact. Keep full text, 44pt minimum targets, responsive phone/tablet and Dynamic Type. Default workshop appearance uses a dark native color scheme so sheets and controls fit the product. PDFs retain white paper for printing. No invented project metrics or readings.
+
+New native captures and representative phone/iPad workflows must be checked before proposing any replacement App Store build. Previously uploaded build5 is held and must not be submitted while this revision is pending. The already approved standalone calculators remain untouched. Existing implementation/asset authorization and this direct visual correction apply; no extra permission gate is needed.
 
 ## Architecture and data
 

@@ -115,6 +115,6 @@ struct SuiteUnitConversions: View {
                     LabeledContent("CFM", value: SN(VentilationCalculator.m3HToCFM(air)))
                 }
             }
-        }.navigationTitle(S("Einheiten umrechnen", "Unit conversions")).navigationBarTitleDisplayMode(.inline).suiteKeyboard()
+        }.suiteFormSurface().navigationTitle(S("Einheiten umrechnen", "Unit conversions")).navigationBarTitleDisplayMode(.inline).suiteKeyboard()
     }
 }

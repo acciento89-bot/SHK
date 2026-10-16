@@ -10,6 +10,7 @@ import SwiftUI
                 .environmentObject(notebook).environmentObject(store)
                 .environment(\.locale, language == "system" ? .current : Locale(identifier: language))
                 .tint(SuiteTheme.teal)
+                .preferredColorScheme(.dark)
                 .task { await store.start() }
         }
     }

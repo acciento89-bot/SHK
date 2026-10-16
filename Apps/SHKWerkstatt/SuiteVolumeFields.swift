@@ -97,7 +97,7 @@ struct SuiteVolumeComponentSheet: View {
                     TextField(S("Hersteller / Datenblatt / Messung", "Manufacturer / data sheet / measurement"), text: Binding(get: { value.source ?? "" }, set: { value.source = $0 }))
                     TextField(S("Notiz", "Note"), text: Binding(get: { value.note ?? "" }, set: { value.note = $0 }), axis: .vertical)
                 }
-            }.navigationTitle(S("Bauteil hinzufügen", "Add component")).suiteKeyboard()
+            }.suiteFormSurface().navigationTitle(S("Bauteil hinzufügen", "Add component")).suiteKeyboard()
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button(S("Abbrechen", "Cancel")) { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) { Button(S("Hinzufügen", "Add")) { add(value); dismiss() }.disabled(!valid).accessibilityIdentifier("component-save") }
@@ -124,7 +124,7 @@ struct SuiteVolumePipeSheet: View {
                 SuiteNumberField(S("Länge je Abschnitt / Kreis", "Length per section / circuit"), value: $length, unit: "m")
                 Stepper(S("Anzahl", "Quantity") + ": \(count)", value: $count, in: 1...10000)
                 if valid { SuiteMetric(title: S("Wasserinhalt gesamt", "Total water volume"), value: "\(SN(VolumeCalculator.pipeVolumeLiters(innerDiameterMM: diameter, lengthMeters: length)*Double(count))) l", tint: .blue) }
-            }.navigationTitle(S("Rohr / Heizkreis", "Pipe / circuit")).suiteKeyboard()
+            }.suiteFormSurface().navigationTitle(S("Rohr / Heizkreis", "Pipe / circuit")).suiteKeyboard()
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button(S("Abbrechen", "Cancel")) { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) { Button(S("Hinzufügen", "Add")) {
@@ -160,7 +160,7 @@ struct SuiteFillSheet: View {
                     if let completed { SuiteMetric(title: S("Netto eingefüllt", "Net water filled"), value: "\(SN(completed.netFillL)) l", tint: .blue) }
                     TextField(S("Messgerät, Systemgrenzen, Hinweise …", "Instrument, system boundary, notes …"), text: $check.note, axis: .vertical)
                 }
-            }.navigationTitle(S("Befüllung erfassen", "Record actual fill")).suiteKeyboard()
+            }.suiteFormSurface().navigationTitle(S("Befüllung erfassen", "Record actual fill")).suiteKeyboard()
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button(S("Abbrechen", "Cancel")) { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) { Button(S("Übernehmen", "Use reading")) { if let completed { add(completed); dismiss() } }.disabled(completed == nil).accessibilityIdentifier("fill-save-reading") }

@@ -5,7 +5,13 @@ struct SuiteProView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                Image("AppBrand").resizable().scaledToFit().frame(width: 94, height: 94).clipShape(RoundedRectangle(cornerRadius: 22)).accessibilityHidden(true)
+                HStack(spacing: 16) {
+                    Image("AppBrand").resizable().scaledToFit().frame(width: 64, height: 64).clipShape(RoundedRectangle(cornerRadius: 16)).accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("SHK WERKSTATT").font(.caption.weight(.semibold)).tracking(1.3).foregroundStyle(SuiteTheme.secondary)
+                        Text(S("Dein Werkzeug. Dauerhaft.", "Your tools. For good.")).font(.headline).foregroundStyle(SuiteTheme.copper)
+                    }
+                }
                 Text(store.hasPro ? S("Deine Werkstatt ist komplett.", "Your workshop is complete.") : S("Mehr Projekte.\nEine Freischaltung.", "More projects.\nOne permanent unlock."))
                     .font(.system(.largeTitle, design: .rounded).bold()).fixedSize(horizontal: false, vertical: true)
                 Text(S("SHK Werkstatt Pro ist ein dauerhafter Einmalkauf.", "SHK Werkstatt Pro is a permanent one-time purchase."))
@@ -14,7 +20,7 @@ struct SuiteProView: View {
                     VStack(alignment: .leading, spacing: 19) {
                         Label(S("Weitere Anlagen und Kundenprojekte speichern", "Save additional systems and customer projects"), systemImage: "square.stack.3d.up")
                         Label(S("Vollständige, mehrseitige PDF-Berichte teilen", "Share complete, multipage PDF reports"), systemImage: "doc.richtext")
-                        Label(S("Auf iPhone und iPad mit demselben Apple-Konto wiederherstellbar", "Restorable on iPhone and iPad using the same Apple account"), systemImage: "iphone.and.ipad")
+                        Label(S("Auf iPhone und iPad mit demselben Apple-Konto wiederherstellbar", "Restorable on iPhone and iPad using the same Apple account"), systemImage: "ipad.and.iphone")
                     }.font(.body).fixedSize(horizontal: false, vertical: true)
                 }
                 if store.hasPro {
@@ -22,10 +28,10 @@ struct SuiteProView: View {
                 } else {
                     Button { Task { await store.purchase() } } label: {
                         HStack {
-                            if store.busy || store.loading { ProgressView().tint(.white) }
+                            if store.busy || store.loading { ProgressView().tint(SuiteTheme.ink) }
                             Text(store.product.map { S("Pro freischalten · ", "Unlock Pro · ") + $0.displayPrice } ?? S("Pro freischalten", "Unlock Pro"))
-                        }.font(.headline).frame(maxWidth: .infinity, minHeight: 34)
-                    }.buttonStyle(.borderedProminent).tint(SuiteTheme.action).controlSize(.large).disabled(store.product == nil || store.busy).accessibilityIdentifier("store-purchase")
+                        }
+                    }.buttonStyle(SuitePrimaryButtonStyle()).disabled(store.product == nil || store.busy).accessibilityIdentifier("store-purchase")
                     if store.product == nil && !store.loading {
                         Text(S("Der Kauf konnte gerade nicht geladen werden. Die kostenlosen Funktionen stehen dir weiter zur Verfügung.", "The purchase could not be loaded. Free features remain available.")).font(.subheadline).foregroundStyle(SuiteTheme.secondary)
                         Button(S("Kauf erneut laden", "Load purchase again")) { Task { await store.loadProduct() } }.disabled(store.busy)
@@ -39,7 +45,8 @@ struct SuiteProView: View {
                     Link(S("Nutzungsbedingungen", "Terms of Use"), destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
                 }.font(.footnote).padding(.vertical, 8)
             }.padding(24).frame(maxWidth: 760).frame(maxWidth: .infinity)
-        }.background(SuiteTheme.canvas).navigationTitle("Pro")
+        }.background(SuiteTheme.canvas).navigationTitle("Pro").navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(SuiteTheme.canvas, for: .navigationBar).toolbarBackground(.visible, for: .navigationBar)
         .toolbar { ToolbarItem(placement: .topBarTrailing) {
             Button(S("Wiederherstellen", "Restore")) { Task { await store.restore() } }
                 .disabled(store.busy).accessibilityIdentifier("store-restore")
@@ -68,7 +75,7 @@ struct SuiteSettingsView: View {
                     Text(S("SHK Werkstatt verbindet sechs Fachbereiche in einer gemeinsamen Projektakte. Berechnungen ersetzen keine Herstellerangaben, Messungen oder fachliche Prüfung.", "SHK Workshop connects six disciplines in one project record. Calculations do not replace manufacturer data, measurements or professional inspection."))
                     Text("Kamilunavo · 1.0").foregroundStyle(SuiteTheme.secondary)
                 }
-            }.navigationTitle(S("Einstellungen", "Settings"))
+            }.suiteFormSurface().navigationTitle(S("Einstellungen", "Settings"))
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button(S("Fertig", "Done")) { dismiss() } } }
         }
     }

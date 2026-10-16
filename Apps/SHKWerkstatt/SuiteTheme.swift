@@ -12,12 +12,16 @@ func SN(_ value: Double, digits: Int = 2) -> String {
 }
 
 enum SuiteTheme {
-    static let teal = Color(uiColor: UIColor { trait in trait.userInterfaceStyle == .dark ? UIColor(red: 0.28, green: 0.79, blue: 0.75, alpha: 1) : UIColor(red: 0.02, green: 0.42, blue: 0.43, alpha: 1) })
-    static let action = Color(red: 0.02, green: 0.42, blue: 0.43)
-    static let copper = Color(uiColor: UIColor { trait in trait.userInterfaceStyle == .dark ? UIColor(red: 1, green: 0.64, blue: 0.38, alpha: 1) : UIColor(red: 0.66, green: 0.32, blue: 0.14, alpha: 1) })
-    static let secondary = Color(uiColor: UIColor { trait in trait.userInterfaceStyle == .dark ? UIColor(red: 0.75, green: 0.79, blue: 0.80, alpha: 1) : UIColor(red: 0.32, green: 0.38, blue: 0.40, alpha: 1) })
-    static let canvas = Color(uiColor: .systemGroupedBackground)
-    static let paper = Color(uiColor: .secondarySystemGroupedBackground)
+    static let teal = Color(red: 0.40, green: 0.85, blue: 0.81)
+    static let copper = Color(red: 0.96, green: 0.67, blue: 0.42)
+    static let action = copper
+    static let ink = Color(red: 0.07, green: 0.13, blue: 0.15)
+    static let secondary = Color(red: 0.70, green: 0.77, blue: 0.78)
+    static let canvas = Color(red: 0.045, green: 0.095, blue: 0.115)
+    static let paper = Color(red: 0.085, green: 0.16, blue: 0.185)
+    static let raised = Color(red: 0.12, green: 0.21, blue: 0.235)
+    static let line = Color(red: 0.23, green: 0.34, blue: 0.36)
+    static let silver = Color(red: 0.83, green: 0.88, blue: 0.88)
 }
 
 enum SuiteModule: String, CaseIterable, Identifiable {
@@ -57,10 +61,10 @@ enum SuiteModule: String, CaseIterable, Identifiable {
         switch self {
         case .heat: SuiteTheme.copper
         case .pipe: SuiteTheme.copper
-        case .volume: .blue
+        case .volume: Color(red: 0.42, green: 0.73, blue: 1)
         case .air: SuiteTheme.teal
-        case .cold: .indigo
-        case .service: .green
+        case .cold: Color(red: 0.68, green: 0.70, blue: 1)
+        case .service: Color(red: 0.62, green: 0.84, blue: 0.59)
         }
     }
     func count(in p: SuiteProject) -> Int {
@@ -79,10 +83,10 @@ struct SuiteCard<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
         content.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-            .background(SuiteTheme.paper, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22).stroke(.primary.opacity(0.05)))
-            .shadow(color: .black.opacity(0.025), radius: 14, y: 5)
+            .background(LinearGradient(colors: [SuiteTheme.raised, SuiteTheme.paper], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(SuiteTheme.line.opacity(0.7)))
+            .shadow(color: .black.opacity(0.14), radius: 14, y: 6)
     }
 }
 
@@ -90,9 +94,7 @@ struct SuiteModuleLabel: View {
     let module: SuiteModule
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: module.symbol).font(.title2.weight(.medium))
-                .frame(width: 48, height: 48).foregroundStyle(module.tint)
-                .background(module.tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
+            SuiteEquipmentIcon(module: module).frame(width: 58, height: 58).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(module.title).font(.headline).foregroundStyle(.primary)
                 Text(module.detail).font(.subheadline).foregroundStyle(SuiteTheme.secondary).fixedSize(horizontal: false, vertical: true)
@@ -150,8 +152,11 @@ struct SuiteMetric: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.subheadline).foregroundStyle(SuiteTheme.secondary)
-            Text(value).font(.system(.title, design: .rounded).weight(.semibold)).foregroundStyle(tint).monospacedDigit()
-        }.padding(.vertical, 5).accessibilityElement(children: .combine)
+            Text(value).font(.system(.title2, design: .monospaced).weight(.semibold)).foregroundStyle(tint).monospacedDigit()
+        }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 2).fill(tint).frame(width: 3).padding(.vertical, 12) }
+            .accessibilityElement(children: .combine)
     }
 }
 
