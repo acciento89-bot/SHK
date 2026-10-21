@@ -11,7 +11,7 @@
   ],
   "receiver_source_sha256": "f03a1da07ebb71f161a216e6247f64304519148df71699e097c528d32979a482",
   "product_gradle_sha256": "52ae951d483d5980a59106e6f0d4cf354ce05241e37d38caa477d0182f88ad50",
-  "reviewed_host_sha256": "14fb08a115b1b549df9e00601d7e5b65c108c21888de795d5e93c026aaa50fc5",
+  "reviewed_host_sha256": "93227f73f5be66235e489def7ddb077889adc46a43f12b17be4f9caaefb8da6a",
   "reviewed_window_policy_sha256": "d89256043c07b8aa241e5c1a6f259d6d3fb4d0bf76d6af758968c841c436f77f",
   "reviewed_change_scope": "External active-window/actual-IME/scroll/trace guards only; original business-method region exact; no product/receiver/assertion changes"
 }

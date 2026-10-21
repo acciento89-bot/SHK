@@ -34,7 +34,8 @@ public final class ShkWorkflowNativeTest {
  private final android.content.Context host=InstrumentationRegistry.getInstrumentation().getTargetContext();
  private final File evidence=new File(host.getFilesDir(),"shk-native-qa");
  private String method="unknown",expectedOwner=null;
- private int traceCount=0;
+ private int traceCount=0,criticalTraceCount=0;
+ private boolean postSaveTrace=false;
  @Rule public final TestWatcher watcher=new TestWatcher(){
   @Override protected void starting(Description d){method=d.getMethodName();evidence.mkdirs();event("START");}
   @Override protected void succeeded(Description d){event("PASS");}
@@ -124,9 +125,9 @@ public final class ShkWorkflowNativeTest {
   for(int attempt=0;attempt<22;attempt++){List<UiObject2> found=nodes(false,labels);if(found.isEmpty())found=nodes(true,labels);if(!found.isEmpty())return found.get(0);scroll(false);}
   capture(method+"-missing-forward-label");throw new AssertionError("Missing forward UI label "+Arrays.toString(labels));
  }
- private UiObject2 find(String...labels){hideKeyboard();for(int sweep=0;sweep<2;sweep++){for(int attempt=0;attempt<18;attempt++){List<UiObject2> found=nodes(false,labels);if(found.isEmpty())found=nodes(true,labels);if(!found.isEmpty())return found.get(0);scroll(false);}top();}capture(method+"-missing-label");throw new AssertionError("Missing actual native label "+Arrays.toString(labels));}
+ private UiObject2 find(String...labels){hideKeyboard();if(postSaveTrace&&Arrays.asList(labels).contains("Record a new before/after visit")){routeTrace("new-visit-lookup-before",null,labels);postSaveTrace=false;}for(int sweep=0;sweep<2;sweep++){for(int attempt=0;attempt<18;attempt++){List<UiObject2> found=nodes(false,labels);if(found.isEmpty())found=nodes(true,labels);if(!found.isEmpty())return found.get(0);scroll(false);}top();}capture(method+"-missing-label");throw new AssertionError("Missing actual native label "+Arrays.toString(labels));}
  private UiObject2 control(UiObject2 node){for(UiObject2 parent=node;parent!=null;parent=parent.getParent())if(parent.isClickable()||"android.widget.Button".equals(parent.getClassName()))return parent;return node;}
- private void click(String...labels){hideKeyboard();UiObject2 action=control(find(labels));assertTrue("Action disabled: "+Arrays.toString(labels),action.isEnabled());action.click();device.waitForIdle(700);}
+ private void click(String...labels){hideKeyboard();UiObject2 action=control(find(labels));assertTrue("Action disabled: "+Arrays.toString(labels),action.isEnabled());boolean saveAppliance=Arrays.asList(labels).contains("Save appliance");if(saveAppliance){postSaveTrace=true;routeTrace("save-before-click",action,labels);}action.click();device.waitForIdle(700);if(saveAppliance)routeTrace("save-after-existing-wait",null,labels);}
  private void clickTextOnly(String...labels){hideKeyboard();find(labels).click();device.waitForIdle(300);}
  private void saveButton(){click("Speichern","Save");}
  private UiObject2 editorFrom(UiObject2 label){UiObject2 selected=null;Rect title=label.getVisibleBounds();
@@ -161,7 +162,7 @@ public final class ShkWorkflowNativeTest {
  private void expect(String...fragments){for(int sweep=0;sweep<2;sweep++){for(int step=0;step<18;step++){requireForeground("expect");for(String part:fragments)if(device.hasObject(By.pkg(expectedOwner).textContains(part))||device.hasObject(By.pkg(expectedOwner).descContains(part)))return;scroll(false);}top();}capture(method+"-missing-fact");throw new AssertionError("Missing native fact "+Arrays.toString(fragments));}
  private boolean scroll(boolean up){hideKeyboard();int[] app=requireForeground("scroll-before");List<int[]> candidates=new ArrayList<>();
   for(UiObject2 node:device.findObjects(By.pkg(expectedOwner).scrollable(true))){Rect r=node.getVisibleBounds();candidates.add(new int[]{r.left,r.top,r.right,r.bottom});}
-  int[] bounds=NativeWindowPolicy.scrollBounds(app,candidates);if(bounds==null)return false;if(traceCount++<100)event("TRACE scroll-container="+Arrays.toString(bounds));int x=(bounds[0]+bounds[2])/2,margin=Math.max(24,(bounds[3]-bounds[1])/5),top=bounds[1]+margin,bottom=bounds[3]-margin;
+  int[] bounds=NativeWindowPolicy.scrollBounds(app,candidates);if(bounds==null)return false;traceEvent("TRACE scroll-container="+Arrays.toString(bounds),false);int x=(bounds[0]+bounds[2])/2,margin=Math.max(24,(bounds[3]-bounds[1])/5),top=bounds[1]+margin,bottom=bounds[3]-margin;
   device.swipe(x,up?top:bottom,x,up?bottom:top,25);device.waitForIdle(300);requireForeground("scroll-after");return true;
  }
  private void top(){hideKeyboard();for(int step=0;step<12;step++)if(!scroll(true))break;}
@@ -175,18 +176,33 @@ public final class ShkWorkflowNativeTest {
  private int[] requireForeground(String stage){List<NativeWindowPolicy.Window> current=windows();traceWindows(stage,current,false);
   try{return NativeWindowPolicy.requireApp(current,expectedOwner);}catch(AssertionError failure){traceWindows("LOST_FOREGROUND-"+stage,current,true);capture(method+"-FAIL");throw failure;}
  }
- private void traceWindows(String stage,List<NativeWindowPolicy.Window> current,boolean failure){if(!failure&&traceCount++>=100)return;
+ private void traceWindows(String stage,List<NativeWindowPolicy.Window> current,boolean failure){
   StringBuilder value=new StringBuilder("TRACE ").append(stage).append(" expected=").append(expectedOwner).append(" ime=").append(NativeWindowPolicy.imeVisible(current));int count=0;
   for(NativeWindowPolicy.Window w:current){if(count++>=10)break;value.append(" | ").append(w.type).append(':').append(w.owner).append(" active=").append(w.active).append(" focused=").append(w.focused).append(" bounds=").append(Arrays.toString(w.bounds()));}
-  event(value.substring(0,Math.min(value.length(),1800)));
+  traceEvent(value.substring(0,Math.min(value.length(),1800)),failure);
  }
  private void hideKeyboard(){List<NativeWindowPolicy.Window> before=windows();traceWindows("ime-before",before,false);NativeWindowPolicy.requireApp(before,expectedOwner);
   if(NativeWindowPolicy.imeVisible(before)){
-   device.pressBack();long deadline=SystemClock.uptimeMillis()+3000;List<NativeWindowPolicy.Window> after;
+   if(postSaveTrace)routeTrace("ime-before-existing-one-back",null);device.pressBack();long deadline=SystemClock.uptimeMillis()+3000;List<NativeWindowPolicy.Window> after;
    do{SystemClock.sleep(100);after=windows();NativeWindowPolicy.requireApp(after,expectedOwner);}while(NativeWindowPolicy.imeVisible(after)&&SystemClock.uptimeMillis()<deadline);
-   traceWindows("ime-after-one-back",after,false);assertFalse("Actual IME must disappear after exactly one Back",NativeWindowPolicy.imeVisible(after));
+   traceWindows("ime-after-one-back",after,false);if(postSaveTrace)routeTrace("ime-after-existing-one-back",null);assertFalse("Actual IME must disappear after exactly one Back",NativeWindowPolicy.imeVisible(after));
   }
   requireForeground("ime-hidden");
+ }
+ private void traceEvent(String value,boolean critical){
+  // 80 ordinary +12 critical traces; original START/ACTUAL_APP/PASS-or-FAIL remain unchanged.
+  // Kälte has two launches: total<=96 JSONL entries. No extra file or raw evidence scope.
+  if(critical){if(criticalTraceCount>=12)return;criticalTraceCount++;}else{if(traceCount>=80)return;traceCount++;}
+  event(value.substring(0,Math.min(value.length(),1800)));
+ }
+ private boolean knownVisible(String...labels){return device.hasObject(By.pkg(expectedOwner).text(pattern(false,labels)));}
+ private void routeTrace(String stage,UiObject2 action,String...labels){
+  // Only static action labels and structural UI facts, never editor text/customer field values.
+  int focused=device.findObjects(By.pkg(expectedOwner).clazz("android.widget.EditText").focused(true)).size();
+  String target=action==null?"none":action.getApplicationPackage()+":"+action.getClassName()+":"+action.getVisibleBounds()+":enabled="+action.isEnabled();
+  String route="ROUTE "+stage+" targetLabel="+Arrays.toString(labels)+" target="+target+" focusedEditors="+focused+
+   " formSave="+knownVisible("Anlage speichern","Save appliance")+" newVisit="+knownVisible("Neuen Vorher-/Nachher-Besuch erfassen","Record a new before/after visit")+" addAppliance="+knownVisible("Anlage anlegen","Add appliance");
+  traceWindows(route,windows(),true);
  }
  private JSONObject archive(String pkg,String file)throws Exception{assertTrue(file.matches("[a-z0-9-]+\\.json"));return new JSONObject(device.executeShellCommand("run-as "+pkg+" cat files/"+file));}
  private JSONObject project(String pkg,String file,String name)throws Exception{return named(archive(pkg,file).getJSONArray("projects"),name);}
