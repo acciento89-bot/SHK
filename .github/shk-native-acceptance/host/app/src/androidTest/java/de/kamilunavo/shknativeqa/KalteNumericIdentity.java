@@ -25,4 +25,16 @@ final class KalteNumericIdentity {
   try{return new java.math.BigDecimal(value.replace(',','.')).stripTrailingZeros().toPlainString();}
   catch(NumberFormatException transientEditorText){return value;}
  }
+ static int ordinal(String id){
+  String[] fields={"evaporation","suction","condensation","liquid","suction-pressure","discharge-pressure","air-flow","entering-air","leaving-air"};
+  for(int stage=0;stage<2;stage++)for(int field=0;field<fields.length;field++)
+   if(("kalte-reading-"+(stage==0?"before":"after")+"-"+fields[field]).equals(id))return stage*fields.length+field;
+  throw new IllegalArgumentException("Unknown explicit ordered field identity");
+ }
+ static int searchDirection(String target,String[] visible){
+  int wanted=ordinal(target),first=18,last=-1;
+  for(String id:visible){int position=ordinal(id);first=Math.min(first,position);last=Math.max(last,position);}
+  if(last<0)return 1;
+  return wanted<first?-1:(wanted>last?1:0);
+ }
 }
