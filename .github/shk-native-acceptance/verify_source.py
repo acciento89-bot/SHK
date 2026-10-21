@@ -9,7 +9,13 @@ def verify(repo,acceptance=HERE):
  if digest(original)!=line['source_sha256']:raise ValueError('Original native source lineage mismatch')
  expected=original.read_text().replace('onlyOwnedDisposableApi36()','onlyOwnedDisposableApi35()').replace('assertEquals(36,Build.VERSION.SDK_INT)','assertEquals(35,Build.VERSION.SDK_INT)')
  actual=(acceptance/'host/app/src/androidTest/java/de/kamilunavo/shknativeqa/ShkWorkflowNativeTest.java').read_text()
- if actual!=expected or actual.count('@Test public void')!=5:raise ValueError('Native methods/helpers changed outside SDK fixture adaptation')
+ if actual.count('@Test public void')!=5:raise ValueError('Exactly five original native methods required')
+ if actual!=expected:
+  host=acceptance/'host/app/src/androidTest/java/de/kamilunavo/shknativeqa/ShkWorkflowNativeTest.java'
+  policy=host.with_name('NativeWindowPolicy.java')
+  if digest(host)!=line.get('reviewed_host_sha256') or not policy.is_file() or digest(policy)!=line.get('reviewed_window_policy_sha256'):raise ValueError('Unreviewed native guard source')
+  def business(s):return s[s.index(' @Test public void'):s.index(' private String unique(')]
+  if business(actual)!=business(expected):raise ValueError('Original business scenario/assertion bytes changed')
  if digest(acceptance/'host/app/src/main/java/de/kamilunavo/shknativeqa/LocalReportReceiver.java')!=line['receiver_source_sha256']:raise ValueError('Actual local report receiver lineage mismatch')
  product=repo/'android/app/build.gradle.kts'
  if digest(product)!=line['product_gradle_sha256']:raise ValueError('Product Gradle changed: review flavor identity/version/SDK config before running acceptance')

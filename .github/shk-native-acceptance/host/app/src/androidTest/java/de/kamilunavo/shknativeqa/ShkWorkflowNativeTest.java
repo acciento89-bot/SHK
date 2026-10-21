@@ -1,6 +1,9 @@
 package de.kamilunavo.shknativeqa;
 
 import android.content.Intent;
+import android.accessibilityservice.AccessibilityServiceInfo;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 import android.content.pm.ApplicationInfo;
 import android.graphics.Rect;
 import android.os.Build;
@@ -30,13 +33,14 @@ public final class ShkWorkflowNativeTest {
  private final UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
  private final android.content.Context host=InstrumentationRegistry.getInstrumentation().getTargetContext();
  private final File evidence=new File(host.getFilesDir(),"shk-native-qa");
- private String method="unknown";
+ private String method="unknown",expectedOwner=null;
+ private int traceCount=0;
  @Rule public final TestWatcher watcher=new TestWatcher(){
   @Override protected void starting(Description d){method=d.getMethodName();evidence.mkdirs();event("START");}
   @Override protected void succeeded(Description d){event("PASS");}
   @Override protected void failed(Throwable e,Description d){capture(method+"-FAIL");event("FAIL "+e);}
  };
- @Before public void onlyOwnedDisposableApi35()throws Exception{assertEquals(35,Build.VERSION.SDK_INT);assertEquals("Disposable emulator only","1",device.executeShellCommand("getprop ro.kernel.qemu").trim());device.setOrientationNatural();device.pressHome();}
+ @Before public void onlyOwnedDisposableApi35()throws Exception{assertEquals(35,Build.VERSION.SDK_INT);assertEquals("Disposable emulator only","1",device.executeShellCommand("getprop ro.kernel.qemu").trim());device.setOrientationNatural();device.pressHome();android.app.UiAutomation automation=InstrumentationRegistry.getInstrumentation().getUiAutomation();AccessibilityServiceInfo info=automation.getServiceInfo();assertNotNull("Accessibility service configuration required",info);info.flags|=AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;automation.setServiceInfo(info);}
  @After public void releaseRotation()throws Exception{device.setOrientationNatural();device.unfreezeRotation();}
 
  @Test public void kalteBeforeAfterHistoryRotateColdReopenAndUtf8File()throws Exception{
@@ -111,11 +115,11 @@ public final class ShkWorkflowNativeTest {
  private void launch(String pkg)throws Exception{
   ApplicationInfo app=host.getPackageManager().getApplicationInfo(pkg,0);assertTrue("Only root-installed debug candidate",(app.flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0);
   android.content.pm.PackageInfo info=host.getPackageManager().getPackageInfo(pkg,0);event("ACTUAL_APP "+pkg+" "+info.versionName+"("+info.getLongVersionCode()+")");
-  device.executeShellCommand("am force-stop "+pkg);Intent intent=host.getPackageManager().getLaunchIntentForPackage(pkg);assertNotNull("Install exact candidate first: "+pkg,intent);intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);host.startActivity(intent);assertTrue(device.wait(Until.hasObject(By.pkg(pkg).depth(0)),15000));device.waitForIdle(1000);
+  device.executeShellCommand("am force-stop "+pkg);Intent intent=host.getPackageManager().getLaunchIntentForPackage(pkg);assertNotNull("Install exact candidate first: "+pkg,intent);intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);host.startActivity(intent);assertTrue(device.wait(Until.hasObject(By.pkg(pkg).depth(0)),15000));device.waitForIdle(1000);expectedOwner=pkg;requireForeground("launch");
  }
  private void english(){top();if(!nodes(false,"English").isEmpty())click("English");assertFalse("Workflow language toggle must be visible",nodes(false,"Deutsch").isEmpty());}
  private Pattern pattern(boolean contains,String...labels){StringJoiner result=new StringJoiner("|","(?:",")");for(String label:labels)result.add(Pattern.quote(label));return Pattern.compile((contains?".*":"")+result+(contains?".*":""),Pattern.DOTALL);}
- private List<UiObject2> nodes(boolean contains,String...labels){List<UiObject2> found=device.findObjects(By.text(pattern(contains,labels)));if(found.isEmpty())found=device.findObjects(By.desc(pattern(contains,labels)));return found;}
+ private List<UiObject2> nodes(boolean contains,String...labels){requireForeground("lookup");List<UiObject2> found=device.findObjects(By.pkg(expectedOwner).text(pattern(contains,labels)));if(found.isEmpty())found=device.findObjects(By.pkg(expectedOwner).desc(pattern(contains,labels)));return found;}
  private UiObject2 forward(String...labels){
   for(int attempt=0;attempt<22;attempt++){List<UiObject2> found=nodes(false,labels);if(found.isEmpty())found=nodes(true,labels);if(!found.isEmpty())return found.get(0);scroll(false);}
   capture(method+"-missing-forward-label");throw new AssertionError("Missing forward UI label "+Arrays.toString(labels));
@@ -138,11 +142,11 @@ public final class ShkWorkflowNativeTest {
    if(aligned.size()>1)throw new AssertionError("Ambiguous same-row editors for "+label.getText()+" "+title);
   }
   if(selected==null)throw new AssertionError("No structurally associated editor for "+label.getText()+" "+title);
-  String owner=selected.getApplicationPackage();selected.click();
+  requireForeground("editor-before-focus");String owner=selected.getApplicationPackage();assertEquals("Editor must belong to expected app",expectedOwner,owner);selected.click();
   UiObject2 focused=device.wait(Until.findObject(By.pkg(owner).clazz("android.widget.EditText").focused(true)),2000);
   if(focused==null||!selected.isFocused())throw new AssertionError("Associated editor did not focus for "+label.getText());return focused;
  }
- private void fill(String de,String en,String value){hideKeyboard();editorFrom(find(de,en)).setText(value);device.waitForIdle(300);hideKeyboard();}
+ private void fill(String de,String en,String value){hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
  private void fillForward(String[] de,String[] en,String[] values){for(int i=0;i<values.length;i++){hideKeyboard();editorFrom(forward(de[i],en[i])).setText(values[i]);device.waitForIdle(250);hideKeyboard();}}
  private void assertField(String de,String en,String expected){assertEquals("Visible raw draft field",expected,editorFrom(find(de,en)).getText());hideKeyboard();}
  private void cardAction(String label,String...actions){UiObject2 heading=find(label);for(UiObject2 parent=heading;parent!=null;parent=parent.getParent()){
@@ -151,25 +155,52 @@ public final class ShkWorkflowNativeTest {
  private void check(String label){UiObject2 item=find(label);for(UiObject2 parent=item;parent!=null;parent=parent.getParent()){
   List<UiObject2> checks=parent.findObjects(By.clazz("android.widget.CheckBox"));if(checks.size()==1){if(!checks.get(0).isChecked())checks.get(0).click();return;}
  }throw new AssertionError("No unique checklist checkbox beside "+label);}
- private void back(){hideKeyboard();device.pressBack();device.waitForIdle(700);}
+ private void back(){backTo(expectedOwner);}
+ private void backTo(String owner){hideKeyboard();requireForeground("back-before");device.pressBack();device.waitForIdle(700);expectedOwner=owner;requireForeground("back-after");}
  private void rotate(String name)throws Exception{hideKeyboard();device.setOrientationLeft();device.waitForIdle(1000);capture(name+"-landscape");device.setOrientationNatural();device.waitForIdle(1000);capture(name+"-portrait");}
- private void expect(String...fragments){for(int sweep=0;sweep<2;sweep++){for(int step=0;step<18;step++){for(String part:fragments)if(device.hasObject(By.textContains(part))||device.hasObject(By.descContains(part)))return;scroll(false);}top();}capture(method+"-missing-fact");throw new AssertionError("Missing native fact "+Arrays.toString(fragments));}
- private void scroll(boolean up){hideKeyboard();int w=device.getDisplayWidth(),h=device.getDisplayHeight();int top=Math.max(90,h/5),bottom=h*4/5;device.swipe(w/2,up?top:bottom,w/2,up?bottom:top,25);device.waitForIdle(300);}
+ private void expect(String...fragments){for(int sweep=0;sweep<2;sweep++){for(int step=0;step<18;step++){requireForeground("expect");for(String part:fragments)if(device.hasObject(By.pkg(expectedOwner).textContains(part))||device.hasObject(By.pkg(expectedOwner).descContains(part)))return;scroll(false);}top();}capture(method+"-missing-fact");throw new AssertionError("Missing native fact "+Arrays.toString(fragments));}
+ private void scroll(boolean up){hideKeyboard();int[] app=requireForeground("scroll-before");List<int[]> candidates=new ArrayList<>();
+  for(UiObject2 node:device.findObjects(By.pkg(expectedOwner).scrollable(true))){Rect r=node.getVisibleBounds();candidates.add(new int[]{r.left,r.top,r.right,r.bottom});}
+  int[] bounds=NativeWindowPolicy.scrollBounds(app,candidates);if(traceCount++<100)event("TRACE scroll-container="+Arrays.toString(bounds));int x=(bounds[0]+bounds[2])/2,margin=Math.max(24,(bounds[3]-bounds[1])/5),top=bounds[1]+margin,bottom=bounds[3]-margin;
+  device.swipe(x,up?top:bottom,x,up?bottom:top,25);device.waitForIdle(300);requireForeground("scroll-after");
+ }
  private void top(){hideKeyboard();for(int step=0;step<12;step++)scroll(true);}
- private void hideKeyboard(){try{String input=device.executeShellCommand("dumpsys input_method");if(Pattern.compile("(?:mInputShown|mIsInputViewShown|isInputViewShown)\\s*=\\s*true").matcher(input).find()){device.pressBack();device.waitForIdle(300);}}catch(Exception e){throw new AssertionError("Cannot establish keyboard state",e);}}
+ private List<NativeWindowPolicy.Window> windows(){List<NativeWindowPolicy.Window> result=new ArrayList<>();
+  for(AccessibilityWindowInfo window:InstrumentationRegistry.getInstrumentation().getUiAutomation().getWindows()){
+   AccessibilityNodeInfo root=null;try{Rect bounds=new Rect();window.getBoundsInScreen(bounds);root=window.getRoot();String owner=root==null||root.getPackageName()==null?"":root.getPackageName().toString();
+    result.add(new NativeWindowPolicy.Window(window.getType(),owner,window.isActive(),window.isFocused(),bounds.left,bounds.top,bounds.right,bounds.bottom));
+   }finally{if(root!=null)root.recycle();window.recycle();}
+  }return result;
+ }
+ private int[] requireForeground(String stage){List<NativeWindowPolicy.Window> current=windows();traceWindows(stage,current,false);
+  try{return NativeWindowPolicy.requireApp(current,expectedOwner);}catch(AssertionError failure){traceWindows("LOST_FOREGROUND-"+stage,current,true);capture(method+"-FAIL");throw failure;}
+ }
+ private void traceWindows(String stage,List<NativeWindowPolicy.Window> current,boolean failure){if(!failure&&traceCount++>=100)return;
+  StringBuilder value=new StringBuilder("TRACE ").append(stage).append(" expected=").append(expectedOwner).append(" ime=").append(NativeWindowPolicy.imeVisible(current));int count=0;
+  for(NativeWindowPolicy.Window w:current){if(count++>=10)break;value.append(" | ").append(w.type).append(':').append(w.owner).append(" active=").append(w.active).append(" focused=").append(w.focused).append(" bounds=").append(Arrays.toString(w.bounds()));}
+  event(value.substring(0,Math.min(value.length(),1800)));
+ }
+ private void hideKeyboard(){List<NativeWindowPolicy.Window> before=windows();traceWindows("ime-before",before,false);NativeWindowPolicy.requireApp(before,expectedOwner);
+  if(NativeWindowPolicy.imeVisible(before)){
+   device.pressBack();long deadline=SystemClock.uptimeMillis()+3000;List<NativeWindowPolicy.Window> after;
+   do{SystemClock.sleep(100);after=windows();NativeWindowPolicy.requireApp(after,expectedOwner);}while(NativeWindowPolicy.imeVisible(after)&&SystemClock.uptimeMillis()<deadline);
+   traceWindows("ime-after-one-back",after,false);assertFalse("Actual IME must disappear after exactly one Back",NativeWindowPolicy.imeVisible(after));
+  }
+  requireForeground("ime-hidden");
+ }
  private JSONObject archive(String pkg,String file)throws Exception{assertTrue(file.matches("[a-z0-9-]+\\.json"));return new JSONObject(device.executeShellCommand("run-as "+pkg+" cat files/"+file));}
  private JSONObject project(String pkg,String file,String name)throws Exception{return named(archive(pkg,file).getJSONArray("projects"),name);}
  private JSONObject named(JSONArray values,String name)throws Exception{for(int i=0;i<values.length();i++){JSONObject value=values.getJSONObject(i);if(name.equals(value.getString("name")))return value;}throw new AssertionError("Saved synthetic record missing: "+name);}
  private JSONArray forOwner(JSONArray values,String field,String id)throws Exception{JSONArray result=new JSONArray();for(int i=0;i<values.length();i++){JSONObject value=values.getJSONObject(i);if(id.equals(value.getString(field)))result.put(value);}return result;}
  private void share(String pkg,String de,String en,String name,String...facts)throws Exception{
   File incoming=new File(evidence,"last-report.txt"),metadata=new File(evidence,"last-report.json"),failure=new File(evidence,"receiver-error.txt");for(File file:new File[]{incoming,metadata,failure})if(file.exists())assertTrue(file.delete());
-  click(de,en);long until=SystemClock.uptimeMillis()+12000;while(SystemClock.uptimeMillis()<until&&pkg.equals(device.getCurrentPackageName()))SystemClock.sleep(100);assertNotEquals("Chooser must open",pkg,device.getCurrentPackageName());capture(name+"-chooser");
+  click(de,en);long until=SystemClock.uptimeMillis()+12000;while(SystemClock.uptimeMillis()<until&&pkg.equals(device.getCurrentPackageName()))SystemClock.sleep(100);assertNotEquals("Chooser must open",pkg,device.getCurrentPackageName());capture(name+"-chooser");String chooser=device.getCurrentPackageName();assertTrue("Only Android local share resolver",Arrays.asList("android","com.android.intentresolver").contains(chooser));expectedOwner=chooser;requireForeground("share-chooser");
   // Only this local controlled receiver is ever selected; no communication app or contact.
-  click("SHK QA local receiver");until=SystemClock.uptimeMillis()+12000;while(SystemClock.uptimeMillis()<until&&!metadata.isFile()&&!failure.isFile())SystemClock.sleep(100);
+  click("SHK QA local receiver");expectedOwner=host.getPackageName();requireForeground("local-receiver");until=SystemClock.uptimeMillis()+12000;while(SystemClock.uptimeMillis()<until&&!metadata.isFile()&&!failure.isFile())SystemClock.sleep(100);
   assertFalse("Local receiver rejected actual share",failure.exists());assertTrue("Missing received report metadata",metadata.isFile());byte[] bytes=Files.readAllBytes(incoming.toPath());String text=new String(bytes,StandardCharsets.UTF_8);JSONObject receipt=new JSONObject(new String(Files.readAllBytes(metadata.toPath()),StandardCharsets.UTF_8));
   assertEquals(pkg+".reports",receipt.getString("authority"));assertEquals(bytes.length,receipt.getInt("byteCount"));assertTrue(receipt.getBoolean("temporaryReadGrant"));assertTrue(receipt.getBoolean("clipDataMatches"));String filename=receipt.getString("filename");assertTrue("Only own report filename read",filename.matches("[a-z0-9-]+\\.txt"));
   String sourceHash=device.executeShellCommand("run-as "+pkg+" sha256sum cache/shk-reports/"+filename).trim().split("\\s+")[0];assertEquals("Complete original file bytes must reach receiver",sourceHash,receipt.getString("sha256"));
-  for(String fact:facts)assertTrue("Actual full report omitted "+fact,text.contains(fact));Files.write(new File(evidence,name+".txt").toPath(),bytes);save(name+"-receipt.json",receipt);capture(name+"-received");back();
+  for(String fact:facts)assertTrue("Actual full report omitted "+fact,text.contains(fact));Files.write(new File(evidence,name+".txt").toPath(),bytes);save(name+"-receipt.json",receipt);capture(name+"-received");backTo(pkg);
  }
  private void save(String name,JSONObject value)throws Exception{Files.write(new File(evidence,name).toPath(),value.toString(2).getBytes(StandardCharsets.UTF_8));}
  private void capture(String name){try{evidence.mkdirs();assertTrue(device.takeScreenshot(new File(evidence,name+".png")));device.dumpWindowHierarchy(new File(evidence,name+".xml"));}catch(Exception e){throw new AssertionError("Cannot capture actual UI evidence",e);}}

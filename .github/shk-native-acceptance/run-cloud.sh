@@ -15,7 +15,7 @@ cleanup() {
     sleep 1
   done
   timeout 15s "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" delete avd -n "$avd" > "$proof/avd-delete.txt" 2>&1
-  timeout 10s emulator -list-avds > "$proof/remaining-avds.txt" 2>&1
+  timeout 10s "${ANDROID_SDK_ROOT:?}/emulator/emulator" -list-avds > "$proof/remaining-avds.txt" 2>&1
   avd_rc=$?
   timeout 5s adb devices > "$proof/remaining-devices.txt" 2>&1
   device_rc=$?
