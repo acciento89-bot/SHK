@@ -304,6 +304,9 @@ public final class ShkWorkflowNativeTest {
   throw new AssertionError("Expected owner never became stable after actual transition");
  }
  private void save(String name,JSONObject value)throws Exception{Files.write(new File(evidence,name).toPath(),value.toString(2).getBytes(StandardCharsets.UTF_8));}
- private void capture(String name){try{evidence.mkdirs();device.dumpWindowHierarchy(new File(evidence,name+".xml"));assertTrue(device.takeScreenshot(new File(evidence,name+".png")));}catch(Exception e){throw new AssertionError("Cannot capture actual UI evidence",e);}}
+ private void capture(String name){try{evidence.mkdirs();device.dumpWindowHierarchy(new File(evidence,name+".xml"));assertTrue(device.takeScreenshot(new File(evidence,name+".png")));if(name.equals("kalte-unsaved-note-landscape")){
+ android.os.ParcelFileDescriptor raw=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("screencap -p");
+ try(InputStream stream=new android.os.ParcelFileDescriptor.AutoCloseInputStream(raw)){Files.copy(stream,new File(evidence,name+"-raw.png").toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);}
+ }}catch(Exception e){throw new AssertionError("Cannot capture actual UI evidence",e);}}
  private void event(String state){try{evidence.mkdirs();try(FileOutputStream out=new FileOutputStream(new File(evidence,"events.jsonl"),true)){out.write((new JSONObject().put("method",method).put("state",state).put("at",System.currentTimeMillis()).toString()+"\n").getBytes(StandardCharsets.UTF_8));}}catch(Exception e){throw new AssertionError(e);}}
 }

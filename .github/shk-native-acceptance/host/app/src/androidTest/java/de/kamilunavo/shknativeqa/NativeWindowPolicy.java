@@ -27,6 +27,7 @@ final class NativeWindowPolicy {
   boolean previousStillActive=false,targetActive=false;
   for(Window w:windows){
    if(!w.visible()||w.type==INPUT_METHOD||(!w.active&&!w.focused))continue;
+   if(w.owner==null||w.owner.isEmpty())return false; // Accessibility root can be temporarily unavailable; never accept an unknown window.
    if(!from.equals(w.owner)&&!target.equals(w.owner))throw new UnexpectedTransitionWindow(w.owner);
    if(from.equals(w.owner))previousStillActive=true;
    if(w.type==APPLICATION&&target.equals(w.owner))targetActive=true;
