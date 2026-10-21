@@ -239,9 +239,23 @@ public final class ShkWorkflowNativeTest {
  }
 
  private void assertField(String de,String en,String expected){if(VENT.equals(expectedOwner)){hideKeyboard();find(de,en);numericTransaction().verify(VentFieldIdentity.id(de),expected);return;}assertEquals("Visible raw draft field",expected,editorFrom(find(de,en)).getText());hideKeyboard();}
- private void cardAction(String label,String...actions){UiObject2 heading=find(label);for(UiObject2 parent=heading;parent!=null;parent=parent.getParent()){
-  List<UiObject2> matches=parent.findObjects(By.text(pattern(false,actions)));if(matches.size()==1){control(matches.get(0)).click();device.waitForIdle(700);return;}
- }throw new AssertionError("No unique action inside card for "+label);}
+ private void cardAction(String label,String...actions){
+  // A lazy card heading can be visible while its action is still below the viewport.
+  // Reacquire native nodes after each owned-container scroll; never retain stale nodes.
+  find(label);
+  for(int step=0;step<18;step++){
+   List<UiObject2> headings=nodes(false,label);
+   if(headings.size()==1)for(UiObject2 parent=headings.get(0);parent!=null;parent=parent.getParent()){
+    if(parent.isScrollable())break; // Never borrow a matching action from another card.
+    List<UiObject2> matches=parent.findObjects(By.text(pattern(false,actions)));
+    if(matches.size()==1){UiObject2 action=control(matches.get(0));Rect bounds=action.getVisibleBounds();
+     if(action.isEnabled()&&bounds.width()>0&&bounds.height()>0){action.click();device.waitForIdle(700);return;}
+    }
+   }
+   if(!scroll(false))break;
+  }
+  capture(method+"-missing-card-action");throw new AssertionError("No unique visible action inside card for "+label);
+ }
  private void check(String label){UiObject2 item=find(label);for(UiObject2 parent=item;parent!=null;parent=parent.getParent()){
   List<UiObject2> checks=parent.findObjects(By.clazz("android.widget.CheckBox"));if(checks.size()==1){if(!checks.get(0).isChecked())checks.get(0).click();return;}
  }throw new AssertionError("No unique checklist checkbox beside "+label);}
