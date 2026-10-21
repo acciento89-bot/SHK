@@ -1,0 +1,72 @@
+name: SHK Android published update CI
+on:
+  pull_request:
+    paths: ['android/**', '.github/shk-native-acceptance/**', '.github/workflows/android-published-update-*.yml']
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/shk-native-acceptance/**', '.github/workflows/android-published-update-*.yml']
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: One app only; confirm its current Google code before release delivery
+        type: choice
+        default: kaltecalc
+        options: [kaltecalc, lueftungscalc, heizkoerpercalc, rohrcalc, anlagencheck]
+permissions:
+  contents: read
+concurrency:
+  group: shk-android-update-ci-${{ github.ref }}-${{ inputs.flavor || 'kaltecalc' }}
+  cancel-in-progress: true
+env:
+  APP_FLAVOR: ${{ inputs.flavor || 'kaltecalc' }}
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Verify reviewed product and native lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$APP_FLAVOR" in kaltecalc|lueftungscalc|heizkoerpercalc|rohrcalc|anlagencheck) ;; *) exit 2;; esac
+          python3 .github/shk-native-acceptance/verify_source.py
+          python3 -m unittest discover -s .github/shk-native-acceptance/tests -v
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: '9.5.0'
+      - name: Validate existing app-specific launcher and store icon
+        shell: bash
+        run: |
+          set -euo pipefail
+          generated="$RUNNER_TEMP/generated-$APP_FLAVOR"
+          python3 scripts/generate_app_icon.py --app "$APP_FLAVOR" --source-dir "$generated"
+          cmp "$generated/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" "store/apple/$APP_FLAVOR-1024.png"
+          cmp "store/apple/$APP_FLAVOR-1024.png" "android/app/src/$APP_FLAVOR/res/drawable-nodpi/ic_launcher.png"
+          test -s "android/store/google-play/$APP_FLAVOR.png"
+          test ! -e "android/app/src/$APP_FLAVOR/res/drawable/ic_launcher.xml"
+          test ! -e android/app/src/main/res/drawable/ic_launcher.xml
+      - name: Test and build this one Android flavor
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          variant="${APP_FLAVOR^}"
+          gradle -p android --no-daemon --max-workers=1 ":app:test${variant}DebugUnitTest" ":app:bundle${variant}Release" --stacktrace
+          mkdir -p "$RUNNER_TEMP/unsigned"
+          cp "android/app/build/outputs/bundle/${APP_FLAVOR}Release/app-${APP_FLAVOR}-release.aab" "$RUNNER_TEMP/unsigned/app-release.aab"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shk-${{ env.APP_FLAVOR }}-1.1.0-4-unsigned-aab
+          path: ${{ runner.temp }}/unsigned/app-release.aab
+          if-no-files-found: error
+          retention-days: 30
