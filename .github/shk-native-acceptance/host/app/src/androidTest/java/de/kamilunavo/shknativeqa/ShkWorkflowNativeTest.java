@@ -36,6 +36,7 @@ public final class ShkWorkflowNativeTest {
  private String method="unknown",expectedOwner=null;
  private int traceCount=0,criticalTraceCount=0;
  private boolean postSaveTrace=false;
+ private String kalteNumericStage=null;
  @Rule public final TestWatcher watcher=new TestWatcher(){
   @Override protected void starting(Description d){method=d.getMethodName();evidence.mkdirs();event("START");}
   @Override protected void succeeded(Description d){event("PASS");}
@@ -128,7 +129,12 @@ public final class ShkWorkflowNativeTest {
  private UiObject2 find(String...labels){hideKeyboard();if(postSaveTrace&&Arrays.asList(labels).contains("Record a new before/after visit")){routeTrace("new-visit-lookup-before",null,labels);postSaveTrace=false;}for(int sweep=0;sweep<2;sweep++){for(int attempt=0;attempt<18;attempt++){List<UiObject2> found=nodes(false,labels);if(found.isEmpty())found=nodes(true,labels);if(!found.isEmpty())return found.get(0);scroll(false);}top();}capture(method+"-missing-label");throw new AssertionError("Missing actual native label "+Arrays.toString(labels));}
  private UiObject2 control(UiObject2 node){for(UiObject2 parent=node;parent!=null;parent=parent.getParent())if(parent.isClickable()||"android.widget.Button".equals(parent.getClassName()))return parent;return node;}
  private void click(String...labels){hideKeyboard();UiObject2 action=control(find(labels));assertTrue("Action disabled: "+Arrays.toString(labels),action.isEnabled());boolean saveAppliance=Arrays.asList(labels).contains("Save appliance");if(saveAppliance){postSaveTrace=true;routeTrace("save-before-click",action,labels);}action.click();device.waitForIdle(700);if(saveAppliance)routeTrace("save-after-existing-wait",null,labels);}
- private void clickTextOnly(String...labels){hideKeyboard();find(labels).click();device.waitForIdle(300);}
+ private void clickTextOnly(String...labels){hideKeyboard();find(labels).click();device.waitForIdle(300);
+  if(KALTE.equals(expectedOwner)){
+   if(Arrays.asList(labels).contains("Before")||Arrays.asList(labels).contains("Vorher"))kalteNumericStage="before";
+   else if(Arrays.asList(labels).contains("After")||Arrays.asList(labels).contains("Nachher"))kalteNumericStage="after";
+  }
+ }
  private void saveButton(){click("Speichern","Save");}
  private UiObject2 editorFrom(UiObject2 label){UiObject2 selected=null;Rect title=label.getVisibleBounds();
   for(UiObject2 current=label;current!=null;current=current.getParent()){
@@ -148,8 +154,8 @@ public final class ShkWorkflowNativeTest {
   if(focused==null||!selected.isFocused())throw new AssertionError("Associated editor did not focus for "+label.getText());return focused;
  }
  private void fill(String de,String en,String value){hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
- private androidx.test.uiautomator.BySelector numericSelector(String label){
-  return By.pkg(expectedOwner).clazz("android.widget.EditText").hasDescendant(By.text(label));
+ private androidx.test.uiautomator.BySelector numericSelector(String id){
+  return By.pkg(expectedOwner).clazz("android.widget.EditText").res(id);
  }
  private UiObject2 freshNumericActionNode(String label,boolean requireFocus){
   requireForeground("numeric-action");List<UiObject2> found=device.findObjects(numericSelector(label));
@@ -175,22 +181,21 @@ public final class ShkWorkflowNativeTest {
    public void pause(long milliseconds){SystemClock.sleep(milliseconds);}
   },expectedOwner,2000);
  }
- private String visibleNumericTitle(String de,String en){
+ private void requireNumericVisible(String id){
   for(int attempt=0;attempt<22;attempt++){
    requireForeground("numeric-find");long deadline=SystemClock.uptimeMillis()+500;
    do{
-    try{if(device.hasObject(numericSelector(en)))return en;if(device.hasObject(numericSelector(de)))return de;break;}
+    try{if(device.hasObject(numericSelector(id)))return;break;}
     catch(androidx.test.uiautomator.StaleObjectException readInvalidated){if(SystemClock.uptimeMillis()>=deadline)throw new NumericInputTransaction.Failure("Numeric query never stabilized");SystemClock.sleep(50);}
    }while(SystemClock.uptimeMillis()<=deadline);
    scroll(false);
   }
-  capture(method+"-FAIL");throw new NumericInputTransaction.Failure("Required numeric label missing: "+en);
+  capture(method+"-FAIL");throw new NumericInputTransaction.Failure("Required explicit stage+field ID missing: "+id);
  }
  private void fillForward(String[] de,String[] en,String[] values){
   for(int i=0;i<values.length;i++){
-   hideKeyboard();String title=visibleNumericTitle(de[i],en[i]);
-   // No UiObject2 or label node is carried across focus/recomposition/setText.
-   numericTransaction().enter(title,values[i]);hideKeyboard();
+   hideKeyboard();String id=KalteNumericIdentity.id(kalteNumericStage,en[i]);requireNumericVisible(id);
+   numericTransaction().enter(id,values[i]);hideKeyboard();
   }
  }
  private void assertKalteRequiredValuesBeforeRotation(){
@@ -200,7 +205,7 @@ public final class ShkWorkflowNativeTest {
   top();
   for(int stage=0;stage<2;stage++){
    clickTextOnly(stage==0?"Vorher":"Nachher",stage==0?"Before":"After");
-   for(int index=0;index<9;index++){String title=visibleNumericTitle(de[index],en[index]);numericTransaction().verify(title,values[stage][index]);}
+   for(int index=0;index<9;index++){String id=KalteNumericIdentity.id(kalteNumericStage,en[index]);requireNumericVisible(id);numericTransaction().verify(id,values[stage][index]);}
   }
   event("TRACE all18 required synthetic readings verified before rotation");
  }

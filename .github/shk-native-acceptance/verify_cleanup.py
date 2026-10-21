@@ -2,7 +2,19 @@
 import argparse,json,pathlib,re
 
 def verify_cleanup(avds,devices,avd,serial,avd_rc,device_rc):
- return avd_rc==0 and device_rc==0 and avd not in avds.splitlines() and not any(line.split() and line.split()[0]==serial for line in devices.splitlines())
+ if avd_rc != 0 or device_rc != 0: return False
+ avd_rows=[line.strip() for line in avds.splitlines() if line.strip()]
+ if any(not re.fullmatch(r'[A-Za-z0-9_.-]+', line) for line in avd_rows): return False
+ rows=[line.strip() for line in devices.splitlines() if line.strip()]
+ if not rows or rows[0] != 'List of devices attached': return False
+ device_ids=[]
+ for row in rows[1:]:
+  fields=row.split()
+  if len(fields)<2 or not re.fullmatch(r'[A-Za-z0-9_.:-]+',fields[0]): return False
+  if fields[1] not in ('device','offline','unauthorized','recovery','sideload','bootloader','host'): return False
+  if any(not re.fullmatch(r'[A-Za-z_]+:[^\s]+',field) for field in fields[2:]): return False
+  device_ids.append(fields[0])
+ return avd not in avd_rows and serial not in device_ids
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('--proof',type=pathlib.Path,required=True);p.add_argument('--avd',required=True);p.add_argument('--serial',required=True);p.add_argument('--avd-rc',type=int,required=True);p.add_argument('--device-rc',type=int,required=True);a=p.parse_args()

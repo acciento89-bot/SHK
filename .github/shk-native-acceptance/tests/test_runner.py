@@ -6,8 +6,8 @@ CONFIG=json.loads((ROOT/'flavors.json').read_text())
 def load():
  spec=importlib.util.spec_from_file_location('runner',ROOT/'run_acceptance.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 class Fake:
- def __init__(self,flavor='kaltecalc',outcome='OK (1 test)',nonzero=False,timeout=False,version=2,versionname="1.0.1",sdk=35,missing=False,anr=False):
-  self.config=CONFIG[flavor];self.outcome=outcome;self.nonzero=nonzero;self.timeout=timeout;self.version=version;self.versionname=versionname;self.sdk=sdk;self.missing=missing;self.anr=anr;self.calls=[]
+ def __init__(self,flavor='kaltecalc',outcome='OK (1 test)',nonzero=False,timeout=False,version=None,versionname=None,sdk=35,missing=False,anr=False):
+  self.config=CONFIG[flavor];self.outcome=outcome;self.nonzero=nonzero;self.timeout=timeout;self.version=self.config["versionCode"] if version is None else version;self.versionname=self.config["versionName"] if versionname is None else versionname;self.sdk=sdk;self.missing=missing;self.anr=anr;self.calls=[]
  def __call__(self,args,**kw):
   self.calls.append((args,kw['timeout']));s=' '.join(map(str,args));rc=0
   if 'ro.build.version.sdk' in s:out=str(self.sdk).encode()
@@ -47,9 +47,9 @@ class RunnerTests(unittest.TestCase):
  def test_native_failure_never_passes_or_dismisses_dialog(self):
   f=Fake(outcome='FAILURES!!! Tests run:1 Failures:1');r=self.fixture(f);self.assertEqual(r['status'],'FAILED');self.assertFalse(any('input' in x for x,t in f.calls))
  def test_wrong_candidate_does_not_run_instrumentation(self):
-  f=Fake(version=3);self.assertEqual(self.fixture(f)['status'],'FAILED');self.assertFalse(any('instrument' in x for x,t in f.calls))
+  f=Fake(version=CONFIG["kaltecalc"]["versionCode"]+1);self.assertEqual(self.fixture(f)['status'],'FAILED');self.assertFalse(any('instrument' in x for x,t in f.calls))
  def test_installed_version_suffix_is_not_exact_candidate(self):
-  for version in ['1.0.1-beta','1.0.1.1']:
+  for version in [CONFIG['kaltecalc']['versionName']+'-beta',CONFIG['kaltecalc']['versionName']+'.1']:
    f=Fake(versionname=version);self.assertEqual(self.fixture(f)['status'],'FAILED');self.assertFalse(any('instrument' in x for x,t in f.calls))
  def test_wrong_sdk_and_system_anr_prevent_install(self):
   for f in [Fake(sdk=36),Fake(anr=True)]:

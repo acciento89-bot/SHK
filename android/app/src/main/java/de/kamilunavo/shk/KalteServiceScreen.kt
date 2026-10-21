@@ -10,6 +10,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -21,6 +24,8 @@ import java.time.Instant
 import java.util.Locale
 import java.util.UUID
 
+private val serviceFieldKeys=listOf("evaporation","suction","condensation","liquid","suction-pressure","discharge-pressure","air-flow","entering-air","leaving-air")
+
 private fun serviceNumbers(reading:KalteReading)=listOf(reading.evaporationC,reading.suctionC,reading.condensationC,reading.liquidC,reading.suctionGaugeBar,reading.dischargeGaugeBar,reading.airFlowM3H,reading.enteringAirC,reading.leavingAirC).map{it.toString()}
 private fun serviceReading(raw:List<String>):KalteReading? {
     if(raw.size!=9)return null
@@ -29,6 +34,7 @@ private fun serviceReading(raw:List<String>):KalteReading? {
     return value.takeIf {runCatching{KalteServiceRules.values(it)}.isSuccess}
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun KalteServiceScreen(onShare:(String)->Unit,onBack:()->Unit) {
     val context=LocalContext.current.applicationContext
@@ -80,7 +86,7 @@ fun KalteServiceScreen(onShare:(String)->Unit,onBack:()->Unit) {
     val asset=current?.assets?.find{it.id==selectedAsset}
     val visits=current?.visits?.filter{it.assetID==selectedAsset}?.sortedByDescending{Instant.parse(it.recordedAt)}.orEmpty()
     val fields=listOf(t("Verdampfung °C","Evaporation °C"),t("Sauggas °C","Suction gas °C"),t("Kondensation °C","Condensation °C"),t("Flüssigkeit °C","Liquid °C"),t("Saugdruck bar(g)","Suction pressure bar(g)"),t("Hochdruck bar(g)","Discharge pressure bar(g)"),t("Luftvolumenstrom m³/h","Air volume m³/h"),t("Luft Eintritt °C","Entering air °C"),t("Luft Austritt °C","Leaving air °C"))
-    LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+    LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().semantics { testTagsAsResourceId = true },contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item("header") {
             Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick={leave()},enabled=!busy){Text(t("‹ Zurück","‹ Back"))}
@@ -153,7 +159,7 @@ fun KalteServiceScreen(onShare:(String)->Unit,onBack:()->Unit) {
                 items((0..8).toList(),key={"reading-$stage-$it"}) {index->
                     val raw=if(stage==0)before else after
                     OutlinedTextField(raw[index],{input->val next=raw.toMutableList();next[index]=input;if(stage==0)before=next.toList() else after=next.toList()},
-                        label={Text(fields[index])},enabled=!busy,modifier=Modifier.fillMaxWidth(),singleLine=true,
+                        label={Text(fields[index])},enabled=!busy,modifier=Modifier.fillMaxWidth().testTag("kalte-reading-${if(stage==0)"before" else "after"}-${serviceFieldKeys[index]}"),singleLine=true,
                         keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),isError=raw[index].isNotBlank()&&raw[index].trim().replace(',','.').toDoubleOrNull()?.isFinite()!=true)
                 }
             }

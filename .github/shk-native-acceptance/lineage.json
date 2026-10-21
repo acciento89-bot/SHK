@@ -10,9 +10,11 @@
     "serviceChecklistVersionsVisitsAgendaRotateColdReopenAndUtf8File"
   ],
   "receiver_source_sha256": "f03a1da07ebb71f161a216e6247f64304519148df71699e097c528d32979a482",
-  "product_gradle_sha256": "52ae951d483d5980a59106e6f0d4cf354ce05241e37d38caa477d0182f88ad50",
-  "reviewed_host_sha256": "018eca5a0a8e0d2af485cddcbcfcf4e7a0b10609f9a16940c5b824598c744664",
+  "product_gradle_sha256": "2cb008beb3a85428b325a9149ddfa606b3697039ed7ae2cd6dbd61a92831aa0f",
+  "reviewed_host_sha256": "671369feb4e56ea0ded0c59a219d6f41e45d7d3d83d01228560fe94ee4cec374",
   "reviewed_window_policy_sha256": "d89256043c07b8aa241e5c1a6f259d6d3fb4d0bf76d6af758968c841c436f77f",
-  "reviewed_change_scope": "External active-window/actual-IME/scroll/trace guards only; original business-method region exact; no product/receiver/assertion changes",
-  "reviewed_numeric_transaction_sha256": "020ddf503bbc27c53e8f9e7ee543481d7055bc4155cbd3df224a17f70617d73c"
+  "reviewed_change_scope": "External active-window/IME/scroll/transaction guards and additive nonvisual Kalte stage+field QA identifiers only; original business-method region exact; product callbacks/layout/validation/arithmetic/storage and receiver/assertions unchanged",
+  "reviewed_numeric_transaction_sha256": "020ddf503bbc27c53e8f9e7ee543481d7055bc4155cbd3df224a17f70617d73c",
+  "reviewed_kalte_identity_sha256": "a1fabfcc12aaeb203628bcbfda69265a52e53a2aa0a24ceb52e8397bcf6538d1",
+  "reviewed_kalte_ui_sha256": "71f928d9e2c84eb195838698789da7c74a9db1eba229464cfd2b121f1e119843"
 }
