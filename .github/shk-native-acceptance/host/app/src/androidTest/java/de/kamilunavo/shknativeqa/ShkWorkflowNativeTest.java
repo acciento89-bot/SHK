@@ -148,27 +148,51 @@ public final class ShkWorkflowNativeTest {
   if(focused==null||!selected.isFocused())throw new AssertionError("Associated editor did not focus for "+label.getText());return focused;
  }
  private void fill(String de,String en,String value){hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
- private UiObject2 uniqueSemanticEditor(String label){
-  requireForeground("numeric-editor-identity");List<UiObject2> found=new ArrayList<>();
-  for(UiObject2 field:device.findObjects(By.pkg(expectedOwner).clazz("android.widget.EditText"))){
-   Rect bounds=field.getVisibleBounds();
-   if(field.isEnabled()&&bounds.width()>0&&bounds.height()>0&&field.findObjects(By.text(label)).size()==1)found.add(field);
-  }
-  if(found.size()!=1)throw new AssertionError("Require exactly one current numeric editor carrying static label "+label);return found.get(0);
+ private androidx.test.uiautomator.BySelector numericSelector(String label){
+  return By.pkg(expectedOwner).clazz("android.widget.EditText").hasDescendant(By.text(label));
  }
- private void requireNumericValue(String label,String expected){
-  long deadline=SystemClock.uptimeMillis()+2000;
-  do{UiObject2 field=uniqueSemanticEditor(label);if(expected.equals(field.getText()))return;SystemClock.sleep(100);}while(SystemClock.uptimeMillis()<deadline);
-  capture(method+"-FAIL");throw new AssertionError("Exact entered value not retained in the same numeric editor: "+label);
+ private UiObject2 freshNumericActionNode(String label,boolean requireFocus){
+  requireForeground("numeric-action");List<UiObject2> found=device.findObjects(numericSelector(label));
+  if(found.size()!=1)throw new NumericInputTransaction.Failure("Exact numeric action target not unique: "+label);
+  UiObject2 field=found.get(0);Rect bounds=field.getVisibleBounds();
+  if(!expectedOwner.equals(field.getApplicationPackage())||!field.isEnabled()||bounds.width()<=0||bounds.height()<=0||(requireFocus&&!field.isFocused()))throw new NumericInputTransaction.Failure("Exact numeric action target not ready: "+label);
+  return field; // Operation-local only: never retained across a click or write.
  }
- private void fillForward(String[] de,String[] en,String[] values){for(int i=0;i<values.length;i++){
-  hideKeyboard();UiObject2 label=forward(de[i],en[i]);String title=label.getText();UiObject2 expected=uniqueSemanticEditor(title);
-  UiObject2 focused=editorFrom(label);UiObject2 current=uniqueSemanticEditor(title);
-  if(!current.isFocused()||!focused.isFocused()||focused.findObjects(By.text(title)).size()!=1||!expected.isFocused()){
-   capture(method+"-FAIL");throw new AssertionError("Focus moved away from the exact numeric label before input: "+title);
+ private NumericInputTransaction numericTransaction(){
+  return new NumericInputTransaction(new NumericInputTransaction.Port(){
+   public NumericInputTransaction.Snapshot observe(String label){
+    requireForeground("numeric-read");
+    try{
+     List<UiObject2> found=device.findObjects(numericSelector(label));
+     if(found.size()!=1)return new NumericInputTransaction.Snapshot(found.size(),expectedOwner,false,false,false,null);
+     UiObject2 field=found.get(0);Rect bounds=field.getVisibleBounds();
+     return new NumericInputTransaction.Snapshot(1,field.getApplicationPackage(),field.isEnabled(),bounds.width()>0&&bounds.height()>0,field.isFocused(),field.getText());
+    }catch(androidx.test.uiautomator.StaleObjectException readInvalidated){throw new NumericInputTransaction.StaleRead();}
+   }
+   public void focus(String label){freshNumericActionNode(label,false).click();}
+   public void write(String label,String value){freshNumericActionNode(label,true).setText(value);}
+   public long now(){return SystemClock.uptimeMillis();}
+   public void pause(long milliseconds){SystemClock.sleep(milliseconds);}
+  },expectedOwner,2000);
+ }
+ private String visibleNumericTitle(String de,String en){
+  for(int attempt=0;attempt<22;attempt++){
+   requireForeground("numeric-find");long deadline=SystemClock.uptimeMillis()+500;
+   do{
+    try{if(device.hasObject(numericSelector(en)))return en;if(device.hasObject(numericSelector(de)))return de;break;}
+    catch(androidx.test.uiautomator.StaleObjectException readInvalidated){if(SystemClock.uptimeMillis()>=deadline)throw new NumericInputTransaction.Failure("Numeric query never stabilized");SystemClock.sleep(50);}
+   }while(SystemClock.uptimeMillis()<=deadline);
+   scroll(false);
   }
-  current.setText(values[i]);device.waitForIdle(250);requireNumericValue(title,values[i]);hideKeyboard();
- }}
+  capture(method+"-FAIL");throw new NumericInputTransaction.Failure("Required numeric label missing: "+en);
+ }
+ private void fillForward(String[] de,String[] en,String[] values){
+  for(int i=0;i<values.length;i++){
+   hideKeyboard();String title=visibleNumericTitle(de[i],en[i]);
+   // No UiObject2 or label node is carried across focus/recomposition/setText.
+   numericTransaction().enter(title,values[i]);hideKeyboard();
+  }
+ }
  private void assertKalteRequiredValuesBeforeRotation(){
   String[] de={"Verdampfung °C","Sauggas °C","Kondensation °C","Flüssigkeit °C","Saugdruck bar(g)","Hochdruck bar(g)","Luftvolumenstrom m³/h","Luft Eintritt °C","Luft Austritt °C"};
   String[] en={"Evaporation °C","Suction gas °C","Condensation °C","Liquid °C","Suction pressure bar(g)","Discharge pressure bar(g)","Air volume m³/h","Entering air °C","Leaving air °C"};
@@ -176,7 +200,7 @@ public final class ShkWorkflowNativeTest {
   top();
   for(int stage=0;stage<2;stage++){
    clickTextOnly(stage==0?"Vorher":"Nachher",stage==0?"Before":"After");
-   for(int index=0;index<9;index++){UiObject2 label=forward(de[index],en[index]);requireNumericValue(label.getText(),values[stage][index]);}
+   for(int index=0;index<9;index++){String title=visibleNumericTitle(de[index],en[index]);numericTransaction().verify(title,values[stage][index]);}
   }
   event("TRACE all18 required synthetic readings verified before rotation");
  }

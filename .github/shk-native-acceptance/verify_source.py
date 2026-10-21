@@ -14,6 +14,8 @@ def verify(repo,acceptance=HERE):
   host=acceptance/'host/app/src/androidTest/java/de/kamilunavo/shknativeqa/ShkWorkflowNativeTest.java'
   policy=host.with_name('NativeWindowPolicy.java')
   if digest(host)!=line.get('reviewed_host_sha256') or not policy.is_file() or digest(policy)!=line.get('reviewed_window_policy_sha256'):raise ValueError('Unreviewed native guard source')
+  numeric=host.with_name('NumericInputTransaction.java')
+  if not numeric.is_file() or digest(numeric)!=line.get('reviewed_numeric_transaction_sha256'):raise ValueError('Unreviewed numeric transaction source')
   def business(s):return s[s.index(' @Test public void'):s.index(' private String unique(')]
   if business(actual)!=business(expected):raise ValueError('Original business scenario/assertion bytes changed')
  if digest(acceptance/'host/app/src/main/java/de/kamilunavo/shknativeqa/LocalReportReceiver.java')!=line['receiver_source_sha256']:raise ValueError('Actual local report receiver lineage mismatch')
