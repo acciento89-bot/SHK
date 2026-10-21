@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util,pathlib,tempfile,unittest,subprocess,json,tarfile,io,os
 from unittest.mock import patch
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -5,8 +6,8 @@ CONFIG=json.loads((ROOT/'flavors.json').read_text())
 def load():
  spec=importlib.util.spec_from_file_location('runner',ROOT/'run_acceptance.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 class Fake:
- def __init__(self,flavor='kaltecalc',outcome='OK (1 test)',nonzero=False,timeout=False,version=2,versionname="1.0.1",sdk=35,missing=False,anr=False):
-  self.config=CONFIG[flavor];self.outcome=outcome;self.nonzero=nonzero;self.timeout=timeout;self.version=version;self.versionname=versionname;self.sdk=sdk;self.missing=missing;self.anr=anr;self.calls=[]
+ def __init__(self,flavor='kaltecalc',outcome='OK (1 test)',nonzero=False,timeout=False,version=None,versionname=None,sdk=35,missing=False,anr=False):
+  self.config=CONFIG[flavor];self.outcome=outcome;self.nonzero=nonzero;self.timeout=timeout;self.version=self.config["versionCode"] if version is None else version;self.versionname=self.config["versionName"] if versionname is None else versionname;self.sdk=sdk;self.missing=missing;self.anr=anr;self.calls=[]
  def __call__(self,args,**kw):
   self.calls.append((args,kw['timeout']));s=' '.join(map(str,args));rc=0
   if 'ro.build.version.sdk' in s:out=str(self.sdk).encode()
@@ -46,9 +47,9 @@ class RunnerTests(unittest.TestCase):
  def test_native_failure_never_passes_or_dismisses_dialog(self):
   f=Fake(outcome='FAILURES!!! Tests run:1 Failures:1');r=self.fixture(f);self.assertEqual(r['status'],'FAILED');self.assertFalse(any('input' in x for x,t in f.calls))
  def test_wrong_candidate_does_not_run_instrumentation(self):
-  f=Fake(version=3);self.assertEqual(self.fixture(f)['status'],'FAILED');self.assertFalse(any('instrument' in x for x,t in f.calls))
+  f=Fake(version=CONFIG["kaltecalc"]["versionCode"]+1);self.assertEqual(self.fixture(f)['status'],'FAILED');self.assertFalse(any('instrument' in x for x,t in f.calls))
  def test_installed_version_suffix_is_not_exact_candidate(self):
-  for version in ['1.0.1-beta','1.0.1.1']:
+  for version in [CONFIG['kaltecalc']['versionName']+'-beta',CONFIG['kaltecalc']['versionName']+'.1']:
    f=Fake(versionname=version);self.assertEqual(self.fixture(f)['status'],'FAILED');self.assertFalse(any('instrument' in x for x,t in f.calls))
  def test_wrong_sdk_and_system_anr_prevent_install(self):
   for f in [Fake(sdk=36),Fake(anr=True)]:
@@ -59,12 +60,21 @@ class RunnerTests(unittest.TestCase):
   self.assertEqual(self.fixture(Fake(missing=True))['status'],'FAILED')
  def test_unknown_flavor_no_adb_calls(self):
   f=Fake();self.assertEqual(self.fixture(f,flavor='unknown')['status'],'FAILED');self.assertEqual(f.calls,[])
+def require_manual_dispatch(source):
+ allowed="workflow_dispatch:\n    inputs:\n      flavor:\n        description: 'One first validation or all five serial workflows'\n        type: choice\n        default: all\n        options: [all, kaltecalc, lueftungscalc, heizkoerpercalc, rohrcalc, anlagencheck]"
+ block=source.split('on:\n',1)[1].split('permissions:',1)[0].strip()
+ if block!=allowed:raise AssertionError('Only the exact reviewed workflow_dispatch inputs are allowed')
 class SourceTests(unittest.TestCase):
- def test_lineage_host_only_sdk_fixture_change(self):
-  line=json.loads((ROOT/'lineage.json').read_text());old=(ROOT/'fixtures/original-ShkWorkflowNativeTest.java.txt').read_text();now=(ROOT/'host/app/src/androidTest/java/de/kamilunavo/shknativeqa/ShkWorkflowNativeTest.java').read_text();self.assertEqual(old,now.replace('onlyOwnedDisposableApi35()','onlyOwnedDisposableApi36()').replace('assertEquals(35,Build.VERSION.SDK_INT)','assertEquals(36,Build.VERSION.SDK_INT)'));self.assertEqual(now.count('@Test public void'),5)
+ def test_lineage_preserves_business_scenarios_and_pins_reviewed_guards(self):
+  line=json.loads((ROOT/'lineage.json').read_text());old=(ROOT/'fixtures/original-ShkWorkflowNativeTest.java.txt').read_text();now=(ROOT/'host/app/src/androidTest/java/de/kamilunavo/shknativeqa/ShkWorkflowNativeTest.java').read_text();self.assertEqual(old[old.index(' @Test public void'):old.index(' private String unique(')],now[now.index(' @Test public void'):now.index(' private String unique(')]);self.assertEqual(hashlib.sha256(now.encode()).hexdigest(),line['reviewed_host_sha256']);self.assertEqual(now.count('@Test public void'),5)
  def test_manual_serial_matrix_ciphertext_only(self):
-  s=(ROOT.parents[0]/'workflows/shk-native-acceptance.yml').read_text();self.assertEqual(s.split('on:\n',1)[1].split('permissions:',1)[0].strip(),'workflow_dispatch:');self.assertIn('max-parallel: 1',s);self.assertIn('fail-fast: false',s);self.assertIn('target: google_apis',s);self.assertIn('-memory 2048',s);self.assertNotIn('secrets.',s)
+  s=(ROOT.parents[0]/'workflows/shk-native-acceptance.yml').read_text();require_manual_dispatch(s);self.assertIn('fromJSON(inputs.flavor',s);self.assertIn('max-parallel: 1',s);self.assertIn('fail-fast: false',s);self.assertIn('target: google_apis',s);self.assertIn('-memory 2048',s);self.assertNotIn('secrets.',s)
   uploads=s.split('uses: actions/upload-artifact@v4');self.assertEqual(len(uploads),2);self.assertIn('path: ${{ runner.temp }}/shk-native-encrypted/${{ matrix.flavor }}/acceptance.cms',uploads[1]);self.assertNotIn('shk-native-acceptance/',uploads[1]);self.assertIn('if: always()',s)
+ def test_manual_guard_rejects_every_extra_event(self):
+  source=(ROOT.parents[0]/'workflows/shk-native-acceptance.yml').read_text();require_manual_dispatch(source)
+  for event in ['push','pull_request','schedule','workflow_run','repository_dispatch','pull_request_target']:
+   with self.subTest(event=event):
+    with self.assertRaises(AssertionError):require_manual_dispatch(source.replace('on:\n','on:\n  '+event+':\n',1))
  def test_cleanup_fail_closed_inventory(self):
   spec=importlib.util.spec_from_file_location('cleanup',ROOT/'verify_cleanup.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
   self.assertTrue(m.verify_cleanup('', 'List of devices attached\n','owned','emulator-5554',0,0));self.assertFalse(m.verify_cleanup('', '', 'owned','emulator-5554',1,0));self.assertFalse(m.verify_cleanup('owned\n','', 'owned','emulator-5554',0,0))

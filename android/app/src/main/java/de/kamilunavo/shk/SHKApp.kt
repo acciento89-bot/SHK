@@ -11,6 +11,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -85,10 +89,11 @@ private fun CardBlock(title: String, content: @Composable ColumnScope.() -> Unit
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun MetricField(title: String, unit: String, value: Double, onChange: (Double) -> Unit) {
     var text by remember(value) { mutableStateOf(fmt(value, 2)) }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(Modifier.fillMaxWidth().semantics { testTagsAsResourceId = true }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(title, color = TextMain, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
         OutlinedTextField(
             value = text,
@@ -96,7 +101,7 @@ private fun MetricField(title: String, unit: String, value: Double, onChange: (D
                 text = raw
                 raw.replace(',', '.').toDoubleOrNull()?.let(onChange)
             },
-            modifier = Modifier.width(150.dp),
+            modifier = Modifier.width(150.dp).testTag("shk-metric-" + title),
             singleLine = true,
             suffix = { Text(unit, color = Muted, fontSize = 12.sp) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),

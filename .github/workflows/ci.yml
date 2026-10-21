@@ -3,7 +3,21 @@ name: SHK Suite CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'android/**'
+      - '.github/shk-native-acceptance/**'
+      - '.github/shk-release/**'
+      - '.github/workflows/android-*.yml'
+      - '.github/workflows/shk-native-acceptance.yml'
+      - '.github/workflows/ci.yml'
   pull_request:
+    paths-ignore:
+      - 'android/**'
+      - '.github/shk-native-acceptance/**'
+      - '.github/shk-release/**'
+      - '.github/workflows/android-*.yml'
+      - '.github/workflows/shk-native-acceptance.yml'
+      - '.github/workflows/ci.yml'
   workflow_dispatch:
 
 jobs:

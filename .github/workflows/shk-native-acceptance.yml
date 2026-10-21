@@ -1,6 +1,12 @@
 name: SHK five native workflows acceptance (manual)
 on:
   workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'One first validation or all five serial workflows'
+        type: choice
+        default: all
+        options: [all, kaltecalc, lueftungscalc, heizkoerpercalc, rohrcalc, anlagencheck]
 permissions:
   contents: read
 concurrency:
@@ -14,7 +20,7 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        flavor: [kaltecalc, lueftungscalc, heizkoerpercalc, rohrcalc, anlagencheck]
+        flavor: ${{ fromJSON(inputs.flavor == 'all' && '["kaltecalc","lueftungscalc","heizkoerpercalc","rohrcalc","anlagencheck"]' || format('["{0}"]', inputs.flavor)) }}
     env:
       SHK_FLAVOR: ${{ matrix.flavor }}
     steps:

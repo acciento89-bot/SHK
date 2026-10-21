@@ -1,27 +1,6 @@
 name: SHK Android Store Screenshots
 
 on:
-  pull_request:
-    paths:
-      - 'android/**'
-      - '.github/scripts/capture-android-store-screenshots.sh'
-      - '.github/scripts/collect-capture-diagnostics.py'
-      - '.github/scripts/encrypt-capture-diagnostics.py'
-      - '.github/scripts/shk-ci-diagnostics.public.pem'
-      - 'scripts/tests/test_capture_diagnostics.py'
-      - 'scripts/tests/test_encrypt_capture_diagnostics.py'
-      - '.github/workflows/android-store-screenshots.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'android/**'
-      - '.github/scripts/capture-android-store-screenshots.sh'
-      - '.github/scripts/collect-capture-diagnostics.py'
-      - '.github/scripts/encrypt-capture-diagnostics.py'
-      - '.github/scripts/shk-ci-diagnostics.public.pem'
-      - 'scripts/tests/test_capture_diagnostics.py'
-      - 'scripts/tests/test_encrypt_capture_diagnostics.py'
-      - '.github/workflows/android-store-screenshots.yml'
   workflow_dispatch:
 
 permissions:
