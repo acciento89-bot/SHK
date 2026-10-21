@@ -37,4 +37,8 @@ final class KalteNumericIdentity {
   if(last<0)return 1;
   return wanted<first?-1:(wanted>last?1:0);
  }
+ static String keyboardCommand(String value){
+  if(value==null||!value.matches("-?[0-9]+(?:[.,][0-9]+)?"))throw new IllegalArgumentException("Only static numeric keyboard input is permitted");
+  return "input text "+value;
+ }
 }

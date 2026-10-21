@@ -176,19 +176,22 @@ public final class ShkWorkflowNativeTest {
     }catch(androidx.test.uiautomator.StaleObjectException readInvalidated){throw new NumericInputTransaction.StaleRead();}
    }
    public void focus(String label){freshNumericActionNode(label,false).click();awaitNumericKeyboardReady();}
-   public void write(String label,String value){freshNumericActionNode(label,true).setText(value);}
+   public void write(String label,String value){
+    UiObject2 target=freshNumericActionNode(label,true);
+    if(label.startsWith("kalte-reading-")){
+     String command=KalteNumericIdentity.keyboardCommand(value);
+     assertTrue("Select only the currently focused exact numeric editor",device.pressKeyCode(android.view.KeyEvent.KEYCODE_A,android.view.KeyEvent.META_CTRL_ON));
+     try{device.executeShellCommand(command);}catch(IOException failed){throw new NumericInputTransaction.Failure("Single controlled keyboard injection failed; not retried");}
+    }else target.setText(value);
+   }
    public long now(){return SystemClock.uptimeMillis();}
    public void pause(long milliseconds){SystemClock.sleep(milliseconds);}
   },expectedOwner,2000);
  }
  private void awaitNumericKeyboardReady(){
-  long deadline=SystemClock.uptimeMillis()+2000;
-  while(!NativeWindowPolicy.imeVisible(windows())){
-   requireForeground("numeric-wait-ime");if(SystemClock.uptimeMillis()>=deadline)throw new NumericInputTransaction.Failure("Expected numeric keyboard did not become visible");SystemClock.sleep(50);
-  }
   try{InstrumentationRegistry.getInstrumentation().getUiAutomation().waitForIdle(200,2000);}
-  catch(java.util.concurrent.TimeoutException notQuiet){throw new NumericInputTransaction.Failure("Numeric keyboard accessibility updates did not settle before a single write");}
-  requireForeground("numeric-ime-ready");
+  catch(java.util.concurrent.TimeoutException notQuiet){throw new NumericInputTransaction.Failure("Numeric accessibility updates did not settle before a single write");}
+  requireForeground("numeric-input-ready");
  }
  private void requireNumericVisible(String id){
   for(int attempt=0;attempt<22;attempt++){
