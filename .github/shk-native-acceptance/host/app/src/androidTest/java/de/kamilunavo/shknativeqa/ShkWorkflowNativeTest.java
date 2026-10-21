@@ -175,22 +175,50 @@ public final class ShkWorkflowNativeTest {
      return new NumericInputTransaction.Snapshot(1,field.getApplicationPackage(),field.isEnabled(),bounds.width()>0&&bounds.height()>0,field.isFocused(),label.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(field.getText()):field.getText());
     }catch(androidx.test.uiautomator.StaleObjectException readInvalidated){throw new NumericInputTransaction.StaleRead();}
    }
-   public void focus(String label){freshNumericActionNode(label,false).click();}
-   public void write(String label,String value){freshNumericActionNode(label,true).setText(value);}
+   public void focus(String label){freshNumericActionNode(label,false).click();awaitNumericKeyboardReady();}
+   public void write(String label,String value){
+    UiObject2 target=freshNumericActionNode(label,true);
+    if(label.startsWith("kalte-reading-")){
+     String command=KalteNumericIdentity.keyboardCommand(value);
+     assertTrue("Select only the currently focused exact numeric editor",device.pressKeyCode(android.view.KeyEvent.KEYCODE_A,android.view.KeyEvent.META_CTRL_ON));
+     try{device.executeShellCommand(command);}catch(IOException failed){throw new NumericInputTransaction.Failure("Single controlled keyboard injection failed; not retried");}
+    }else target.setText(value);
+   }
    public long now(){return SystemClock.uptimeMillis();}
    public void pause(long milliseconds){SystemClock.sleep(milliseconds);}
   },expectedOwner,2000);
  }
+ private void awaitNumericKeyboardReady(){
+  try{InstrumentationRegistry.getInstrumentation().getUiAutomation().waitForIdle(200,2000);}
+  catch(java.util.concurrent.TimeoutException notQuiet){throw new NumericInputTransaction.Failure("Numeric accessibility updates did not settle before a single write");}
+  requireForeground("numeric-input-ready");
+ }
  private void requireNumericVisible(String id){
   for(int attempt=0;attempt<22;attempt++){
-   requireForeground("numeric-find");long deadline=SystemClock.uptimeMillis()+500;
-   do{
-    try{if(device.hasObject(numericSelector(id)))return;break;}
-    catch(androidx.test.uiautomator.StaleObjectException readInvalidated){if(SystemClock.uptimeMillis()>=deadline)throw new NumericInputTransaction.Failure("Numeric query never stabilized");SystemClock.sleep(50);}
-   }while(SystemClock.uptimeMillis()<=deadline);
-   scroll(false);
+   requireForeground("numeric-find");
+   try{
+    List<UiObject2> exact=device.findObjects(numericSelector(id));
+    if(exact.size()>1)throw new NumericInputTransaction.Failure("Duplicate exact numeric field identity");
+    if(exact.size()==1){Rect r=exact.get(0).getVisibleBounds();if(r.width()>0&&r.height()>0)return;}
+    if(id.startsWith("shk-metric-")){scrollNumeric(true);continue;}
+    List<String> visible=new ArrayList<>();
+    for(UiObject2 field:device.findObjects(By.pkg(expectedOwner).clazz("android.widget.EditText"))){
+     String resource=field.getResourceName();Rect r=field.getVisibleBounds();
+     if(resource!=null&&resource.startsWith("kalte-reading-")&&r.width()>0&&r.height()>0)visible.add(resource);
+    }
+    int direction=KalteNumericIdentity.searchDirection(id,visible.toArray(new String[0]));
+    if(direction==0){SystemClock.sleep(50);continue;}
+    scrollNumeric(direction<0);
+   }catch(androidx.test.uiautomator.StaleObjectException readInvalidated){SystemClock.sleep(50);}
   }
   capture(method+"-FAIL");throw new NumericInputTransaction.Failure("Required explicit stage+field ID missing: "+id);
+ }
+ private void scrollNumeric(boolean up){
+  hideKeyboard();int[] app=requireForeground("numeric-scroll-before");List<int[]> candidates=new ArrayList<>();
+  for(UiObject2 node:device.findObjects(By.pkg(expectedOwner).scrollable(true))){Rect r=node.getVisibleBounds();candidates.add(new int[]{r.left,r.top,r.right,r.bottom});}
+  int[] b=NativeWindowPolicy.scrollBounds(app,candidates);if(b==null)throw new NumericInputTransaction.Failure("Numeric field not visible and no scroll container");
+  int x=(b[0]+b[2])/2,center=(b[1]+b[3])/2,step=Math.max(24,(b[3]-b[1])/10);
+  device.swipe(x,up?center-step:center+step,x,up?center+step:center-step,25);device.waitForIdle(300);requireForeground("numeric-scroll-after");
  }
  private void fillForward(String[] de,String[] en,String[] values){
   for(int i=0;i<values.length;i++){
@@ -218,7 +246,7 @@ public final class ShkWorkflowNativeTest {
   List<UiObject2> checks=parent.findObjects(By.clazz("android.widget.CheckBox"));if(checks.size()==1){if(!checks.get(0).isChecked())checks.get(0).click();return;}
  }throw new AssertionError("No unique checklist checkbox beside "+label);}
  private void back(){backTo(expectedOwner);}
- private void backTo(String owner){hideKeyboard();requireForeground("back-before");device.pressBack();device.waitForIdle(700);expectedOwner=owner;requireForeground("back-after");}
+ private void backTo(String owner){hideKeyboard();requireForeground("back-before");String previous=expectedOwner;device.pressBack();device.waitForIdle(700);expectedOwner=owner;if(!previous.equals(owner))awaitOwnerTransition(previous,owner);requireForeground("back-after");}
  private void rotate(String name)throws Exception{if(name.equals("kalte-unsaved-note"))assertKalteRequiredValuesBeforeRotation();hideKeyboard();device.setOrientationLeft();device.waitForIdle(1000);capture(name+"-landscape");device.setOrientationNatural();device.waitForIdle(1000);capture(name+"-portrait");}
  private void expect(String...fragments){for(int sweep=0;sweep<2;sweep++){for(int step=0;step<18;step++){requireForeground("expect");for(String part:fragments)if(device.hasObject(By.pkg(expectedOwner).textContains(part))||device.hasObject(By.pkg(expectedOwner).descContains(part)))return;scroll(false);}top();}capture(method+"-missing-fact");throw new AssertionError("Missing native fact "+Arrays.toString(fragments));}
  private boolean scroll(boolean up){hideKeyboard();int[] app=requireForeground("scroll-before");List<int[]> candidates=new ArrayList<>();
@@ -279,14 +307,18 @@ public final class ShkWorkflowNativeTest {
   String sourceHash=device.executeShellCommand("run-as "+pkg+" sha256sum cache/shk-reports/"+filename).trim().split("\\s+")[0];assertEquals("Complete original file bytes must reach receiver",sourceHash,receipt.getString("sha256"));
   for(String fact:facts)assertTrue("Actual full report omitted "+fact,text.contains(fact));Files.write(new File(evidence,name+".txt").toPath(),bytes);save(name+"-receipt.json",receipt);capture(name+"-received");backTo(pkg);
  }
- private void awaitOwnedReceiver(String chooser){
+ private void awaitOwnedReceiver(String chooser){awaitOwnerTransition(chooser,host.getPackageName());}
+ private void awaitOwnerTransition(String previous,String target){
   long deadline=SystemClock.uptimeMillis()+2000;
-  do{if(NativeWindowPolicy.transitionReady(windows(),chooser,host.getPackageName()))return;
+  do{if(NativeWindowPolicy.transitionReady(windows(),previous,target))return;
    if(SystemClock.uptimeMillis()>=deadline)break;SystemClock.sleep(50);
   }while(SystemClock.uptimeMillis()<=deadline);
-  throw new AssertionError("Local owned receiver never became stable after actual chooser selection");
+  throw new AssertionError("Expected owner never became stable after actual transition");
  }
  private void save(String name,JSONObject value)throws Exception{Files.write(new File(evidence,name).toPath(),value.toString(2).getBytes(StandardCharsets.UTF_8));}
- private void capture(String name){try{evidence.mkdirs();assertTrue(device.takeScreenshot(new File(evidence,name+".png")));device.dumpWindowHierarchy(new File(evidence,name+".xml"));}catch(Exception e){throw new AssertionError("Cannot capture actual UI evidence",e);}}
+ private void capture(String name){try{evidence.mkdirs();device.dumpWindowHierarchy(new File(evidence,name+".xml"));assertTrue(device.takeScreenshot(new File(evidence,name+".png")));if(name.equals("kalte-unsaved-note-landscape")){
+ android.os.ParcelFileDescriptor raw=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("screencap -p");
+ try(InputStream stream=new android.os.ParcelFileDescriptor.AutoCloseInputStream(raw)){Files.copy(stream,new File(evidence,name+"-raw.png").toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);}
+ }}catch(Exception e){throw new AssertionError("Cannot capture actual UI evidence",e);}}
  private void event(String state){try{evidence.mkdirs();try(FileOutputStream out=new FileOutputStream(new File(evidence,"events.jsonl"),true)){out.write((new JSONObject().put("method",method).put("state",state).put("at",System.currentTimeMillis()).toString()+"\n").getBytes(StandardCharsets.UTF_8));}}catch(Exception e){throw new AssertionError(e);}}
 }
