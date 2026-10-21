@@ -6,6 +6,7 @@ class SourceIdentityTests(unittest.TestCase):
  def fixture(self,p):
   ui=p/'android/app/src/main/java/de/kamilunavo/shk/KalteServiceScreen.kt';ui.parent.mkdir(parents=True,exist_ok=True)
   shutil.copyfile(ROOT/'fixtures/product-KalteServiceScreen.kt.txt',ui)
+  shutil.copyfile(ROOT/'fixtures/product-SHKApp.kt.txt',ui.with_name('SHKApp.kt'))
   return ui
  def test_missing_reviewed_ui_fails_closed(self):
   with tempfile.TemporaryDirectory() as d:

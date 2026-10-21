@@ -153,7 +153,7 @@ public final class ShkWorkflowNativeTest {
   UiObject2 focused=device.wait(Until.findObject(By.pkg(owner).clazz("android.widget.EditText").focused(true)),2000);
   if(focused==null||!selected.isFocused())throw new AssertionError("Associated editor did not focus for "+label.getText());return focused;
  }
- private void fill(String de,String en,String value){hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
+ private void fill(String de,String en,String value){if(KALTE.equals(expectedOwner)&&(de.equals("Verdampfung")||de.equals("Sauggas"))){hideKeyboard();String id=KalteNumericIdentity.legacyId(de);requireNumericVisible(id);numericTransaction().enter(id,KalteNumericIdentity.legacyValue(value));hideKeyboard();return;}hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
  private androidx.test.uiautomator.BySelector numericSelector(String id){
   return By.pkg(expectedOwner).clazz("android.widget.EditText").res(id);
  }
@@ -172,7 +172,7 @@ public final class ShkWorkflowNativeTest {
      List<UiObject2> found=device.findObjects(numericSelector(label));
      if(found.size()!=1)return new NumericInputTransaction.Snapshot(found.size(),expectedOwner,false,false,false,null);
      UiObject2 field=found.get(0);Rect bounds=field.getVisibleBounds();
-     return new NumericInputTransaction.Snapshot(1,field.getApplicationPackage(),field.isEnabled(),bounds.width()>0&&bounds.height()>0,field.isFocused(),field.getText());
+     return new NumericInputTransaction.Snapshot(1,field.getApplicationPackage(),field.isEnabled(),bounds.width()>0&&bounds.height()>0,field.isFocused(),label.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(field.getText()):field.getText());
     }catch(androidx.test.uiautomator.StaleObjectException readInvalidated){throw new NumericInputTransaction.StaleRead();}
    }
    public void focus(String label){freshNumericActionNode(label,false).click();}

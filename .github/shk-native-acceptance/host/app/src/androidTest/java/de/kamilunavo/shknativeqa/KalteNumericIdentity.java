@@ -16,4 +16,13 @@ final class KalteNumericIdentity {
   else throw new IllegalArgumentException("Unknown static numeric field label");
   return "kalte-reading-"+stage+"-"+key;
  }
+ static String legacyId(String label){
+  if(!"Verdampfung".equals(label)&&!"Sauggas".equals(label))throw new IllegalArgumentException("Unknown legacy Kälte field");
+  return "shk-metric-"+label;
+ }
+ static String legacyValue(String value){
+  if(value==null)throw new IllegalArgumentException("Missing numeric value");
+  try{return new java.math.BigDecimal(value.replace(',','.')).stripTrailingZeros().toPlainString();}
+  catch(NumberFormatException transientEditorText){return value;}
+ }
 }

@@ -20,6 +20,8 @@ def verify(repo,acceptance=HERE):
   if not identity.is_file() or digest(identity)!=line.get('reviewed_kalte_identity_sha256'):raise ValueError('Unreviewed numeric stage identity')
   ui=repo/'android/app/src/main/java/de/kamilunavo/shk/KalteServiceScreen.kt'
   if not ui.is_file() or digest(ui)!=line.get('reviewed_kalte_ui_sha256'):raise ValueError('Missing or unreviewed numeric UI test IDs')
+  metric=repo/'android/app/src/main/java/de/kamilunavo/shk/SHKApp.kt'
+  if not metric.is_file() or digest(metric)!=line.get('reviewed_metric_ui_sha256'):raise ValueError('Missing or unreviewed legacy numeric UI IDs')
   def business(s):return s[s.index(' @Test public void'):s.index(' private String unique(')]
   if business(actual)!=business(expected):raise ValueError('Original business scenario/assertion bytes changed')
  if digest(acceptance/'host/app/src/main/java/de/kamilunavo/shknativeqa/LocalReportReceiver.java')!=line['receiver_source_sha256']:raise ValueError('Actual local report receiver lineage mismatch')
