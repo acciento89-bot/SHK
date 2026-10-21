@@ -22,6 +22,7 @@ final class NativeWindowPolicy {
   return app.bounds();
  }
  static int[] scrollBounds(int[] app,List<int[]> candidates){
+  if(candidates.isEmpty())return null; // A fitting screen legitimately has no scroll container.
   int[] best=null;long area=0;
   for(int[] c:candidates){int[] clipped={Math.max(app[0],c[0]),Math.max(app[1],c[1]),Math.min(app[2],c[2]),Math.min(app[3],c[3])};
    int width=clipped[2]-clipped[0],height=clipped[3]-clipped[1];long size=(long)width*height;

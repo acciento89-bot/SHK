@@ -159,12 +159,12 @@ public final class ShkWorkflowNativeTest {
  private void backTo(String owner){hideKeyboard();requireForeground("back-before");device.pressBack();device.waitForIdle(700);expectedOwner=owner;requireForeground("back-after");}
  private void rotate(String name)throws Exception{hideKeyboard();device.setOrientationLeft();device.waitForIdle(1000);capture(name+"-landscape");device.setOrientationNatural();device.waitForIdle(1000);capture(name+"-portrait");}
  private void expect(String...fragments){for(int sweep=0;sweep<2;sweep++){for(int step=0;step<18;step++){requireForeground("expect");for(String part:fragments)if(device.hasObject(By.pkg(expectedOwner).textContains(part))||device.hasObject(By.pkg(expectedOwner).descContains(part)))return;scroll(false);}top();}capture(method+"-missing-fact");throw new AssertionError("Missing native fact "+Arrays.toString(fragments));}
- private void scroll(boolean up){hideKeyboard();int[] app=requireForeground("scroll-before");List<int[]> candidates=new ArrayList<>();
+ private boolean scroll(boolean up){hideKeyboard();int[] app=requireForeground("scroll-before");List<int[]> candidates=new ArrayList<>();
   for(UiObject2 node:device.findObjects(By.pkg(expectedOwner).scrollable(true))){Rect r=node.getVisibleBounds();candidates.add(new int[]{r.left,r.top,r.right,r.bottom});}
-  int[] bounds=NativeWindowPolicy.scrollBounds(app,candidates);if(traceCount++<100)event("TRACE scroll-container="+Arrays.toString(bounds));int x=(bounds[0]+bounds[2])/2,margin=Math.max(24,(bounds[3]-bounds[1])/5),top=bounds[1]+margin,bottom=bounds[3]-margin;
-  device.swipe(x,up?top:bottom,x,up?bottom:top,25);device.waitForIdle(300);requireForeground("scroll-after");
+  int[] bounds=NativeWindowPolicy.scrollBounds(app,candidates);if(bounds==null)return false;if(traceCount++<100)event("TRACE scroll-container="+Arrays.toString(bounds));int x=(bounds[0]+bounds[2])/2,margin=Math.max(24,(bounds[3]-bounds[1])/5),top=bounds[1]+margin,bottom=bounds[3]-margin;
+  device.swipe(x,up?top:bottom,x,up?bottom:top,25);device.waitForIdle(300);requireForeground("scroll-after");return true;
  }
- private void top(){hideKeyboard();for(int step=0;step<12;step++)scroll(true);}
+ private void top(){hideKeyboard();for(int step=0;step<12;step++)if(!scroll(true))break;}
  private List<NativeWindowPolicy.Window> windows(){List<NativeWindowPolicy.Window> result=new ArrayList<>();
   for(AccessibilityWindowInfo window:InstrumentationRegistry.getInstrumentation().getUiAutomation().getWindows()){
    AccessibilityNodeInfo root=null;try{Rect bounds=new Rect();window.getBoundsInScreen(bounds);root=window.getRoot();String owner=root==null||root.getPackageName()==null?"":root.getPackageName().toString();
