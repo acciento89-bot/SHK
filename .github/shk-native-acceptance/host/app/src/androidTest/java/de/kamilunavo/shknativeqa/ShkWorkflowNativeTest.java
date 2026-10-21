@@ -175,11 +175,20 @@ public final class ShkWorkflowNativeTest {
      return new NumericInputTransaction.Snapshot(1,field.getApplicationPackage(),field.isEnabled(),bounds.width()>0&&bounds.height()>0,field.isFocused(),label.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(field.getText()):field.getText());
     }catch(androidx.test.uiautomator.StaleObjectException readInvalidated){throw new NumericInputTransaction.StaleRead();}
    }
-   public void focus(String label){freshNumericActionNode(label,false).click();}
+   public void focus(String label){freshNumericActionNode(label,false).click();awaitNumericKeyboardReady();}
    public void write(String label,String value){freshNumericActionNode(label,true).setText(value);}
    public long now(){return SystemClock.uptimeMillis();}
    public void pause(long milliseconds){SystemClock.sleep(milliseconds);}
   },expectedOwner,2000);
+ }
+ private void awaitNumericKeyboardReady(){
+  long deadline=SystemClock.uptimeMillis()+2000;
+  while(!NativeWindowPolicy.imeVisible(windows())){
+   requireForeground("numeric-wait-ime");if(SystemClock.uptimeMillis()>=deadline)throw new NumericInputTransaction.Failure("Expected numeric keyboard did not become visible");SystemClock.sleep(50);
+  }
+  try{InstrumentationRegistry.getInstrumentation().getUiAutomation().waitForIdle(200,2000);}
+  catch(java.util.concurrent.TimeoutException notQuiet){throw new NumericInputTransaction.Failure("Numeric keyboard accessibility updates did not settle before a single write");}
+  requireForeground("numeric-ime-ready");
  }
  private void requireNumericVisible(String id){
   for(int attempt=0;attempt<22;attempt++){
