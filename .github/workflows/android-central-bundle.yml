@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    if: github.ref == 'refs/heads/main' && github.repository == 'acciento89-bot/SHK'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'acciento89-bot/SHK'
     runs-on: ubuntu-latest
     timeout-minutes: 50
     permissions:
@@ -100,7 +100,7 @@ jobs:
         - app: anlagencheck
           package: de.kamilunavo.servicecheck
   sign:
-    if: github.ref == 'refs/heads/main' && github.repository == 'acciento89-bot/SHK'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'acciento89-bot/SHK'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -1,0 +1,14 @@
+{
+  "source": "/Volumes/SSK SSD/Kamilunavo/Artifacts/StoreOptimization-20261020/SHKPublishedUpdates/NativeQA/app/src/androidTest/java/de/kamilunavo/shknativeqa/ShkWorkflowNativeTest.java",
+  "source_sha256": "9eae149f0abff907638b50cbc61dbe79f1bc722e21c94a9d9d9c21c4f8a75b73",
+  "only_host_change": "SDK fixture guard36\u219235 and method name; five test methods+all shared helper bodies byte-identical",
+  "methods": [
+    "kalteBeforeAfterHistoryRotateColdReopenAndUtf8File",
+    "ventCommissioningSnapshotHistoryRotateColdReopenAndUtf8File",
+    "radiatorRetrofitBaselineProposalTemperaturesRotateColdReopenAndUtf8File",
+    "pipeSeriesParallelBaselineProposalRotateColdReopenAndUtf8File",
+    "serviceChecklistVersionsVisitsAgendaRotateColdReopenAndUtf8File"
+  ],
+  "receiver_source_sha256": "f03a1da07ebb71f161a216e6247f64304519148df71699e097c528d32979a482",
+  "product_gradle_sha256": "52ae951d483d5980a59106e6f0d4cf354ce05241e37d38caa477d0182f88ad50"
+}
