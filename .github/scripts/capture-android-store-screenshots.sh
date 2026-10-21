@@ -9,6 +9,21 @@ set -euo pipefail
 
 readonly apk_path="$GITHUB_WORKSPACE/$APK_PATH"
 readonly output_dir="$GITHUB_WORKSPACE/$OUTPUT_DIR"
+readonly diagnostics_dir="${DIAGNOSTICS_DIR:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/shk-capture-diagnostics/$PACKAGE_NAME}"
+readonly helper_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+capture_stage=setup
+
+preserve_failure() {
+  local status=$?
+  trap - EXIT
+  if [[ "$status" -ne 0 ]]; then
+    # Diagnostics are best-effort and must never replace the original failure.
+    set +e
+    python3 "$helper_dir/collect-capture-diagnostics.py" "$diagnostics_dir" "$PACKAGE_NAME" "$status" "$capture_stage"
+  fi
+  exit "$status"
+}
+trap preserve_failure EXIT
 
 current_focus() {
   adb shell dumpsys window | grep -m1 'mCurrentFocus=' || true
@@ -22,6 +37,11 @@ ui_dump() {
 reject_system_dialog() {
   local dump="$1"
   if grep -Eqi "System UI|isn't responding|Close app|Viewing full screen|Got it" <<<"$dump"; then
+    # Keep the exact rejected tree before later diagnostic queries can change it.
+    { umask 077; mkdir -p "$diagnostics_dir"
+      printf '%s\n' "$dump" > "$diagnostics_dir/rejected-ui.xml"
+      printf '%s\n' "${2:-}" > "$diagnostics_dir/rejected-focus.txt"
+    } || true
     echo "System dialog detected; refusing to capture app screenshots." >&2
     return 1
   fi
@@ -32,15 +52,14 @@ wait_for_ready_ui() {
   for attempt in $(seq 1 90); do
     focus="$(current_focus)"
     dump="$(ui_dump)"
-    reject_system_dialog "$dump"
+    reject_system_dialog "$dump" "$focus"
     if [[ "$focus" == *"$PACKAGE_NAME"* ]] && grep -Fq "$WAIT_TEXT" <<<"$dump"; then
       return 0
     fi
     sleep 2
   done
   echo "Timed out waiting for real $PACKAGE_NAME UI text: $WAIT_TEXT" >&2
-  current_focus >&2
-  ui_dump >&2
+  # The EXIT collector retains hierarchy/focus privately for encrypted upload.
   return 1
 }
 
@@ -61,11 +80,10 @@ assert_clean_foreground() {
   focus="$(current_focus)"
   if [[ "$focus" != *"$PACKAGE_NAME"* ]]; then
     echo "Expected $PACKAGE_NAME in mCurrentFocus; refusing to capture." >&2
-    printf '%s\n' "$focus" >&2
     return 1
   fi
   dump="$(ui_dump)"
-  reject_system_dialog "$dump"
+  reject_system_dialog "$dump" "$focus"
   grep -Fq "$WAIT_TEXT" <<<"$dump"
 }
 
@@ -75,9 +93,9 @@ test -s "$apk_path"
 adb install -r "$apk_path"
 adb shell settings put system accelerometer_rotation 0
 adb shell settings put system user_rotation 0
-adb shell settings put global hide_error_dialogs 1
 adb shell cmd locale set-app-locales "$PACKAGE_NAME" --user 0 de-DE || true
 
+capture_stage=first-frame
 launch_app
 assert_clean_foreground
 adb exec-out screencap -p > "$output_dir/01-current-ui.png"
@@ -100,10 +118,12 @@ case "$SECOND_ACTION" in
 esac
 
 WAIT_TEXT="${SECOND_WAIT_TEXT:-$WAIT_TEXT}"
+capture_stage=second-frame
 wait_for_ready_ui
 assert_clean_foreground
 adb exec-out screencap -p > "$output_dir/02-current-ui-detail.png"
 
+capture_stage=image-validation
 python3 - "$output_dir" <<'PY'
 import hashlib
 import struct

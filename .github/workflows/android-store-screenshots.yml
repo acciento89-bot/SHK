@@ -5,12 +5,22 @@ on:
     paths:
       - 'android/**'
       - '.github/scripts/capture-android-store-screenshots.sh'
+      - '.github/scripts/collect-capture-diagnostics.py'
+      - '.github/scripts/encrypt-capture-diagnostics.py'
+      - '.github/scripts/shk-ci-diagnostics.public.pem'
+      - 'scripts/tests/test_capture_diagnostics.py'
+      - 'scripts/tests/test_encrypt_capture_diagnostics.py'
       - '.github/workflows/android-store-screenshots.yml'
   push:
     branches: [main]
     paths:
       - 'android/**'
       - '.github/scripts/capture-android-store-screenshots.sh'
+      - '.github/scripts/collect-capture-diagnostics.py'
+      - '.github/scripts/encrypt-capture-diagnostics.py'
+      - '.github/scripts/shk-ci-diagnostics.public.pem'
+      - 'scripts/tests/test_capture_diagnostics.py'
+      - 'scripts/tests/test_encrypt_capture_diagnostics.py'
       - '.github/workflows/android-store-screenshots.yml'
   workflow_dispatch:
 
@@ -58,6 +68,10 @@ jobs:
             second_wait_text: VERDICHTER
     steps:
       - uses: actions/checkout@v5
+      - name: Test capture diagnostics contract
+        run: |
+          python3 scripts/tests/test_capture_diagnostics.py
+          python3 scripts/tests/test_encrypt_capture_diagnostics.py
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -85,13 +99,24 @@ jobs:
           profile: pixel_7
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: WAIT_TEXT='${{ matrix.wait_text }}' SECOND_WAIT_TEXT='${{ matrix.second_wait_text }}' PACKAGE_NAME='${{ matrix.package }}' APK_PATH='${{ matrix.apk }}' OUTPUT_DIR='android/store/google-play/screenshots/${{ matrix.label }}/de-DE' SECOND_ACTION='swipe' bash "$GITHUB_WORKSPACE/.github/scripts/capture-android-store-screenshots.sh"
+          script: DIAGNOSTICS_DIR="$RUNNER_TEMP/shk-capture-diagnostics/${{ matrix.label }}" WAIT_TEXT='${{ matrix.wait_text }}' SECOND_WAIT_TEXT='${{ matrix.second_wait_text }}' PACKAGE_NAME='${{ matrix.package }}' APK_PATH='${{ matrix.apk }}' OUTPUT_DIR='android/store/google-play/screenshots/${{ matrix.label }}/de-DE' SECOND_ACTION='swipe' bash "$GITHUB_WORKSPACE/.github/scripts/capture-android-store-screenshots.sh"
       - uses: actions/upload-artifact@v4
         with:
           name: SHK-${{ matrix.label }}-authentic-Android-screenshots
           path: android/store/google-play/screenshots/${{ matrix.label }}/de-DE/*.png
           if-no-files-found: error
           retention-days: 30
+      - name: Encrypt capture failure diagnostics
+        if: always()
+        run: python3 .github/scripts/encrypt-capture-diagnostics.py "$RUNNER_TEMP/shk-capture-diagnostics/${{ matrix.label }}" "$RUNNER_TEMP/shk-encrypted-diagnostics/${{ matrix.label }}/failure.cms"
+      - name: Preserve capture failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SHK-${{ matrix.label }}-capture-diagnostics
+          path: ${{ runner.temp }}/shk-encrypted-diagnostics/${{ matrix.label }}/failure.cms
+          if-no-files-found: ignore
+          retention-days: 7
 
   persist:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
