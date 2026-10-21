@@ -153,7 +153,7 @@ public final class ShkWorkflowNativeTest {
   UiObject2 focused=device.wait(Until.findObject(By.pkg(owner).clazz("android.widget.EditText").focused(true)),2000);
   if(focused==null||!selected.isFocused())throw new AssertionError("Associated editor did not focus for "+label.getText());return focused;
  }
- private void fill(String de,String en,String value){if(KALTE.equals(expectedOwner)&&(de.equals("Verdampfung")||de.equals("Sauggas"))){hideKeyboard();String id=KalteNumericIdentity.legacyId(de);requireNumericVisible(id);numericTransaction().enter(id,KalteNumericIdentity.legacyValue(value));hideKeyboard();return;}hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
+ private void fill(String de,String en,String value){if(VENT.equals(expectedOwner)){hideKeyboard();find(de,en);String id=VentFieldIdentity.id(de);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(KALTE.equals(expectedOwner)&&(de.equals("Verdampfung")||de.equals("Sauggas"))){hideKeyboard();String id=KalteNumericIdentity.legacyId(de);requireNumericVisible(id);numericTransaction().enter(id,KalteNumericIdentity.legacyValue(value));hideKeyboard();return;}hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
  private androidx.test.uiautomator.BySelector numericSelector(String id){
   return By.pkg(expectedOwner).clazz("android.widget.EditText").res(id);
  }
@@ -178,7 +178,7 @@ public final class ShkWorkflowNativeTest {
    public void focus(String label){freshNumericActionNode(label,false).click();awaitNumericKeyboardReady();}
    public void write(String label,String value){
     UiObject2 target=freshNumericActionNode(label,true);
-    if(label.startsWith("kalte-reading-")){
+    if(label.startsWith("kalte-reading-")||VentFieldIdentity.keyboardNumeric(label)){
      String command=KalteNumericIdentity.keyboardCommand(value);
      assertTrue("Select only the currently focused exact numeric editor",device.pressKeyCode(android.view.KeyEvent.KEYCODE_A,android.view.KeyEvent.META_CTRL_ON));
      try{device.executeShellCommand(command);}catch(IOException failed){throw new NumericInputTransaction.Failure("Single controlled keyboard injection failed; not retried");}
@@ -238,7 +238,7 @@ public final class ShkWorkflowNativeTest {
   event("TRACE all18 required synthetic readings verified before rotation");
  }
 
- private void assertField(String de,String en,String expected){assertEquals("Visible raw draft field",expected,editorFrom(find(de,en)).getText());hideKeyboard();}
+ private void assertField(String de,String en,String expected){if(VENT.equals(expectedOwner)){hideKeyboard();find(de,en);numericTransaction().verify(VentFieldIdentity.id(de),expected);return;}assertEquals("Visible raw draft field",expected,editorFrom(find(de,en)).getText());hideKeyboard();}
  private void cardAction(String label,String...actions){UiObject2 heading=find(label);for(UiObject2 parent=heading;parent!=null;parent=parent.getParent()){
   List<UiObject2> matches=parent.findObjects(By.text(pattern(false,actions)));if(matches.size()==1){control(matches.get(0)).click();device.waitForIdle(700);return;}
  }throw new AssertionError("No unique action inside card for "+label);}

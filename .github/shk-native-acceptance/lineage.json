@@ -11,11 +11,13 @@
   ],
   "receiver_source_sha256": "f03a1da07ebb71f161a216e6247f64304519148df71699e097c528d32979a482",
   "product_gradle_sha256": "2cb008beb3a85428b325a9149ddfa606b3697039ed7ae2cd6dbd61a92831aa0f",
-  "reviewed_host_sha256": "5b2fca2e1745e6ac7d22f1df1f6fcc24874cda2d811d5fd74b7d0fdcffae6072",
+  "reviewed_host_sha256": "bf53747839b4c0f8b6b0ba07503dfffcc40fa31d6b613227bbd0df49960f8ddf",
   "reviewed_window_policy_sha256": "7c029353dfd2d1a3bf0ff1c30021ed8fd1dedefc496d51687fab1efd2ed775f2",
   "reviewed_change_scope": "External active-window/IME/scroll/transaction guards and additive nonvisual Kalte stage+field QA identifiers only; original business-method region exact; product callbacks/layout/validation/arithmetic/storage and receiver/assertions unchanged",
   "reviewed_numeric_transaction_sha256": "020ddf503bbc27c53e8f9e7ee543481d7055bc4155cbd3df224a17f70617d73c",
   "reviewed_kalte_identity_sha256": "66858406fd3d8ac56068100204926f74600bcdcf8bbeea74d064c50032e72651",
   "reviewed_kalte_ui_sha256": "71f928d9e2c84eb195838698789da7c74a9db1eba229464cfd2b121f1e119843",
-  "reviewed_metric_ui_sha256": "f28d81d6032b16416ea14d326420dcdfa42c5e923a658beb175b9bab93d8394a"
+  "reviewed_metric_ui_sha256": "f28d81d6032b16416ea14d326420dcdfa42c5e923a658beb175b9bab93d8394a",
+  "reviewed_vent_identity_sha256": "d988481236c91c235bfae8a613e8883040b180f53c800fa9b60151add5e2eb21",
+  "reviewed_vent_ui_sha256": "b95654f2e4b1a1f61f8783e5e51811681e5232eb751ca3c01be169f9b8253794"
 }
