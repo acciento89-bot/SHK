@@ -148,7 +148,39 @@ public final class ShkWorkflowNativeTest {
   if(focused==null||!selected.isFocused())throw new AssertionError("Associated editor did not focus for "+label.getText());return focused;
  }
  private void fill(String de,String en,String value){hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
- private void fillForward(String[] de,String[] en,String[] values){for(int i=0;i<values.length;i++){hideKeyboard();editorFrom(forward(de[i],en[i])).setText(values[i]);device.waitForIdle(250);hideKeyboard();}}
+ private UiObject2 uniqueSemanticEditor(String label){
+  requireForeground("numeric-editor-identity");List<UiObject2> found=new ArrayList<>();
+  for(UiObject2 field:device.findObjects(By.pkg(expectedOwner).clazz("android.widget.EditText"))){
+   Rect bounds=field.getVisibleBounds();
+   if(field.isEnabled()&&bounds.width()>0&&bounds.height()>0&&field.findObjects(By.text(label)).size()==1)found.add(field);
+  }
+  if(found.size()!=1)throw new AssertionError("Require exactly one current numeric editor carrying static label "+label);return found.get(0);
+ }
+ private void requireNumericValue(String label,String expected){
+  long deadline=SystemClock.uptimeMillis()+2000;
+  do{UiObject2 field=uniqueSemanticEditor(label);if(expected.equals(field.getText()))return;SystemClock.sleep(100);}while(SystemClock.uptimeMillis()<deadline);
+  capture(method+"-FAIL");throw new AssertionError("Exact entered value not retained in the same numeric editor: "+label);
+ }
+ private void fillForward(String[] de,String[] en,String[] values){for(int i=0;i<values.length;i++){
+  hideKeyboard();UiObject2 label=forward(de[i],en[i]);String title=label.getText();UiObject2 expected=uniqueSemanticEditor(title);
+  UiObject2 focused=editorFrom(label);UiObject2 current=uniqueSemanticEditor(title);
+  if(!current.isFocused()||!focused.isFocused()||focused.findObjects(By.text(title)).size()!=1||!expected.isFocused()){
+   capture(method+"-FAIL");throw new AssertionError("Focus moved away from the exact numeric label before input: "+title);
+  }
+  current.setText(values[i]);device.waitForIdle(250);requireNumericValue(title,values[i]);hideKeyboard();
+ }}
+ private void assertKalteRequiredValuesBeforeRotation(){
+  String[] de={"Verdampfung °C","Sauggas °C","Kondensation °C","Flüssigkeit °C","Saugdruck bar(g)","Hochdruck bar(g)","Luftvolumenstrom m³/h","Luft Eintritt °C","Luft Austritt °C"};
+  String[] en={"Evaporation °C","Suction gas °C","Condensation °C","Liquid °C","Suction pressure bar(g)","Discharge pressure bar(g)","Air volume m³/h","Entering air °C","Leaving air °C"};
+  String[][] values={{"4","11","42","36","7.5","24","800","27","19"},{"4","9","42","37","7","23","800","27","18"}};
+  top();
+  for(int stage=0;stage<2;stage++){
+   clickTextOnly(stage==0?"Vorher":"Nachher",stage==0?"Before":"After");
+   for(int index=0;index<9;index++){UiObject2 label=forward(de[index],en[index]);requireNumericValue(label.getText(),values[stage][index]);}
+  }
+  event("TRACE all18 required synthetic readings verified before rotation");
+ }
+
  private void assertField(String de,String en,String expected){assertEquals("Visible raw draft field",expected,editorFrom(find(de,en)).getText());hideKeyboard();}
  private void cardAction(String label,String...actions){UiObject2 heading=find(label);for(UiObject2 parent=heading;parent!=null;parent=parent.getParent()){
   List<UiObject2> matches=parent.findObjects(By.text(pattern(false,actions)));if(matches.size()==1){control(matches.get(0)).click();device.waitForIdle(700);return;}
@@ -158,7 +190,7 @@ public final class ShkWorkflowNativeTest {
  }throw new AssertionError("No unique checklist checkbox beside "+label);}
  private void back(){backTo(expectedOwner);}
  private void backTo(String owner){hideKeyboard();requireForeground("back-before");device.pressBack();device.waitForIdle(700);expectedOwner=owner;requireForeground("back-after");}
- private void rotate(String name)throws Exception{hideKeyboard();device.setOrientationLeft();device.waitForIdle(1000);capture(name+"-landscape");device.setOrientationNatural();device.waitForIdle(1000);capture(name+"-portrait");}
+ private void rotate(String name)throws Exception{if(name.equals("kalte-unsaved-note"))assertKalteRequiredValuesBeforeRotation();hideKeyboard();device.setOrientationLeft();device.waitForIdle(1000);capture(name+"-landscape");device.setOrientationNatural();device.waitForIdle(1000);capture(name+"-portrait");}
  private void expect(String...fragments){for(int sweep=0;sweep<2;sweep++){for(int step=0;step<18;step++){requireForeground("expect");for(String part:fragments)if(device.hasObject(By.pkg(expectedOwner).textContains(part))||device.hasObject(By.pkg(expectedOwner).descContains(part)))return;scroll(false);}top();}capture(method+"-missing-fact");throw new AssertionError("Missing native fact "+Arrays.toString(fragments));}
  private boolean scroll(boolean up){hideKeyboard();int[] app=requireForeground("scroll-before");List<int[]> candidates=new ArrayList<>();
   for(UiObject2 node:device.findObjects(By.pkg(expectedOwner).scrollable(true))){Rect r=node.getVisibleBounds();candidates.add(new int[]{r.left,r.top,r.right,r.bottom});}
