@@ -21,6 +21,18 @@ final class NativeWindowPolicy {
   if(app==null)throw new AssertionError("Expected application has no focused/active window: "+expected);
   return app.bounds();
  }
+ static final class UnexpectedTransitionWindow extends AssertionError {UnexpectedTransitionWindow(String owner){super("Unexpected share-transition window: "+owner);}}
+ static boolean transitionReady(List<Window> windows,String from,String target){
+  if(from==null||target==null||from.equals(target))throw new AssertionError("Explicit distinct transition owners required");
+  boolean previousStillActive=false,targetActive=false;
+  for(Window w:windows){
+   if(!w.visible()||w.type==INPUT_METHOD||(!w.active&&!w.focused))continue;
+   if(!from.equals(w.owner)&&!target.equals(w.owner))throw new UnexpectedTransitionWindow(w.owner);
+   if(from.equals(w.owner))previousStillActive=true;
+   if(w.type==APPLICATION&&target.equals(w.owner))targetActive=true;
+  }
+  return targetActive&&!previousStillActive;
+ }
  static int[] scrollBounds(int[] app,List<int[]> candidates){
   if(candidates.isEmpty())return null; // A fitting screen legitimately has no scroll container.
   int[] best=null;long area=0;

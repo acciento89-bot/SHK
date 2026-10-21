@@ -273,11 +273,18 @@ public final class ShkWorkflowNativeTest {
   File incoming=new File(evidence,"last-report.txt"),metadata=new File(evidence,"last-report.json"),failure=new File(evidence,"receiver-error.txt");for(File file:new File[]{incoming,metadata,failure})if(file.exists())assertTrue(file.delete());
   click(de,en);long until=SystemClock.uptimeMillis()+12000;while(SystemClock.uptimeMillis()<until&&pkg.equals(device.getCurrentPackageName()))SystemClock.sleep(100);assertNotEquals("Chooser must open",pkg,device.getCurrentPackageName());capture(name+"-chooser");String chooser=device.getCurrentPackageName();assertTrue("Only Android local share resolver",Arrays.asList("android","com.android.intentresolver").contains(chooser));expectedOwner=chooser;requireForeground("share-chooser");
   // Only this local controlled receiver is ever selected; no communication app or contact.
-  click("SHK QA local receiver");expectedOwner=host.getPackageName();requireForeground("local-receiver");until=SystemClock.uptimeMillis()+12000;while(SystemClock.uptimeMillis()<until&&!metadata.isFile()&&!failure.isFile())SystemClock.sleep(100);
+  click("SHK QA local receiver");String previousChooser=expectedOwner;expectedOwner=host.getPackageName();awaitOwnedReceiver(previousChooser);requireForeground("local-receiver");until=SystemClock.uptimeMillis()+12000;while(SystemClock.uptimeMillis()<until&&!metadata.isFile()&&!failure.isFile())SystemClock.sleep(100);
   assertFalse("Local receiver rejected actual share",failure.exists());assertTrue("Missing received report metadata",metadata.isFile());byte[] bytes=Files.readAllBytes(incoming.toPath());String text=new String(bytes,StandardCharsets.UTF_8);JSONObject receipt=new JSONObject(new String(Files.readAllBytes(metadata.toPath()),StandardCharsets.UTF_8));
   assertEquals(pkg+".reports",receipt.getString("authority"));assertEquals(bytes.length,receipt.getInt("byteCount"));assertTrue(receipt.getBoolean("temporaryReadGrant"));assertTrue(receipt.getBoolean("clipDataMatches"));String filename=receipt.getString("filename");assertTrue("Only own report filename read",filename.matches("[a-z0-9-]+\\.txt"));
   String sourceHash=device.executeShellCommand("run-as "+pkg+" sha256sum cache/shk-reports/"+filename).trim().split("\\s+")[0];assertEquals("Complete original file bytes must reach receiver",sourceHash,receipt.getString("sha256"));
   for(String fact:facts)assertTrue("Actual full report omitted "+fact,text.contains(fact));Files.write(new File(evidence,name+".txt").toPath(),bytes);save(name+"-receipt.json",receipt);capture(name+"-received");backTo(pkg);
+ }
+ private void awaitOwnedReceiver(String chooser){
+  long deadline=SystemClock.uptimeMillis()+2000;
+  do{if(NativeWindowPolicy.transitionReady(windows(),chooser,host.getPackageName()))return;
+   if(SystemClock.uptimeMillis()>=deadline)break;SystemClock.sleep(50);
+  }while(SystemClock.uptimeMillis()<=deadline);
+  throw new AssertionError("Local owned receiver never became stable after actual chooser selection");
  }
  private void save(String name,JSONObject value)throws Exception{Files.write(new File(evidence,name).toPath(),value.toString(2).getBytes(StandardCharsets.UTF_8));}
  private void capture(String name){try{evidence.mkdirs();assertTrue(device.takeScreenshot(new File(evidence,name+".png")));device.dumpWindowHierarchy(new File(evidence,name+".xml"));}catch(Exception e){throw new AssertionError("Cannot capture actual UI evidence",e);}}
