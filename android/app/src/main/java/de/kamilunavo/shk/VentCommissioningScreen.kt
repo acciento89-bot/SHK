@@ -9,6 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -17,6 +21,7 @@ import java.time.Instant
 import java.util.Locale
 import java.util.UUID
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
     val context=LocalContext.current.applicationContext
@@ -47,7 +52,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
     fun commit(next:VentCommissioningBook,done:()->Unit={}) {if(book!=null)state.commit(next,book.revision){editor=0;done()}}
     val terminal=if(editor==3&&project!=null)runCatching {VentTerminal(editID,roomID,name.trim(),VentSide.valueOf(side),shkNumber(target)?:error("target"),shkNumber(measured)?:error("measured"))}.getOrNull()else null
     val terminalCandidate=if(terminal!=null&&book!=null)runCatching{VentCommissioningRules.putTerminal(book,project!!.id,terminal)}.getOrNull()else null
-    LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+    LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().semantics { testTagsAsResourceId = true },contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item("header") {
             Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick={leave()},enabled=!state.busy){Text(t("‹ Zurück","‹ Back"))}
@@ -66,7 +71,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
         if(book!=null&&(editor==1||editor==2)) {
             item("name-form") {Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text(if(editor==1)t("Neues Projekt","New project")else t("Raum","Room"),style=MaterialTheme.typography.titleLarge)
-                OutlinedTextField(name,{name=it},label={Text(t("Bezeichnung","Name"))},enabled=!state.busy,modifier=Modifier.fillMaxWidth())
+                OutlinedTextField(name,{name=it},label={Text(t("Bezeichnung","Name"))},enabled=!state.busy,modifier=Modifier.fillMaxWidth().testTag("vent-field-name"))
                 val candidate=runCatching{if(editor==1)VentCommissioningRules.addProject(book,editID,name.trim())else VentCommissioningRules.putRoom(book,project!!.id,VentRoom(editID,name.trim()))}.getOrNull()
                 val creating=editor==1
                 Button(onClick={if(candidate!=null)commit(candidate){if(creating)projectID=editID}},enabled=!state.busy&&candidate!=null,modifier=Modifier.fillMaxWidth()){Text(t("Speichern","Save"))}
@@ -111,11 +116,11 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
         if(book!=null&&project!=null&&editor==3) {
             item("terminal-form") {Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text(t("Ventil / Messstelle","Terminal / measurement point"),style=MaterialTheme.typography.titleLarge)
-                OutlinedTextField(name,{name=it},label={Text(t("Bezeichnung","Name"))},enabled=!state.busy,modifier=Modifier.fillMaxWidth())
+                OutlinedTextField(name,{name=it},label={Text(t("Bezeichnung","Name"))},enabled=!state.busy,modifier=Modifier.fillMaxWidth().testTag("vent-field-name"))
                 Text(t("Raum auswählen","Choose room"));project.rooms.forEach{room->OutlinedButton(onClick={roomID=room.id},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text((if(roomID==room.id)"✓ " else "")+room.name)}}
                 for(direction in VentSide.entries)OutlinedButton(onClick={side=direction.name},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text((if(side==direction.name)"✓ "else "")+(if(direction==VentSide.SUPPLY)t("Zuluft","Supply")else t("Abluft","Extract")))}
-                OutlinedTextField(target,{target=it},label={Text(t("Soll m³/h","Target m³/h"))},enabled=!state.busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())
-                OutlinedTextField(measured,{measured=it},label={Text(t("Ist m³/h","Measured m³/h"))},enabled=!state.busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())
+                OutlinedTextField(target,{target=it},label={Text(t("Soll m³/h","Target m³/h"))},enabled=!state.busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth().testTag("vent-field-target"))
+                OutlinedTextField(measured,{measured=it},label={Text(t("Ist m³/h","Measured m³/h"))},enabled=!state.busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth().testTag("vent-field-measured"))
                 if(terminalCandidate==null)Text(t("Name, Raum und beide Luftmengen 0…100000 m³/h vollständig eingeben. Bei Soll0 ist die Prozentabweichung nicht definiert.","Enter name, room and both flows 0…100000 m³/h. Percentage deviation is undefined for target0."))
                 Button(onClick={terminalCandidate?.let{commit(it)}},enabled=!state.busy&&terminalCandidate!=null,modifier=Modifier.fillMaxWidth()){Text(t("Einstellung speichern","Save adjustment"))}
             }}
@@ -124,7 +129,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
             item("snapshot-form") {Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text(t("Aktuelle Einstellungen dauerhaft dokumentieren","Document current adjustments"),style=MaterialTheme.typography.titleLarge)
                 Text(t("Alle aktuellen Raumbezeichnungen, Ventile, Soll- und Istwerte werden als unveränderter Besuch gespeichert.","All current room names, terminals, target and measured values are saved as an unchanged visit."))
-                OutlinedTextField(note,{note=it},label={Text(t("Tätigkeit / Messquelle / Notiz","Work / measurement source / note"))},enabled=!state.busy,modifier=Modifier.fillMaxWidth(),minLines=3)
+                OutlinedTextField(note,{note=it},label={Text(t("Tätigkeit / Messquelle / Notiz","Work / measurement source / note"))},enabled=!state.busy,modifier=Modifier.fillMaxWidth().testTag("vent-field-note"),minLines=3)
                 Button(onClick={if(visitTime.isEmpty())visitTime=Instant.now().toString();commit(VentCommissioningRules.recordVisit(book,project.id,editID,visitTime,note))},enabled=!state.busy&&note.length<=2000,modifier=Modifier.fillMaxWidth()){Text(t("Einstellbesuch speichern","Save adjustment visit"))}
             }}
         }
