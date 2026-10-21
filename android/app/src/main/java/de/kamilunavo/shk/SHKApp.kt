@@ -7,6 +7,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -26,7 +28,7 @@ private val Muted = Color(0xFFAAB9BA)
 private val TextMain = Color(0xFFF1F6F5)
 
 @Composable
-fun SHKApp(kind: String, onShare: (String) -> Unit) {
+fun SHKApp(kind: String, onShare: (String) -> Unit, onReportShare: (String) -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Mint,
@@ -38,12 +40,14 @@ fun SHKApp(kind: String, onShare: (String) -> Unit) {
         )
     ) {
         CompositionLocalProvider(LocalContentColor provides TextMain) {
+            var serviceOpen by rememberSaveable(kind) { mutableStateOf(false) }
+            val calculatorState=rememberSaveableStateHolder()
             when (kind) {
-                "kaltecalc" -> KalteCalc(onShare)
-                "lueftungscalc" -> LueftungsCalc(onShare)
-                "heizkoerpercalc" -> HeizkoerperCalc(onShare)
-                "rohrcalc" -> RohrCalc(onShare)
-                else -> AnlagenCheck(onShare)
+                "kaltecalc" -> if(serviceOpen) KalteServiceScreen(onReportShare,{serviceOpen=false}) else calculatorState.SaveableStateProvider("kalte-calculator") {KalteCalc(onShare,{serviceOpen=true})}
+                "lueftungscalc" -> if(serviceOpen) VentCommissioningScreen(onReportShare,{serviceOpen=false}) else calculatorState.SaveableStateProvider("vent-calculator") {LueftungsCalc(onShare,{serviceOpen=true})}
+                "heizkoerpercalc" -> if(serviceOpen) RadiatorRetrofitScreen(onReportShare,{serviceOpen=false}) else calculatorState.SaveableStateProvider("radiator-calculator") {HeizkoerperCalc(onShare,{serviceOpen=true})}
+                "rohrcalc" -> if(serviceOpen) PipeCircuitScreen(onReportShare,{serviceOpen=false}) else calculatorState.SaveableStateProvider("pipe-calculator") {RohrCalc(onShare,{serviceOpen=true})}
+                else -> if(serviceOpen) ServiceHistoryScreen(onReportShare,{serviceOpen=false}) else calculatorState.SaveableStateProvider("service-calculator") {AnlagenCheck(onShare,{serviceOpen=true})}
             }
         }
     }
@@ -116,24 +120,29 @@ private fun ShareButton(label: String, text: String, onShare: (String) -> Unit) 
 }
 
 @Composable
-private fun KalteCalc(onShare: (String) -> Unit) {
-    var evaporation by remember { mutableDoubleStateOf(4.0) }
-    var suction by remember { mutableDoubleStateOf(11.0) }
-    var condensation by remember { mutableDoubleStateOf(42.0) }
-    var liquid by remember { mutableDoubleStateOf(36.0) }
-    var suctionPressure by remember { mutableDoubleStateOf(7.5) }
-    var dischargePressure by remember { mutableDoubleStateOf(24.0) }
-    var airFlow by remember { mutableDoubleStateOf(800.0) }
-    var enteringAir by remember { mutableDoubleStateOf(27.0) }
-    var leavingAir by remember { mutableDoubleStateOf(19.0) }
-    var celsius by remember { mutableDoubleStateOf(20.0) }
-    var bar by remember { mutableDoubleStateOf(10.0) }
-    var vacuumMbar by remember { mutableDoubleStateOf(1.0) }
+private fun KalteCalc(onShare: (String) -> Unit, onService: () -> Unit) {
+    var evaporation by rememberSaveable { mutableDoubleStateOf(4.0) }
+    var suction by rememberSaveable { mutableDoubleStateOf(11.0) }
+    var condensation by rememberSaveable { mutableDoubleStateOf(42.0) }
+    var liquid by rememberSaveable { mutableDoubleStateOf(36.0) }
+    var suctionPressure by rememberSaveable { mutableDoubleStateOf(7.5) }
+    var dischargePressure by rememberSaveable { mutableDoubleStateOf(24.0) }
+    var airFlow by rememberSaveable { mutableDoubleStateOf(800.0) }
+    var enteringAir by rememberSaveable { mutableDoubleStateOf(27.0) }
+    var leavingAir by rememberSaveable { mutableDoubleStateOf(19.0) }
+    var celsius by rememberSaveable { mutableDoubleStateOf(20.0) }
+    var bar by rememberSaveable { mutableDoubleStateOf(10.0) }
+    var vacuumMbar by rememberSaveable { mutableDoubleStateOf(1.0) }
+    val serviceEnglish=!Locale.getDefault().language.startsWith("de")
     val superheat = suction - evaporation
     val subcooling = condensation - liquid
     val ratio = if (suctionPressure + 1.01325 > 0) (dischargePressure + 1.01325) / (suctionPressure + 1.01325) else 0.0
     val capacity = max(0.0, airFlow) * abs(enteringAir - leavingAir) * 0.000335
     AppPage("KälteCalc", "SERVICE CONSOLE", "Kältekreis, Luftseite und Service-Einheiten offline berechnen.") {
+        CardBlock(if(serviceEnglish)"Service history" else "Servicehistorie") {
+            Text(if(serviceEnglish)"Save appliances and before/after service visits." else "Anlagen und Vorher-/Nachher-Besuche getrennt speichern.")
+            OutlinedButton(onClick=onService,modifier=Modifier.fillMaxWidth()) {Text(if(serviceEnglish)"Open service visits" else "Servicebesuche öffnen")}
+        }
         CardBlock("Kältekreis") {
             MetricField("Verdampfung", "°C", evaporation) { evaporation = it }
             MetricField("Sauggas", "°C", suction) { suction = it }
@@ -169,16 +178,16 @@ private fun KalteCalc(onShare: (String) -> Unit) {
 }
 
 @Composable
-private fun LueftungsCalc(onShare: (String) -> Unit) {
-    var flow by remember { mutableDoubleStateOf(250.0) }
-    var targetVelocity by remember { mutableDoubleStateOf(3.0) }
-    var diameter by remember { mutableDoubleStateOf(180.0) }
-    var width by remember { mutableDoubleStateOf(300.0) }
-    var height by remember { mutableDoubleStateOf(200.0) }
-    var roomLength by remember { mutableDoubleStateOf(5.0) }
-    var roomWidth by remember { mutableDoubleStateOf(4.0) }
-    var roomHeight by remember { mutableDoubleStateOf(2.5) }
-    var airChanges by remember { mutableDoubleStateOf(1.5) }
+private fun LueftungsCalc(onShare: (String) -> Unit,onCommissioning:()->Unit) {
+    var flow by rememberSaveable { mutableDoubleStateOf(250.0) }
+    var targetVelocity by rememberSaveable { mutableDoubleStateOf(3.0) }
+    var diameter by rememberSaveable { mutableDoubleStateOf(180.0) }
+    var width by rememberSaveable { mutableDoubleStateOf(300.0) }
+    var height by rememberSaveable { mutableDoubleStateOf(200.0) }
+    var roomLength by rememberSaveable { mutableDoubleStateOf(5.0) }
+    var roomWidth by rememberSaveable { mutableDoubleStateOf(4.0) }
+    var roomHeight by rememberSaveable { mutableDoubleStateOf(2.5) }
+    var airChanges by rememberSaveable { mutableDoubleStateOf(1.5) }
     val q = max(0.0, flow) / 3600
     val requiredDiameter = if (q > 0 && targetVelocity > 0) sqrt(4 * q / (PI * targetVelocity)) * 1000 else 0.0
     val roundVelocity = if (diameter > 0) q / (PI * (diameter / 1000).pow(2) / 4) else 0.0
@@ -188,6 +197,9 @@ private fun LueftungsCalc(onShare: (String) -> Unit) {
     val roomVolume = max(0.0, roomLength) * max(0.0, roomWidth) * max(0.0, roomHeight)
     val roomFlow = roomVolume * max(0.0, airChanges)
     AppPage("LüftungsCalc", "AIRFLOW STUDIO", "Kanalquerschnitt und Raumluftwechsel getrennt bearbeiten.") {
+        CardBlock(if(Locale.getDefault().language.startsWith("de"))"Inbetriebnahmeprojekte" else "Commissioning projects") {
+            OutlinedButton(onClick=onCommissioning,modifier=Modifier.fillMaxWidth()){Text(if(Locale.getDefault().language.startsWith("de"))"Räume, Ventile und Einstellbesuche" else "Rooms, terminals and adjustment visits")}
+        }
         CardBlock("Rundkanal") {
             MetricField("Volumenstrom", "m³/h", flow) { flow = it }
             MetricField("Zielgeschwindigkeit", "m/s", targetVelocity) { targetVelocity = it }
@@ -215,13 +227,13 @@ private fun LueftungsCalc(onShare: (String) -> Unit) {
 }
 
 @Composable
-private fun HeizkoerperCalc(onShare: (String) -> Unit) {
-    var nominal by remember { mutableDoubleStateOf(2000.0) }
-    var required by remember { mutableDoubleStateOf(1500.0) }
-    var flow by remember { mutableDoubleStateOf(55.0) }
-    var ret by remember { mutableDoubleStateOf(45.0) }
-    var room by remember { mutableDoubleStateOf(20.0) }
-    var exponent by remember { mutableDoubleStateOf(1.30) }
+private fun HeizkoerperCalc(onShare: (String) -> Unit, onRetrofit: () -> Unit) {
+    var nominal by rememberSaveable { mutableDoubleStateOf(2000.0) }
+    var required by rememberSaveable { mutableDoubleStateOf(1500.0) }
+    var flow by rememberSaveable { mutableDoubleStateOf(55.0) }
+    var ret by rememberSaveable { mutableDoubleStateOf(45.0) }
+    var room by rememberSaveable { mutableDoubleStateOf(20.0) }
+    var exponent by rememberSaveable { mutableDoubleStateOf(1.30) }
     val arithmetic = max(0.0, (flow + ret) / 2 - room)
     val ratioC = if (flow > room) (ret - room) / (flow - room) else 0.0
     val logarithmic = if (flow >= ret && flow > room && ret > room && abs(flow-ret) > 1e-6) (flow-ret)/ln((flow-room)/(ret-room)) else arithmetic
@@ -232,6 +244,7 @@ private fun HeizkoerperCalc(onShare: (String) -> Unit) {
     val count = if (required > 0 && actual > 0) ceil(required/actual).toInt() else 0
     val waterFlow = if (actual > 0 && flow > ret) actual/(1.163*(flow-ret)) else 0.0
     AppPage("HeizkörperCalc", "RAUM & HEIZFLÄCHE", "Heizkörper passend zum realen Betriebspunkt bewerten.") {
+        Button(onClick=onRetrofit,modifier=Modifier.fillMaxWidth()){Text(if(Locale.getDefault().language.startsWith("de"))"Modernisierung · Räume & Temperaturvarianten" else "Retrofit · rooms & temperature alternatives")}
         CardBlock("Betriebspunkt") {
             MetricField("Hersteller-Nennleistung ΔT50", "W", nominal) { nominal = it }
             Text("ΔT50 ist die mittlere Heizkörper-Übertemperatur zum Raum, nicht die Vor-/Rücklauf-Spreizung.", color = Muted, fontSize = 12.sp)
@@ -268,19 +281,20 @@ private fun pipeResult(flowLPH: Double, diameterMM: Double, lengthM: Double, rou
 }
 
 @Composable
-private fun RohrCalc(onShare: (String) -> Unit) {
-    var flow by remember { mutableDoubleStateOf(1000.0) }
-    var diameter by remember { mutableDoubleStateOf(20.0) }
-    var length by remember { mutableDoubleStateOf(10.0) }
-    var roughness by remember { mutableDoubleStateOf(0.01) }
-    var zeta by remember { mutableDoubleStateOf(0.0) }
-    var targetVelocity by remember { mutableDoubleStateOf(1.0) }
+private fun RohrCalc(onShare: (String) -> Unit, onCircuit: () -> Unit) {
+    var flow by rememberSaveable { mutableDoubleStateOf(1000.0) }
+    var diameter by rememberSaveable { mutableDoubleStateOf(20.0) }
+    var length by rememberSaveable { mutableDoubleStateOf(10.0) }
+    var roughness by rememberSaveable { mutableDoubleStateOf(0.01) }
+    var zeta by rememberSaveable { mutableDoubleStateOf(0.0) }
+    var targetVelocity by rememberSaveable { mutableDoubleStateOf(1.0) }
     val r=pipeResult(flow,diameter,length,roughness,zeta)
     val q=max(0.0,flow)/1000/3600
     val requiredDiameter=if(q>0 && targetVelocity>0) sqrt(4*q/(PI*targetVelocity))*1000 else 0.0
     val maximumFlow=if(diameter>0 && targetVelocity>0) PI*(diameter/1000).pow(2)/4*targetVelocity*3600*1000 else 0.0
     val regime=when { r.reynolds<2300 -> "laminar"; r.reynolds<4000 -> "Übergangsbereich"; else -> "turbulent" }
     AppPage("RohrCalc", "HYDRAULIC WORKSHEET", "Freier Innendurchmesser · reale Länge · ζ-Widerstände") {
+        Button(onClick=onCircuit,modifier=Modifier.fillMaxWidth()){Text(if(Locale.getDefault().language.startsWith("de"))"Rohrkreise · Bestand & Vorschlag" else "Circuits · baseline & proposal")}
         CardBlock("Rohrstrecke 01") {
             MetricField("Volumenstrom", "l/h", flow) { flow = it }
             MetricField("Freier Innendurchmesser", "mm", diameter) { diameter = it }
@@ -315,24 +329,25 @@ private fun RohrCalc(onShare: (String) -> Unit) {
 }
 
 @Composable
-private fun AnlagenCheck(onShare: (String) -> Unit) {
-    var objectName by remember { mutableStateOf("") }
-    var flow by remember { mutableDoubleStateOf(55.0) }
-    var ret by remember { mutableDoubleStateOf(45.0) }
-    var cold by remember { mutableDoubleStateOf(1.5) }
-    var hot by remember { mutableDoubleStateOf(1.9) }
-    var minPressure by remember { mutableDoubleStateOf(1.2) }
-    var maxPressure by remember { mutableDoubleStateOf(2.0) }
-    var staticHeight by remember { mutableDoubleStateOf(8.0) }
-    var safetyValve by remember { mutableDoubleStateOf(3.0) }
-    var tightness by remember { mutableStateOf(false) }
-    var vented by remember { mutableStateOf(false) }
-    var pumpChecked by remember { mutableStateOf(false) }
-    var filtersChecked by remember { mutableStateOf(false) }
-    var notes by remember { mutableStateOf("") }
+private fun AnlagenCheck(onShare: (String) -> Unit, onHistory: () -> Unit) {
+    var objectName by rememberSaveable { mutableStateOf("") }
+    var flow by rememberSaveable { mutableDoubleStateOf(55.0) }
+    var ret by rememberSaveable { mutableDoubleStateOf(45.0) }
+    var cold by rememberSaveable { mutableDoubleStateOf(1.5) }
+    var hot by rememberSaveable { mutableDoubleStateOf(1.9) }
+    var minPressure by rememberSaveable { mutableDoubleStateOf(1.2) }
+    var maxPressure by rememberSaveable { mutableDoubleStateOf(2.0) }
+    var staticHeight by rememberSaveable { mutableDoubleStateOf(8.0) }
+    var safetyValve by rememberSaveable { mutableDoubleStateOf(3.0) }
+    var tightness by rememberSaveable { mutableStateOf(false) }
+    var vented by rememberSaveable { mutableStateOf(false) }
+    var pumpChecked by rememberSaveable { mutableStateOf(false) }
+    var filtersChecked by rememberSaveable { mutableStateOf(false) }
+    var notes by rememberSaveable { mutableStateOf("") }
     val spread=flow-ret; val rise=hot-cold; val minStatic=max(0.0,staticHeight)*0.0980665+0.3; val margin=safetyValve-hot
     val warnings=listOf(spread<0 || spread<5 || spread>20, cold<minPressure || cold>maxPressure, cold<minStatic, rise<0 || rise>1, margin<0.5).count{it}
     AppPage("AnlagenCheck", "SERVICE INSPECTION", "Messwerte erfassen, gegen eigene Vorgaben prüfen und dokumentieren.") {
+        Button(onClick=onHistory,modifier=Modifier.fillMaxWidth()){Text(if(Locale.getDefault().language.startsWith("de"))"Servicehistorie · eigene Checklisten & Folgetermine" else "Service history · own checklists & next visits")}
         CardBlock("Objekt / Anlage") { OutlinedTextField(objectName,{objectName=it},Modifier.fillMaxWidth(),placeholder={Text("z. B. Heizzentrale Nord")}) }
         CardBlock("Messwerte") {
             MetricField("Vorlauf", "°C", flow) { flow = it }

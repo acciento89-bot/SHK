@@ -1,0 +1,14 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <queries>
+    <package android:name="de.kamilunav.kaltecalc" />
+    <package android:name="de.kamilunavo.luftungscalc" />
+    <package android:name="de.kamilunavo.heizkorpercalc" />
+    <package android:name="de.kamilunavo.rohrcalc" />
+    <package android:name="de.kamilunavo.servicecheck" />
+  </queries>
+  <application android:label="SHK Native QA" android:allowBackup="false">
+    <activity android:name=".LocalReportReceiver" android:label="SHK QA local receiver" android:exported="true">
+      <intent-filter><action android:name="android.intent.action.SEND" /><category android:name="android.intent.category.DEFAULT" /><data android:mimeType="text/plain" /></intent-filter>
+    </activity>
+  </application>
+</manifest>

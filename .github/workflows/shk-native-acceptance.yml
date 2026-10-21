@@ -1,0 +1,83 @@
+name: SHK five native workflows acceptance (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: shk-native-acceptance
+  cancel-in-progress: false
+jobs:
+  native-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        flavor: [kaltecalc, lueftungscalc, heizkoerpercalc, rohrcalc, anlagencheck]
+    env:
+      SHK_FLAVOR: ${{ matrix.flavor }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Verify synthetic source, identities and preserved native assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          proof="$RUNNER_TEMP/shk-native-acceptance/$SHK_FLAVOR"
+          mkdir -p "$proof"
+          git rev-parse HEAD > "$proof/source-commit.txt"
+          python3 .github/shk-native-acceptance/verify_source.py
+          python3 -m unittest discover -s .github/shk-native-acceptance/tests -v
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Build exact own flavor debug candidate and separate host
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          proof="$RUNNER_TEMP/shk-native-acceptance/$SHK_FLAVOR"
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          variant="${SHK_FLAVOR^}"
+          gradle -p android --no-daemon --max-workers=1 "test${variant}DebugUnitTest" "assemble${variant}Debug" --stacktrace > "$proof/product-build.log" 2>&1
+          gradle -p .github/shk-native-acceptance/host --no-daemon --max-workers=1 :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace > "$proof/host-build.log" 2>&1
+      - name: Enable official KVM
+        run: test -e /dev/kvm && sudo chmod 666 /dev/kvm
+      - name: Actual native workflow on stock Google APIs image
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          avd-name: SHKNativeAcceptance-${{ matrix.flavor }}-35
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 2048
+          disable-animations: true
+          script: bash .github/shk-native-acceptance/run-cloud.sh
+      - name: Encrypt synthetic native success or failure evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/shk-native-acceptance/encrypt_evidence.py \
+            "$RUNNER_TEMP/shk-native-acceptance/$SHK_FLAVOR" \
+            "$RUNNER_TEMP/shk-native-encrypted/$SHK_FLAVOR/acceptance.cms" \
+            .github/shk-native-acceptance/shk-ci-diagnostics.public.pem
+      - name: Retain encrypted synthetic evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SHK-native-${{ matrix.flavor }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/shk-native-encrypted/${{ matrix.flavor }}/acceptance.cms
+          if-no-files-found: warn
+          retention-days: 7
