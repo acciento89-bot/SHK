@@ -135,8 +135,9 @@ public final class ShkWorkflowNativeTest {
    requireForeground("click-target-read");
    try{
     List<UiObject2> found=nodes(false,labels);if(found.isEmpty())found=nodes(true,labels);
-    if(found.size()>1)throw new AssertionError("Ambiguous native click target: "+Arrays.toString(labels));
-    if(found.size()==1){UiObject2 action=control(found.get(0));Rect bounds=action.getVisibleBounds();
+    List<UiObject2> actions=new ArrayList<>();boolean[] clickable=new boolean[found.size()];boolean any=false;
+    for(int i=0;i<found.size();i++){UiObject2 candidate=control(found.get(i));actions.add(candidate);clickable[i]=candidate.isClickable()||"android.widget.Button".equals(candidate.getClassName());any|=clickable[i];}
+    if(any){UiObject2 action=actions.get(NativeClickPolicy.uniqueAction(clickable));Rect bounds=action.getVisibleBounds();
      assertEquals("Native action owner",expectedOwner,action.getApplicationPackage());
      assertTrue("Action disabled: "+Arrays.toString(labels),action.isEnabled());
      if(bounds.width()>0&&bounds.height()>0)return action;

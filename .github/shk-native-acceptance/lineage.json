@@ -11,7 +11,7 @@
   ],
   "receiver_source_sha256": "f03a1da07ebb71f161a216e6247f64304519148df71699e097c528d32979a482",
   "product_gradle_sha256": "2cb008beb3a85428b325a9149ddfa606b3697039ed7ae2cd6dbd61a92831aa0f",
-  "reviewed_host_sha256": "2f310fa043f1446e551502aef6b96714a60240770c60315a7d348ecf57cff487",
+  "reviewed_host_sha256": "597eee58345ab1292e75d268a2b81d487bb96e11b0a1cc55758d9312a88d8b2e",
   "reviewed_window_policy_sha256": "7c029353dfd2d1a3bf0ff1c30021ed8fd1dedefc496d51687fab1efd2ed775f2",
   "reviewed_change_scope": "External active-window/IME/scroll/transaction guards and additive nonvisual Kalte stage+field QA identifiers only; original business-method region exact; product callbacks/layout/validation/arithmetic/storage and receiver/assertions unchanged",
   "reviewed_numeric_transaction_sha256": "020ddf503bbc27c53e8f9e7ee543481d7055bc4155cbd3df224a17f70617d73c",
@@ -26,5 +26,6 @@
   "reviewed_pipe_ui_sha256": "23808deb886c2f99549d3794cfda47164fe9e232b5ff545fd5f529633d6494bd",
   "reviewed_service_identity_sha256": "914a488ad1429edc3f5629714468205c1d02b858ee4c2b3b7237061084458e56",
   "reviewed_service_ui_sha256": "f7ac2b800a3d86c7116eec8f2b1f238632dae6692e00e0f3bdbfccb7e04797df",
-  "reviewed_checklist_policy_sha256": "99253b86c85e3e990cee05b252216496833730762033feda6da26833e3b88ee4"
+  "reviewed_checklist_policy_sha256": "99253b86c85e3e990cee05b252216496833730762033feda6da26833e3b88ee4",
+  "reviewed_click_policy_sha256": "76e424c5100c1b17ba93e7a57d467cffc76f18751807ee9b6e38ac4ebde8dee6"
 }
