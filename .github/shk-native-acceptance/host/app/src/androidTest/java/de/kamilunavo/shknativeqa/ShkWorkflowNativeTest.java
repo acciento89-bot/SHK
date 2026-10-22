@@ -153,7 +153,7 @@ public final class ShkWorkflowNativeTest {
   UiObject2 focused=device.wait(Until.findObject(By.pkg(owner).clazz("android.widget.EditText").focused(true)),2000);
   if(focused==null||!selected.isFocused())throw new AssertionError("Associated editor did not focus for "+label.getText());return focused;
  }
- private void fill(String de,String en,String value){if(RADIATOR.equals(expectedOwner)){hideKeyboard();find(de,en);String id=RadiatorFieldIdentity.id(de,en);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(VENT.equals(expectedOwner)){hideKeyboard();find(de,en);String id=VentFieldIdentity.id(de);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(KALTE.equals(expectedOwner)&&(de.equals("Verdampfung")||de.equals("Sauggas"))){hideKeyboard();String id=KalteNumericIdentity.legacyId(de);requireNumericVisible(id);numericTransaction().enter(id,KalteNumericIdentity.legacyValue(value));hideKeyboard();return;}hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
+ private void fill(String de,String en,String value){if(PIPE.equals(expectedOwner)){hideKeyboard();find(de,en);String id=PipeFieldIdentity.id(de,en);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(RADIATOR.equals(expectedOwner)){hideKeyboard();find(de,en);String id=RadiatorFieldIdentity.id(de,en);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(VENT.equals(expectedOwner)){hideKeyboard();find(de,en);String id=VentFieldIdentity.id(de);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(KALTE.equals(expectedOwner)&&(de.equals("Verdampfung")||de.equals("Sauggas"))){hideKeyboard();String id=KalteNumericIdentity.legacyId(de);requireNumericVisible(id);numericTransaction().enter(id,KalteNumericIdentity.legacyValue(value));hideKeyboard();return;}hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
  private androidx.test.uiautomator.BySelector numericSelector(String id){
   return By.pkg(expectedOwner).clazz("android.widget.EditText").res(id);
  }
@@ -178,7 +178,7 @@ public final class ShkWorkflowNativeTest {
    public void focus(String label){freshNumericActionNode(label,false).click();awaitNumericKeyboardReady();}
    public void write(String label,String value){
     UiObject2 target=freshNumericActionNode(label,true);
-    if(label.startsWith("kalte-reading-")||VentFieldIdentity.keyboardNumeric(label)||RadiatorFieldIdentity.keyboardNumeric(label)){
+    if(label.startsWith("kalte-reading-")||VentFieldIdentity.keyboardNumeric(label)||RadiatorFieldIdentity.keyboardNumeric(label)||PipeFieldIdentity.keyboardNumeric(label)){
      String command=value.isEmpty()&&RadiatorFieldIdentity.keyboardNumeric(label)?null:KalteNumericIdentity.keyboardCommand(value);
      assertTrue("Select only the currently focused exact numeric editor",device.pressKeyCode(android.view.KeyEvent.KEYCODE_A,android.view.KeyEvent.META_CTRL_ON));
      if(command==null)assertTrue("Clear only the focused radiator numeric editor",device.pressKeyCode(android.view.KeyEvent.KEYCODE_DEL));
@@ -239,7 +239,7 @@ public final class ShkWorkflowNativeTest {
   event("TRACE all18 required synthetic readings verified before rotation");
  }
 
- private void assertField(String de,String en,String expected){if(RADIATOR.equals(expectedOwner)){hideKeyboard();find(de,en);numericTransaction().verify(RadiatorFieldIdentity.id(de,en),expected);return;}if(VENT.equals(expectedOwner)){hideKeyboard();find(de,en);numericTransaction().verify(VentFieldIdentity.id(de),expected);return;}assertEquals("Visible raw draft field",expected,editorFrom(find(de,en)).getText());hideKeyboard();}
+ private void assertField(String de,String en,String expected){if(PIPE.equals(expectedOwner)){hideKeyboard();find(de,en);numericTransaction().verify(PipeFieldIdentity.id(de,en),expected);return;}if(RADIATOR.equals(expectedOwner)){hideKeyboard();find(de,en);numericTransaction().verify(RadiatorFieldIdentity.id(de,en),expected);return;}if(VENT.equals(expectedOwner)){hideKeyboard();find(de,en);numericTransaction().verify(VentFieldIdentity.id(de),expected);return;}assertEquals("Visible raw draft field",expected,editorFrom(find(de,en)).getText());hideKeyboard();}
  private void cardAction(String label,String...actions){
   // A lazy card heading can be visible while its action is still below the viewport.
   // Reacquire native nodes after each owned-container scroll; never retain stale nodes.
