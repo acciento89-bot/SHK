@@ -34,6 +34,8 @@ def verify(repo,acceptance=HERE):
   serviceIdentity=host.with_name('ServiceFieldIdentity.java')
   serviceUI=repo/'android/app/src/main/java/de/kamilunavo/shk/ServiceHistoryScreen.kt'
   if not serviceIdentity.is_file() or digest(serviceIdentity)!=line.get('reviewed_service_identity_sha256') or not serviceUI.is_file() or digest(serviceUI)!=line.get('reviewed_service_ui_sha256'):raise ValueError('Missing or unreviewed service field identities')
+  checkboxPolicy=host.with_name('ChecklistRowPolicy.java')
+  if not checkboxPolicy.is_file() or digest(checkboxPolicy)!=line.get('reviewed_checklist_policy_sha256'):raise ValueError('Missing or unreviewed checklist row policy')
   def business(s):return s[s.index(' @Test public void'):s.index(' private String unique(')]
   if business(actual)!=business(expected):raise ValueError('Original business scenario/assertion bytes changed')
  if digest(acceptance/'host/app/src/main/java/de/kamilunavo/shknativeqa/LocalReportReceiver.java')!=line['receiver_source_sha256']:raise ValueError('Actual local report receiver lineage mismatch')
