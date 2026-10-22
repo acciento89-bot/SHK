@@ -172,7 +172,7 @@ public final class ShkWorkflowNativeTest {
   UiObject2 focused=device.wait(Until.findObject(By.pkg(owner).clazz("android.widget.EditText").focused(true)),2000);
   if(focused==null||!selected.isFocused())throw new AssertionError("Associated editor did not focus for "+label.getText());return focused;
  }
- private void fill(String de,String en,String value){if(SERVICE.equals(expectedOwner)){hideKeyboard();find(de,en);String id=ServiceFieldIdentity.id(de,en);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(PIPE.equals(expectedOwner)){hideKeyboard();find(de,en);String id=PipeFieldIdentity.id(de,en);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(RADIATOR.equals(expectedOwner)){hideKeyboard();find(de,en);String id=RadiatorFieldIdentity.id(de,en);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(VENT.equals(expectedOwner)){hideKeyboard();find(de,en);String id=VentFieldIdentity.id(de);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(KALTE.equals(expectedOwner)&&(de.equals("Verdampfung")||de.equals("Sauggas"))){hideKeyboard();String id=KalteNumericIdentity.legacyId(de);requireNumericVisible(id);numericTransaction().enter(id,KalteNumericIdentity.legacyValue(value));hideKeyboard();return;}hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
+ private void fill(String de,String en,String value){if(SERVICE.equals(expectedOwner)){hideKeyboard();find(de,en);String id=ServiceFieldIdentity.id(de,en);requireServiceFieldVisible(id);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(PIPE.equals(expectedOwner)){hideKeyboard();find(de,en);String id=PipeFieldIdentity.id(de,en);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(RADIATOR.equals(expectedOwner)){hideKeyboard();find(de,en);String id=RadiatorFieldIdentity.id(de,en);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(VENT.equals(expectedOwner)){hideKeyboard();find(de,en);String id=VentFieldIdentity.id(de);numericTransaction().enter(id,id.startsWith("shk-metric-")?KalteNumericIdentity.legacyValue(value):value);hideKeyboard();return;}if(KALTE.equals(expectedOwner)&&(de.equals("Verdampfung")||de.equals("Sauggas"))){hideKeyboard();String id=KalteNumericIdentity.legacyId(de);requireNumericVisible(id);numericTransaction().enter(id,KalteNumericIdentity.legacyValue(value));hideKeyboard();return;}hideKeyboard();traceWindows("fill-before-"+de,windows(),false);editorFrom(find(de,en)).setText(value);device.waitForIdle(300);requireForeground("fill-after-"+de);hideKeyboard();}
  private androidx.test.uiautomator.BySelector numericSelector(String id){
   return By.pkg(expectedOwner).clazz("android.widget.EditText").res(id);
  }
@@ -219,9 +219,31 @@ public final class ShkWorkflowNativeTest {
   },expectedOwner,2000);
  }
  private void awaitNumericKeyboardReady(){
+  // A quiet accessibility tree may precede a delayed keyboard. Wait for the real IME window first.
+  long deadline=SystemClock.uptimeMillis()+3000;boolean visible=false;
+  do{List<NativeWindowPolicy.Window> current=windows();NativeWindowPolicy.requireApp(current,expectedOwner);
+   visible=NativeWindowPolicy.imeVisible(current);if(visible)break;
+   if(SystemClock.uptimeMillis()>=deadline)break;SystemClock.sleep(100);
+  }while(SystemClock.uptimeMillis()<=deadline);
+  if(!visible)throw new NumericInputTransaction.Failure("Actual IME did not become visible before the single write");
   try{InstrumentationRegistry.getInstrumentation().getUiAutomation().waitForIdle(200,2000);}
   catch(java.util.concurrent.TimeoutException notQuiet){throw new NumericInputTransaction.Failure("Numeric accessibility updates did not settle before a single write");}
   requireForeground("numeric-input-ready");
+ }
+ private void requireServiceFieldVisible(String id){
+  // Labels can appear before their complete editor enters the viewport; locate the exact owned editor.
+  for(int attempt=0;attempt<18;attempt++){
+   hideKeyboard();requireForeground("service-field-visibility");
+   try{List<UiObject2> exact=device.findObjects(numericSelector(id));
+    if(exact.size()>1)throw new NumericInputTransaction.Failure("Duplicate service field before focus: "+id);
+    if(exact.size()==1){UiObject2 field=exact.get(0);Rect r=field.getVisibleBounds();
+     if(!expectedOwner.equals(field.getApplicationPackage())||!field.isEnabled())throw new NumericInputTransaction.Failure("Wrong owner or disabled service field: "+id);
+     if(r.width()>0&&r.height()>0)return;
+    }
+   }catch(androidx.test.uiautomator.StaleObjectException invalidatedRead){/* No field action has been attempted. */}
+   if(!scroll(false))break;
+  }
+  throw new NumericInputTransaction.Failure("Exact visible service editor missing before focus: "+id);
  }
  private void requireNumericVisible(String id){
   for(int attempt=0;attempt<22;attempt++){
