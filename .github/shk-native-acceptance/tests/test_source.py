@@ -9,6 +9,7 @@ class SourceIdentityTests(unittest.TestCase):
   shutil.copyfile(ROOT/'fixtures/product-SHKApp.kt.txt',ui.with_name('SHKApp.kt'))
   shutil.copyfile(ROOT/'fixtures/product-VentCommissioningScreen.kt.txt',ui.with_name('VentCommissioningScreen.kt'))
   shutil.copyfile(ROOT/'fixtures/product-RadiatorRetrofitScreen.kt.txt',ui.with_name('RadiatorRetrofitScreen.kt'))
+  shutil.copyfile(ROOT/'fixtures/product-PipeCircuitScreen.kt.txt',ui.with_name('PipeCircuitScreen.kt'))
   return ui
  def test_missing_reviewed_ui_fails_closed(self):
   with tempfile.TemporaryDirectory() as d:

@@ -45,9 +45,9 @@ fun PipeCircuitScreen(onShare:(String)->Unit,onBack:()->Unit) {
         if(book!=null&&editor==0&&project==null){item("new"){Button(onClick={begin(1)},enabled=!state.busy&&book.projects.size<20,modifier=Modifier.fillMaxWidth()){Text(t("Rohrkreisprojekt anlegen","Create circuit project"))}};items(book.projects,key={"project-${it.id}"}){entry->OutlinedButton(onClick={projectID=entry.id;pathID=null},modifier=Modifier.fillMaxWidth()){Text(entry.name)}}}
         if(book!=null&&editor!=0)item("editor"){Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text(when(editor){1->t("Neues Projekt","New project");2->t("Parallelpfad und Volumenstrom","Parallel path and flow");else->t("Rohrsegment in Reihe","Pipe segment in series")},style=MaterialTheme.typography.titleLarge)
-            ShkDraftField(t("Bezeichnung","Name"),name,!state.busy,{name=it})
-            if(editor>=2)ShkDraftField(if(editor==2)t("Vorgegebener Volumenstrom l/h","Declared flow l/h")else t("Reale Länge m","Actual length m"),a,!state.busy,{a=it},true)
-            if(editor==3){ShkDraftField(t("Freier Innendurchmesser mm","Free inside diameter mm"),b,!state.busy,{b=it},true);ShkDraftField(t("Rauheit mm","Roughness mm"),c,!state.busy,{c=it},true);ShkDraftField(t("Summe örtlicher Widerstände ζ","Local resistance sum ζ"),d,!state.busy,{d=it},true)}
+            ShkDraftField(t("Bezeichnung","Name"),name,!state.busy,{name=it},testID="pipe-field-name")
+            if(editor>=2)ShkDraftField(if(editor==2)t("Vorgegebener Volumenstrom l/h","Declared flow l/h")else t("Reale Länge m","Actual length m"),a,!state.busy,{a=it},true,testID="pipe-field-a")
+            if(editor==3){ShkDraftField(t("Freier Innendurchmesser mm","Free inside diameter mm"),b,!state.busy,{b=it},true,testID="pipe-field-b");ShkDraftField(t("Rauheit mm","Roughness mm"),c,!state.busy,{c=it},true,testID="pipe-field-c");ShkDraftField(t("Summe örtlicher Widerstände ζ","Local resistance sum ζ"),d,!state.busy,{d=it},true,testID="pipe-field-d")}
             if(candidate==null)Text(t("Alle Felder gültig ausfüllen. Nichtnegative Länge, Rauheit und ζ; Innendurchmesser ≥0,1 mm. Volumenstrom0…1000000 l/h.","Complete all fields. Nonnegative length, roughness and ζ; inside diameter ≥0.1 mm. Flow0…1000000 l/h."))
             val creating=editor==1
             Button(onClick={candidate?.let{state.commit(it,book.revision){editor=0;if(creating)projectID=editID}}},enabled=!state.busy&&candidate!=null,modifier=Modifier.fillMaxWidth()){Text(t("Speichern","Save"))}

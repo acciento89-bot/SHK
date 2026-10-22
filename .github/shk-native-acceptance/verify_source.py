@@ -28,6 +28,9 @@ def verify(repo,acceptance=HERE):
   radiatorIdentity=host.with_name('RadiatorFieldIdentity.java')
   radiatorUI=repo/'android/app/src/main/java/de/kamilunavo/shk/RadiatorRetrofitScreen.kt'
   if not radiatorIdentity.is_file() or digest(radiatorIdentity)!=line.get('reviewed_radiator_identity_sha256') or not radiatorUI.is_file() or digest(radiatorUI)!=line.get('reviewed_radiator_ui_sha256'):raise ValueError('Missing or unreviewed radiator field identities')
+  pipeIdentity=host.with_name('PipeFieldIdentity.java')
+  pipeUI=repo/'android/app/src/main/java/de/kamilunavo/shk/PipeCircuitScreen.kt'
+  if not pipeIdentity.is_file() or digest(pipeIdentity)!=line.get('reviewed_pipe_identity_sha256') or not pipeUI.is_file() or digest(pipeUI)!=line.get('reviewed_pipe_ui_sha256'):raise ValueError('Missing or unreviewed pipe field identities')
   def business(s):return s[s.index(' @Test public void'):s.index(' private String unique(')]
   if business(actual)!=business(expected):raise ValueError('Original business scenario/assertion bytes changed')
  if digest(acceptance/'host/app/src/main/java/de/kamilunavo/shknativeqa/LocalReportReceiver.java')!=line['receiver_source_sha256']:raise ValueError('Actual local report receiver lineage mismatch')
