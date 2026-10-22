@@ -11,7 +11,7 @@
   ],
   "receiver_source_sha256": "f03a1da07ebb71f161a216e6247f64304519148df71699e097c528d32979a482",
   "product_gradle_sha256": "2cb008beb3a85428b325a9149ddfa606b3697039ed7ae2cd6dbd61a92831aa0f",
-  "reviewed_host_sha256": "2f30f00daaa3469bd8f775b204e2f42b94fbc23ecbea095dcafd73504a686caf",
+  "reviewed_host_sha256": "e2e3b5b9edbe6143f73785b57e39a3fc0884a0769e04def19fa22be100f0f32b",
   "reviewed_window_policy_sha256": "7c029353dfd2d1a3bf0ff1c30021ed8fd1dedefc496d51687fab1efd2ed775f2",
   "reviewed_change_scope": "External active-window/IME/scroll/transaction guards and additive nonvisual Kalte stage+field QA identifiers only; original business-method region exact; product callbacks/layout/validation/arithmetic/storage and receiver/assertions unchanged",
   "reviewed_numeric_transaction_sha256": "020ddf503bbc27c53e8f9e7ee543481d7055bc4155cbd3df224a17f70617d73c",
@@ -23,5 +23,7 @@
   "reviewed_radiator_identity_sha256": "116288ec4584f2da15805030134cd3cc9dfa43b6b2526258a19861e312a5acd2",
   "reviewed_radiator_ui_sha256": "15faa8c22d24fce6ca82570f164c1c91f2c15698e7738cf3fd78ea9e974db25e",
   "reviewed_pipe_identity_sha256": "f171e2a04682f5d6980700196ed0956f5a4806123c7cc49f50888b8feee7bbb0",
-  "reviewed_pipe_ui_sha256": "23808deb886c2f99549d3794cfda47164fe9e232b5ff545fd5f529633d6494bd"
+  "reviewed_pipe_ui_sha256": "23808deb886c2f99549d3794cfda47164fe9e232b5ff545fd5f529633d6494bd",
+  "reviewed_service_identity_sha256": "914a488ad1429edc3f5629714468205c1d02b858ee4c2b3b7237061084458e56",
+  "reviewed_service_ui_sha256": "f7ac2b800a3d86c7116eec8f2b1f238632dae6692e00e0f3bdbfccb7e04797df"
 }
