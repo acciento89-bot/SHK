@@ -10,6 +10,7 @@ class SourceIdentityTests(unittest.TestCase):
   shutil.copyfile(ROOT/'fixtures/product-VentCommissioningScreen.kt.txt',ui.with_name('VentCommissioningScreen.kt'))
   shutil.copyfile(ROOT/'fixtures/product-RadiatorRetrofitScreen.kt.txt',ui.with_name('RadiatorRetrofitScreen.kt'))
   shutil.copyfile(ROOT/'fixtures/product-PipeCircuitScreen.kt.txt',ui.with_name('PipeCircuitScreen.kt'))
+  shutil.copyfile(ROOT/'fixtures/product-ServiceHistoryScreen.kt.txt',ui.with_name('ServiceHistoryScreen.kt'))
   return ui
  def test_missing_reviewed_ui_fails_closed(self):
   with tempfile.TemporaryDirectory() as d:
@@ -25,4 +26,13 @@ class SourceIdentityTests(unittest.TestCase):
  def test_unreviewed_candidate_version_fails_before_build(self):
   with tempfile.TemporaryDirectory() as d:
    p=pathlib.Path(d);self.fixture(p);(p/'android/app/build.gradle.kts').write_text(re.sub(r'\bversionCode\s*=\s*(\d+)',lambda match:'versionCode = '+str(int(match.group(1))+1),(ROOT/'fixtures/product-build.gradle.kts.txt').read_text(),count=1))
+   with self.assertRaises(ValueError):self.module().verify(p,ROOT)
+
+ def test_missing_service_ui_fails_closed(self):
+  with tempfile.TemporaryDirectory() as d:
+   p=pathlib.Path(d);self.fixture(p).with_name('ServiceHistoryScreen.kt').unlink()
+   with self.assertRaises(ValueError):self.module().verify(p,ROOT)
+ def test_tampered_service_ui_fails_closed(self):
+  with tempfile.TemporaryDirectory() as d:
+   p=pathlib.Path(d);ui=self.fixture(p).with_name('ServiceHistoryScreen.kt');ui.write_text(ui.read_text()+'// unreviewed service form')
    with self.assertRaises(ValueError):self.module().verify(p,ROOT)

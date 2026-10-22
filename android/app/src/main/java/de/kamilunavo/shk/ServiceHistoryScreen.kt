@@ -8,6 +8,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import java.io.File
@@ -15,6 +19,7 @@ import java.time.Instant
 import java.util.Locale
 import java.util.UUID
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ServiceHistoryScreen(onShare:(String)->Unit,onBack:()->Unit) {
     val context=LocalContext.current.applicationContext;val file=remember(context){ServiceHistoryFile(File(context.filesDir,"service-history-v1.json"))}
@@ -51,8 +56,8 @@ fun ServiceHistoryScreen(onShare:(String)->Unit,onBack:()->Unit) {
         }
         if(book!=null&&editor in 1..2)item("name-form"){Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text(if(editor==1)t("Anlage","Installation")else t("Eigene Checkliste · eine Prüffrage pro Zeile","Own checklist · one item per line"),style=MaterialTheme.typography.titleLarge)
-            ShkDraftField(t("Bezeichnung","Name"),name,!state.busy,{name=it})
-            if(editor==2){OutlinedTextField(checklistText,{raw->checklistText=raw;val count=raw.split('\n').size;val ids=ArrayList(checklistIDs);while(ids.size<count&&ids.size<30)ids.add(UUID.randomUUID().toString());checklistIDs=ids},label={Text(t("Prüffragen (1–30)","Checklist items (1–30)"))},minLines=4,enabled=!state.busy,modifier=Modifier.fillMaxWidth());Text(t("Speichern erzeugt eine neue Version. Frühere Besuche bleiben unverändert.","Saving creates a new version. Previous visits remain unchanged."))}
+            ShkDraftField(t("Bezeichnung","Name"),name,!state.busy,{name=it},testID="service-field-name")
+            if(editor==2){OutlinedTextField(checklistText,{raw->checklistText=raw;val count=raw.split('\n').size;val ids=ArrayList(checklistIDs);while(ids.size<count&&ids.size<30)ids.add(UUID.randomUUID().toString());checklistIDs=ids},label={Text(t("Prüffragen (1–30)","Checklist items (1–30)"))},minLines=4,enabled=!state.busy,modifier=Modifier.fillMaxWidth().testTag("service-field-checklist").semantics { testTagsAsResourceId = true });Text(t("Speichern erzeugt eine neue Version. Frühere Besuche bleiben unverändert.","Saving creates a new version. Previous visits remain unchanged."))}
             if(candidate==null)Text(t("Bezeichnung und alle Prüffragen vollständig eingeben (je höchstens120 Zeichen).","Complete the name and every checklist item (at most120 characters each)."))
             val creating=editor==1
             Button(onClick={candidate?.let{state.commit(it,book.revision){editor=0;if(creating)installationID=editID}}},enabled=!state.busy&&candidate!=null,modifier=Modifier.fillMaxWidth()){Text(t("Speichern","Save"))}
@@ -75,12 +80,12 @@ fun ServiceHistoryScreen(onShare:(String)->Unit,onBack:()->Unit) {
             Text(t("Servicebesuch · eigene Messungen","Service visit · own readings"),style=MaterialTheme.typography.titleLarge);Text(recordedAt+" UTC")
             book.templates.forEach{entry->OutlinedButton(onClick={templateID=entry.id;checked=arrayListOf()},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text((if(templateID==entry.id)"✓ "else "")+entry.name+" · v${entry.version}")}}
             template?.items?.forEach{item->Row(Modifier.fillMaxWidth()){Checkbox(item.id in checked,{on->checked=ArrayList(if(on)checked+item.id else checked.filter{it!=item.id})},enabled=!state.busy);Text(item.label,modifier=Modifier.weight(1f).padding(top=12.dp))}}
-            ShkDraftField(t("Vorlauf °C","Supply °C"),flow,!state.busy,{flow=it},true);ShkDraftField(t("Rücklauf °C","Return °C"),ret,!state.busy,{ret=it},true)
-            ShkDraftField(t("Kaltfülldruck bar","Cold pressure bar"),cold,!state.busy,{cold=it},true);ShkDraftField(t("Warmdruck bar","Hot pressure bar"),hot,!state.busy,{hot=it},true)
-            ShkDraftField(t("Statische Höhe m","Static height m"),height,!state.busy,{height=it},true);ShkDraftField(t("Sicherheitsventil bar","Safety valve bar"),valve,!state.busy,{valve=it},true)
-            ShkDraftField(t("Eigener Kaltfülldruck min. bar","Own cold pressure min. bar"),minimum,!state.busy,{minimum=it},true);ShkDraftField(t("Eigener Kaltfülldruck max. bar","Own cold pressure max. bar"),maximum,!state.busy,{maximum=it},true)
-            OutlinedTextField(note,{note=it},label={Text(t("Tätigkeit / Messquelle / Notiz (max.2000)","Work / measurement source / note (max.2000)"))},minLines=3,enabled=!state.busy,modifier=Modifier.fillMaxWidth())
-            ShkDraftField(t("Nächster Service YYYY-MM-DD (optional)","Next service YYYY-MM-DD (optional)"),nextDate,!state.busy,{nextDate=it})
+            ShkDraftField(t("Vorlauf °C","Supply °C"),flow,!state.busy,{flow=it},true,testID="service-field-flow");ShkDraftField(t("Rücklauf °C","Return °C"),ret,!state.busy,{ret=it},true,testID="service-field-return")
+            ShkDraftField(t("Kaltfülldruck bar","Cold pressure bar"),cold,!state.busy,{cold=it},true,testID="service-field-cold");ShkDraftField(t("Warmdruck bar","Hot pressure bar"),hot,!state.busy,{hot=it},true,testID="service-field-hot")
+            ShkDraftField(t("Statische Höhe m","Static height m"),height,!state.busy,{height=it},true,testID="service-field-height");ShkDraftField(t("Sicherheitsventil bar","Safety valve bar"),valve,!state.busy,{valve=it},true,testID="service-field-valve")
+            ShkDraftField(t("Eigener Kaltfülldruck min. bar","Own cold pressure min. bar"),minimum,!state.busy,{minimum=it},true,testID="service-field-minimum");ShkDraftField(t("Eigener Kaltfülldruck max. bar","Own cold pressure max. bar"),maximum,!state.busy,{maximum=it},true,testID="service-field-maximum")
+            OutlinedTextField(note,{note=it},label={Text(t("Tätigkeit / Messquelle / Notiz (max.2000)","Work / measurement source / note (max.2000)"))},minLines=3,enabled=!state.busy,modifier=Modifier.fillMaxWidth().testTag("service-field-note").semantics { testTagsAsResourceId = true })
+            ShkDraftField(t("Nächster Service YYYY-MM-DD (optional)","Next service YYYY-MM-DD (optional)"),nextDate,!state.busy,{nextDate=it},testID="service-field-date")
             if(candidate==null)Text(t("Alle Messwerte und eigene Druckgrenzen gültig eingeben; Folgetermin frühestens Besuchsdatum. Ungeprüfte Punkte bleiben ausdrücklich offen.","Enter valid readings and own pressure limits; next date cannot precede this visit. Unchecked items remain explicitly open."))
             Button(onClick={candidate?.let{state.commit(it,book.revision){editor=0}}},enabled=!state.busy&&candidate!=null,modifier=Modifier.fillMaxWidth()){Text(t("Besuch unverändert speichern","Save visit snapshot"))}
         }}

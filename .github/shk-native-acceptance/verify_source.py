@@ -31,6 +31,9 @@ def verify(repo,acceptance=HERE):
   pipeIdentity=host.with_name('PipeFieldIdentity.java')
   pipeUI=repo/'android/app/src/main/java/de/kamilunavo/shk/PipeCircuitScreen.kt'
   if not pipeIdentity.is_file() or digest(pipeIdentity)!=line.get('reviewed_pipe_identity_sha256') or not pipeUI.is_file() or digest(pipeUI)!=line.get('reviewed_pipe_ui_sha256'):raise ValueError('Missing or unreviewed pipe field identities')
+  serviceIdentity=host.with_name('ServiceFieldIdentity.java')
+  serviceUI=repo/'android/app/src/main/java/de/kamilunavo/shk/ServiceHistoryScreen.kt'
+  if not serviceIdentity.is_file() or digest(serviceIdentity)!=line.get('reviewed_service_identity_sha256') or not serviceUI.is_file() or digest(serviceUI)!=line.get('reviewed_service_ui_sha256'):raise ValueError('Missing or unreviewed service field identities')
   def business(s):return s[s.index(' @Test public void'):s.index(' private String unique(')]
   if business(actual)!=business(expected):raise ValueError('Original business scenario/assertion bytes changed')
  if digest(acceptance/'host/app/src/main/java/de/kamilunavo/shknativeqa/LocalReportReceiver.java')!=line['receiver_source_sha256']:raise ValueError('Actual local report receiver lineage mismatch')
