@@ -128,7 +128,25 @@ public final class ShkWorkflowNativeTest {
  }
  private UiObject2 find(String...labels){hideKeyboard();if(postSaveTrace&&Arrays.asList(labels).contains("Record a new before/after visit")){routeTrace("new-visit-lookup-before",null,labels);postSaveTrace=false;}for(int sweep=0;sweep<2;sweep++){for(int attempt=0;attempt<18;attempt++){List<UiObject2> found=nodes(false,labels);if(found.isEmpty())found=nodes(true,labels);if(!found.isEmpty())return found.get(0);scroll(false);}top();}capture(method+"-missing-label");throw new AssertionError("Missing actual native label "+Arrays.toString(labels));}
  private UiObject2 control(UiObject2 node){for(UiObject2 parent=node;parent!=null;parent=parent.getParent())if(parent.isClickable()||"android.widget.Button".equals(parent.getClassName()))return parent;return node;}
- private void click(String...labels){hideKeyboard();UiObject2 action=control(find(labels));assertTrue("Action disabled: "+Arrays.toString(labels),action.isEnabled());boolean saveAppliance=Arrays.asList(labels).contains("Save appliance");if(saveAppliance){postSaveTrace=true;routeTrace("save-before-click",action,labels);}action.click();device.waitForIdle(700);if(saveAppliance)routeTrace("save-after-existing-wait",null,labels);}
+ private UiObject2 freshClickAction(String...labels){
+  // Only read-side staleness is retried. The caller performs the actual click once, outside this catch.
+  long deadline=SystemClock.uptimeMillis()+2000;
+  do{
+   requireForeground("click-target-read");
+   try{
+    List<UiObject2> found=nodes(false,labels);if(found.isEmpty())found=nodes(true,labels);
+    if(found.size()>1)throw new AssertionError("Ambiguous native click target: "+Arrays.toString(labels));
+    if(found.size()==1){UiObject2 action=control(found.get(0));Rect bounds=action.getVisibleBounds();
+     assertEquals("Native action owner",expectedOwner,action.getApplicationPackage());
+     assertTrue("Action disabled: "+Arrays.toString(labels),action.isEnabled());
+     if(bounds.width()>0&&bounds.height()>0)return action;
+    }
+   }catch(androidx.test.uiautomator.StaleObjectException invalidatedRead){/* Read-only reacquisition; never click again. */}
+   if(SystemClock.uptimeMillis()>=deadline)break;SystemClock.sleep(100);
+  }while(SystemClock.uptimeMillis()<=deadline);
+  throw new AssertionError("Fresh native action not established: "+Arrays.toString(labels));
+ }
+ private void click(String...labels){hideKeyboard();find(labels);UiObject2 action=freshClickAction(labels);boolean saveAppliance=Arrays.asList(labels).contains("Save appliance");if(saveAppliance){postSaveTrace=true;routeTrace("save-before-click",action,labels);}action.click();device.waitForIdle(700);if(saveAppliance)routeTrace("save-after-existing-wait",null,labels);}
  private void clickTextOnly(String...labels){hideKeyboard();find(labels).click();device.waitForIdle(300);
   if(KALTE.equals(expectedOwner)){
    if(Arrays.asList(labels).contains("Before")||Arrays.asList(labels).contains("Vorher"))kalteNumericStage="before";
