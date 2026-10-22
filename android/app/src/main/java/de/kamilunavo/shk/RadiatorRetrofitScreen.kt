@@ -9,6 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -16,9 +20,10 @@ import java.io.File
 import java.util.Locale
 import java.util.UUID
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-internal fun ShkDraftField(label:String,value:String,enabled:Boolean,onChange:(String)->Unit,numeric:Boolean=false) {
-    OutlinedTextField(value,onChange,label={Text(label)},enabled=enabled,keyboardOptions=KeyboardOptions(keyboardType=if(numeric)KeyboardType.Decimal else KeyboardType.Text),modifier=Modifier.fillMaxWidth())
+internal fun ShkDraftField(label:String,value:String,enabled:Boolean,onChange:(String)->Unit,numeric:Boolean=false,testID:String="") {
+    OutlinedTextField(value,onChange,label={Text(label)},enabled=enabled,keyboardOptions=KeyboardOptions(keyboardType=if(numeric)KeyboardType.Decimal else KeyboardType.Text),modifier=if(testID.isEmpty())Modifier.fillMaxWidth()else Modifier.fillMaxWidth().testTag(testID).semantics { testTagsAsResourceId = true })
 }
 @Composable
 fun RadiatorRetrofitScreen(onShare:(String)->Unit,onBack:()->Unit) {
@@ -57,9 +62,9 @@ fun RadiatorRetrofitScreen(onShare:(String)->Unit,onBack:()->Unit) {
         }
         if(book!=null&&editor!=0)item("editor"){Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text(when(editor){1->t("Neues Projekt","New project");2->t("Raum und eigene Heizlast","Room and heat requirement");3->t("Temperaturalternative","Temperature alternative");else->if(proposed)t("Geplanter Heizkörper","Proposed radiator")else t("Vorhandener Heizkörper","Existing radiator")},style=MaterialTheme.typography.titleLarge)
-            ShkDraftField(t("Bezeichnung","Name"),name,!state.busy,{name=it})
-            if(editor>=2)ShkDraftField(when(editor){2->t("Raum-Heizlast W","Room heat requirement W");3->t("Vorlauf °C","Supply °C");else->t("Hersteller-Nennleistung ΔT50 W je Stück","Manufacturer nominal ΔT50 W per unit")},a,!state.busy,{a=it},true)
-            if(editor>=3){ShkDraftField(if(editor==3)t("Rücklauf °C","Return °C")else t("Hersteller-Exponent n","Manufacturer exponent n"),b,!state.busy,{b=it},true);ShkDraftField(if(editor==3)t("Raum °C","Room °C")else t("Anzahl (ganze Zahl)","Count (whole number)"),c,!state.busy,{c=it},true)}
+            ShkDraftField(t("Bezeichnung","Name"),name,!state.busy,{name=it},testID="radiator-field-name")
+            if(editor>=2)ShkDraftField(when(editor){2->t("Raum-Heizlast W","Room heat requirement W");3->t("Vorlauf °C","Supply °C");else->t("Hersteller-Nennleistung ΔT50 W je Stück","Manufacturer nominal ΔT50 W per unit")},a,!state.busy,{a=it},true,testID="radiator-field-a")
+            if(editor>=3){ShkDraftField(if(editor==3)t("Rücklauf °C","Return °C")else t("Hersteller-Exponent n","Manufacturer exponent n"),b,!state.busy,{b=it},true,testID="radiator-field-b");ShkDraftField(if(editor==3)t("Raum °C","Room °C")else t("Anzahl (ganze Zahl)","Count (whole number)"),c,!state.busy,{c=it},true,testID="radiator-field-c")}
             if(candidate==null)Text(t("Alle Felder gültig ausfüllen. Temperatur: Vorlauf ≥ Rücklauf > Raum. Herstellerleistung/n positiv; Anzahl1–100.","Complete all fields. Temperatures: supply ≥ return > room. Manufacturer output/n positive; count1–100."))
             val creating=editor==1
             Button(onClick={candidate?.let{state.commit(it,book.revision){editor=0;if(creating)projectID=editID}}},enabled=!state.busy&&candidate!=null,modifier=Modifier.fillMaxWidth()){Text(t("Speichern","Save"))}
