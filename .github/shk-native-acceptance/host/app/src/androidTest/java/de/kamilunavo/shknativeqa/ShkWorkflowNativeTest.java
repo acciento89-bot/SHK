@@ -177,11 +177,21 @@ public final class ShkWorkflowNativeTest {
   return By.pkg(expectedOwner).clazz("android.widget.EditText").res(id);
  }
  private UiObject2 freshNumericActionNode(String label,boolean requireFocus){
-  requireForeground("numeric-action");List<UiObject2> found=device.findObjects(numericSelector(label));
-  if(found.size()!=1)throw new NumericInputTransaction.Failure("Exact numeric action target not unique: "+label);
-  UiObject2 field=found.get(0);Rect bounds=field.getVisibleBounds();
-  if(!expectedOwner.equals(field.getApplicationPackage())||!field.isEnabled()||bounds.width()<=0||bounds.height()<=0||(requireFocus&&!field.isFocused()))throw new NumericInputTransaction.Failure("Exact numeric action target not ready: "+label);
-  return field; // Operation-local only: never retained across a click or write.
+  // Reacquire only reads while IME/Compose updates its tree. Focus and write remain in callers, once.
+  long deadline=SystemClock.uptimeMillis()+2000;
+  do{
+   requireForeground("numeric-action-read");
+   try{
+    List<UiObject2> found=device.findObjects(numericSelector(label));
+    if(found.size()>1)throw new NumericInputTransaction.Failure("Duplicate exact numeric action targets: "+label+" count="+found.size());
+    if(found.size()==1){UiObject2 field=found.get(0);Rect bounds=field.getVisibleBounds();
+     if(!expectedOwner.equals(field.getApplicationPackage())||!field.isEnabled())throw new NumericInputTransaction.Failure("Wrong owner or disabled numeric action target: "+label);
+     if(bounds.width()>0&&bounds.height()>0&&(!requireFocus||field.isFocused()))return field;
+    }
+   }catch(androidx.test.uiautomator.StaleObjectException invalidatedRead){/* Read-side only; never repeat an actual action. */}
+   if(SystemClock.uptimeMillis()>=deadline)break;SystemClock.sleep(100);
+  }while(SystemClock.uptimeMillis()<=deadline);
+  throw new NumericInputTransaction.Failure("Fresh numeric action target not established: "+label);
  }
  private NumericInputTransaction numericTransaction(){
   return new NumericInputTransaction(new NumericInputTransaction.Port(){
