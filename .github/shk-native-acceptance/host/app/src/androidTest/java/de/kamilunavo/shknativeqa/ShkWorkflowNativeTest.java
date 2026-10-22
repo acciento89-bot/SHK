@@ -275,9 +275,18 @@ public final class ShkWorkflowNativeTest {
   }
   capture(method+"-missing-card-action");throw new AssertionError("No unique visible action inside card for "+label);
  }
- private void check(String label){UiObject2 item=find(label);for(UiObject2 parent=item;parent!=null;parent=parent.getParent()){
-  List<UiObject2> checks=parent.findObjects(By.clazz("android.widget.CheckBox"));if(checks.size()==1){if(!checks.get(0).isChecked())checks.get(0).click();return;}
- }throw new AssertionError("No unique checklist checkbox beside "+label);}
+ private UiObject2 checklistBox(String label){
+  requireForeground("checklist-read");List<UiObject2> labels=nodes(false,label);
+  assertEquals("Exact checklist label must be unique",1,labels.size());Rect title=labels.get(0).getVisibleBounds();
+  List<UiObject2> boxes=device.findObjects(By.pkg(expectedOwner).clazz("android.widget.CheckBox"));int[][] bounds=new int[boxes.size()][];
+  for(int i=0;i<boxes.size();i++){Rect b=boxes.get(i).getVisibleBounds();bounds[i]=new int[]{b.left,b.top,b.right,b.bottom};}
+  UiObject2 target=boxes.get(ChecklistRowPolicy.uniqueLeftOfLabel(new int[]{title.left,title.top,title.right,title.bottom},bounds));
+  assertEquals("Checkbox owner",expectedOwner,target.getApplicationPackage());assertTrue("Checkbox enabled",target.isEnabled());assertTrue("Checkbox checkable",target.isCheckable());return target;
+ }
+ private void check(String label){hideKeyboard();find(label);UiObject2 box=checklistBox(label);
+  if(!box.isChecked())box.click(); // At most one actual action; never retry a possibly delivered click.
+  device.waitForIdle(700);assertTrue("Checklist selection readback",checklistBox(label).isChecked());
+ }
  private void back(){backTo(expectedOwner);}
  private void backTo(String owner){hideKeyboard();requireForeground("back-before");String previous=expectedOwner;device.pressBack();device.waitForIdle(700);expectedOwner=owner;if(!previous.equals(owner))awaitOwnerTransition(previous,owner);requireForeground("back-after");}
  private void rotate(String name)throws Exception{if(name.equals("kalte-unsaved-note"))assertKalteRequiredValuesBeforeRotation();hideKeyboard();device.setOrientationLeft();device.waitForIdle(1000);capture(name+"-landscape");device.setOrientationNatural();device.waitForIdle(1000);capture(name+"-portrait");}
