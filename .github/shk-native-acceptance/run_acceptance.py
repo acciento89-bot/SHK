@@ -30,6 +30,10 @@ def run_acceptance(adb,serial,flavor,product,host,test,proof,execute=subprocess.
   validated=True
   anr=call(['shell','dumpsys','activity','lastanr']);(proof/'preflight-anr.txt').write_bytes(anr)
   if b'com.android.systemui' in anr.lower():raise RuntimeError('ENVIRONMENT_BLOCKED:SystemUI ANR; no dismissal')
+  # The owned emulator reports a hardware keyboard; require normal phone IME behavior explicitly.
+  call(['shell','settings','put','secure','show_ime_with_hard_keyboard','1'])
+  if call(['shell','settings','get','secure','show_ime_with_hard_keyboard']).decode().strip()!='1':raise RuntimeError('Software keyboard precondition not established')
+  r['softwareKeyboardWithHardware']=True
   r['apkSha256']={role:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for role,p in [('product',product),('host',host),('test',test)]}
   for apk in [product,host,test]:call(['install','-r',str(apk)],90)
   identity=call(['shell','dumpsys','package',c['package']]);(proof/'installed-identity.txt').write_bytes(identity);info=identity.decode(errors='replace')

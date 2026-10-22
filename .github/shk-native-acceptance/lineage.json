@@ -11,7 +11,7 @@
   ],
   "receiver_source_sha256": "f03a1da07ebb71f161a216e6247f64304519148df71699e097c528d32979a482",
   "product_gradle_sha256": "2cb008beb3a85428b325a9149ddfa606b3697039ed7ae2cd6dbd61a92831aa0f",
-  "reviewed_host_sha256": "5965e4ef29578b3b1f3c85cc6a7223615baf32c84a9f94788fb46c56ffdd92b7",
+  "reviewed_host_sha256": "f63509e942543b9e0e350cf08a9c02184caaa02885e80f08a6405a8b31784375",
   "reviewed_window_policy_sha256": "7c029353dfd2d1a3bf0ff1c30021ed8fd1dedefc496d51687fab1efd2ed775f2",
   "reviewed_change_scope": "External active-window/IME/scroll/transaction guards and additive nonvisual Kalte stage+field QA identifiers only; original business-method region exact; product callbacks/layout/validation/arithmetic/storage and receiver/assertions unchanged",
   "reviewed_numeric_transaction_sha256": "020ddf503bbc27c53e8f9e7ee543481d7055bc4155cbd3df224a17f70617d73c",

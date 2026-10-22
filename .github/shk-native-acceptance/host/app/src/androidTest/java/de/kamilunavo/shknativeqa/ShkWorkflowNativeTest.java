@@ -225,7 +225,7 @@ public final class ShkWorkflowNativeTest {
    visible=NativeWindowPolicy.imeVisible(current);if(visible)break;
    if(SystemClock.uptimeMillis()>=deadline)break;SystemClock.sleep(100);
   }while(SystemClock.uptimeMillis()<=deadline);
-  if(!visible)throw new NumericInputTransaction.Failure("Actual IME did not become visible before the single write");
+  if(!visible){traceWindows("numeric-ime-not-ready",windows(),true);throw new NumericInputTransaction.Failure("Actual IME did not become visible before the single write");}
   try{InstrumentationRegistry.getInstrumentation().getUiAutomation().waitForIdle(200,2000);}
   catch(java.util.concurrent.TimeoutException notQuiet){throw new NumericInputTransaction.Failure("Numeric accessibility updates did not settle before a single write");}
   requireForeground("numeric-input-ready");

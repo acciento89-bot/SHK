@@ -6,12 +6,13 @@ CONFIG=json.loads((ROOT/'flavors.json').read_text())
 def load():
  spec=importlib.util.spec_from_file_location('runner',ROOT/'run_acceptance.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 class Fake:
- def __init__(self,flavor='kaltecalc',outcome='OK (1 test)',nonzero=False,timeout=False,version=None,versionname=None,sdk=35,missing=False,anr=False):
-  self.config=CONFIG[flavor];self.outcome=outcome;self.nonzero=nonzero;self.timeout=timeout;self.version=self.config["versionCode"] if version is None else version;self.versionname=self.config["versionName"] if versionname is None else versionname;self.sdk=sdk;self.missing=missing;self.anr=anr;self.calls=[]
+ def __init__(self,flavor='kaltecalc',outcome='OK (1 test)',nonzero=False,timeout=False,version=None,versionname=None,sdk=35,missing=False,anr=False,keyboard="1",qemu="1"):
+  self.config=CONFIG[flavor];self.outcome=outcome;self.nonzero=nonzero;self.timeout=timeout;self.version=self.config["versionCode"] if version is None else version;self.versionname=self.config["versionName"] if versionname is None else versionname;self.sdk=sdk;self.missing=missing;self.anr=anr;self.keyboard=keyboard;self.qemu=qemu;self.calls=[]
  def __call__(self,args,**kw):
   self.calls.append((args,kw['timeout']));s=' '.join(map(str,args));rc=0
   if 'ro.build.version.sdk' in s:out=str(self.sdk).encode()
-  elif 'ro.kernel.qemu' in s:out=b'1'
+  elif 'ro.kernel.qemu' in s:out=self.qemu.encode()
+  elif 'settings get secure show_ime_with_hard_keyboard' in s:out=self.keyboard.encode()
   elif 'lastanr' in s:out=b'ANR com.android.systemui' if self.anr else b'No ANR since boot'
   elif 'dumpsys package' in s:out=f'versionCode={self.version} minSdk=26 targetSdk=36\nversionName={self.versionname}'.encode()
   elif 'instrument -w' in s:
@@ -40,6 +41,18 @@ class RunnerTests(unittest.TestCase):
    fake=Fake(flavor);r=self.fixture(fake,flavor);self.assertEqual(r['status'],'PASSED');commands=[' '.join(x[0]) for x in fake.calls]
    instruments=[x for x in commands if 'instrument -w' in x];self.assertEqual(len(instruments),1);self.assertIn('#'+c['method'],instruments[0]);self.assertEqual(sum(' install -r ' in x for x in commands),3)
    self.assertEqual(set(r['apkSha256']),{'product','host','test'});self.assertFalse(any('pm clear' in x or 'purchase' in x.lower() or 'restore' in x.lower() for x in commands))
+ def test_keyboard_precondition_is_set_and_read_back_before_install(self):
+  f=Fake();r=self.fixture(f);self.assertEqual(r['status'],'PASSED');self.assertTrue(r['softwareKeyboardWithHardware'])
+  commands=[' '.join(x[0]) for x in f.calls]
+  put='adb -s emulator-5554 shell settings put secure show_ime_with_hard_keyboard 1';get='adb -s emulator-5554 shell settings get secure show_ime_with_hard_keyboard'
+  self.assertEqual(commands.count(put),1);self.assertEqual(commands.count(get),1)
+  self.assertLess(next(i for i,s in enumerate(commands) if 'lastanr' in s),commands.index(put));self.assertLess(commands.index(put),commands.index(get));self.assertLess(commands.index(get),next(i for i,s in enumerate(commands) if ' install -r ' in s))
+ def test_keyboard_precondition_readback_fails_before_install(self):
+  for value in ['0','null','unknown','1\n0']:
+   f=Fake(keyboard=value);self.assertEqual(self.fixture(f)['status'],'FAILED');self.assertFalse(any('install' in x for x,t in f.calls))
+ def test_keyboard_mutation_only_after_owned_emulator_preflight(self):
+  for f,serial in [(Fake(sdk=36),'emulator-5554'),(Fake(qemu='0'),'emulator-5554'),(Fake(anr=True),'emulator-5554'),(Fake(),'personal-phone')]:
+   self.assertEqual(self.fixture(f,serial=serial)['status'],'FAILED');self.assertFalse(any('settings' in x for x,t in f.calls))
  def test_nonzero_instrumentation_retains_stdout_and_stderr(self):
   r=self.fixture(Fake(outcome='REAL_ASSERTION_FAILURE',nonzero=True));self.assertEqual(r['status'],'FAILED');self.assertEqual(self.files['instrumentation.txt'],b'REAL_ASSERTION_FAILURE');self.assertEqual(self.files['instrumentation-stderr.txt'],b'RETAIN_STDERR')
  def test_timeout_retains_partial_and_bounds_and_stops_host(self):
