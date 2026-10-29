@@ -24,27 +24,23 @@ import androidx.compose.ui.unit.sp
 import java.util.Locale
 import kotlin.math.*
 
-private val Mint = Color(0xFF63E6BE)
-private val BgTop = Color(0xFF040C0E)
-private val BgBottom = Color(0xFF051717)
-private val Panel = Color(0x18FFFFFF)
-private val Muted = Color(0xFFAAB9BA)
-private val TextMain = Color(0xFFF1F6F5)
+private val Mint: Color @Composable get() = MaterialTheme.colorScheme.primary
+private val BgTop: Color @Composable get() = MaterialTheme.colorScheme.background
+private val BgBottom: Color @Composable get() = MaterialTheme.colorScheme.background
+private val Panel: Color @Composable get() = MaterialTheme.colorScheme.surface
+private val Muted: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val TextMain: Color @Composable get() = MaterialTheme.colorScheme.onSurface
 
 @Composable
 fun SHKApp(kind: String, onShare: (String) -> Unit, onReportShare: (String) -> Unit) {
     MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Mint,
-            background = BgTop,
-            surface = BgTop,
-            onBackground = TextMain,
-            onSurface = TextMain,
-            onSurfaceVariant = Muted
-        )
+        colorScheme = shkColors(kind),
+        typography = shkTypography(kind),
+        shapes = shkShapes(kind),
     ) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         CompositionLocalProvider(LocalContentColor provides TextMain) {
-            var serviceOpen by rememberSaveable(kind) { mutableStateOf(false) }
+            var serviceOpen by rememberSaveable(kind) { mutableStateOf(true) }
             val calculatorState=rememberSaveableStateHolder()
             when (kind) {
                 "kaltecalc" -> if(serviceOpen) KalteServiceScreen(onReportShare,{serviceOpen=false}) else calculatorState.SaveableStateProvider("kalte-calculator") {KalteCalc(onShare,{serviceOpen=true})}
@@ -53,6 +49,7 @@ fun SHKApp(kind: String, onShare: (String) -> Unit, onReportShare: (String) -> U
                 "rohrcalc" -> if(serviceOpen) PipeCircuitScreen(onReportShare,{serviceOpen=false}) else calculatorState.SaveableStateProvider("pipe-calculator") {RohrCalc(onShare,{serviceOpen=true})}
                 else -> if(serviceOpen) ServiceHistoryScreen(onReportShare,{serviceOpen=false}) else calculatorState.SaveableStateProvider("service-calculator") {AnlagenCheck(onShare,{serviceOpen=true})}
             }
+        }
         }
     }
 }
@@ -81,7 +78,7 @@ private fun AppPage(title: String, eyebrow: String, subtitle: String, content: @
 
 @Composable
 private fun CardBlock(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = Panel, contentColor = TextMain), shape = RoundedCornerShape(24.dp)) {
+    Card(colors = CardDefaults.cardColors(containerColor = Panel, contentColor = TextMain), shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(title.uppercase(Locale.GERMANY), color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             content()
@@ -93,15 +90,15 @@ private fun CardBlock(title: String, content: @Composable ColumnScope.() -> Unit
 @Composable
 private fun MetricField(title: String, unit: String, value: Double, onChange: (Double) -> Unit) {
     var text by remember(value) { mutableStateOf(fmt(value, 2)) }
-    Row(Modifier.fillMaxWidth().semantics { testTagsAsResourceId = true }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(title, color = TextMain, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
+    Column(Modifier.fillMaxWidth().semantics { testTagsAsResourceId = true }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(title, color = TextMain, fontWeight = FontWeight.Medium)
         OutlinedTextField(
             value = text,
             onValueChange = { raw ->
                 text = raw
                 raw.replace(',', '.').toDoubleOrNull()?.let(onChange)
             },
-            modifier = Modifier.width(150.dp).testTag("shk-metric-" + title),
+            modifier = Modifier.fillMaxWidth().testTag("shk-metric-" + title),
             singleLine = true,
             suffix = { Text(unit, color = Muted, fontSize = 12.sp) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -143,7 +140,7 @@ private fun KalteCalc(onShare: (String) -> Unit, onService: () -> Unit) {
     val subcooling = condensation - liquid
     val ratio = if (suctionPressure + 1.01325 > 0) (dischargePressure + 1.01325) / (suctionPressure + 1.01325) else 0.0
     val capacity = max(0.0, airFlow) * abs(enteringAir - leavingAir) * 0.000335
-    AppPage("KälteCalc", "SERVICE CONSOLE", "Kältekreis, Luftseite und Service-Einheiten offline berechnen.") {
+    AppPage("KälteCalc", "KÄLTEKREIS · MESSWERKZEUGE", "Kältekreis, Luftseite und Service-Einheiten offline berechnen.") {
         CardBlock(if(serviceEnglish)"Service history" else "Servicehistorie") {
             Text(if(serviceEnglish)"Save appliances and before/after service visits." else "Anlagen und Vorher-/Nachher-Besuche getrennt speichern.")
             OutlinedButton(onClick=onService,modifier=Modifier.fillMaxWidth()) {Text(if(serviceEnglish)"Open service visits" else "Servicebesuche öffnen")}
@@ -201,7 +198,7 @@ private fun LueftungsCalc(onShare: (String) -> Unit,onCommissioning:()->Unit) {
     val equivalentDiameter = if (width > 0 && height > 0) 1.30 * (width * height).pow(0.625) / (width + height).pow(0.25) else 0.0
     val roomVolume = max(0.0, roomLength) * max(0.0, roomWidth) * max(0.0, roomHeight)
     val roomFlow = roomVolume * max(0.0, airChanges)
-    AppPage("LüftungsCalc", "AIRFLOW STUDIO", "Kanalquerschnitt und Raumluftwechsel getrennt bearbeiten.") {
+    AppPage("LüftungsCalc", "KANAL & LUFTMENGE", "Kanalquerschnitt und Raumluftwechsel getrennt bearbeiten.") {
         CardBlock(if(Locale.getDefault().language.startsWith("de"))"Inbetriebnahmeprojekte" else "Commissioning projects") {
             OutlinedButton(onClick=onCommissioning,modifier=Modifier.fillMaxWidth()){Text(if(Locale.getDefault().language.startsWith("de"))"Räume, Ventile und Einstellbesuche" else "Rooms, terminals and adjustment visits")}
         }

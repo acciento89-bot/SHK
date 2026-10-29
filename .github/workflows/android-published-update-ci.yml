@@ -66,7 +66,7 @@ jobs:
           cp "android/app/build/outputs/bundle/${APP_FLAVOR}Release/app-${APP_FLAVOR}-release.aab" "$RUNNER_TEMP/unsigned/app-release.aab"
       - uses: actions/upload-artifact@v4
         with:
-          name: shk-${{ env.APP_FLAVOR }}-1.1.0-4-unsigned-aab
+          name: shk-${{ env.APP_FLAVOR }}-1.2.0-5-unsigned-aab
           path: ${{ runner.temp }}/unsigned/app-release.aab
           if-no-files-found: error
           retention-days: 30
