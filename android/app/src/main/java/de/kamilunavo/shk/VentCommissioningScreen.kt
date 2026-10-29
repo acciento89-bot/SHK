@@ -53,6 +53,9 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
     val terminal=if(editor==3&&project!=null)runCatching {VentTerminal(editID,roomID,name.trim(),VentSide.valueOf(side),shkNumber(target)?:error("target"),if(measured.isBlank())null else shkNumber(measured)?:error("measured"))}.getOrNull()else null
     val terminalCandidate=if(terminal!=null&&book!=null)runCatching{VentCommissioningRules.putTerminal(book,project!!.id,terminal)}.getOrNull()else null
     LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().semantics { testTagsAsResourceId = true },contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        if (project == null && editor == 0) {
+            item("landing-workspace") { VentLandingBoard(book, state.busy, english, { english = !english }, { leave() }, { begin(1) }) }
+        } else {
         item("header") {
             Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick={leave()},enabled=!state.busy){Text(t("‹ Zurück","‹ Back"))}
@@ -61,12 +64,13 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
                 Text(t("Soll- und Ist-Luftmengen je Ventil. Zuluft und Abluft bleiben getrennt. Einstellbesuche behalten ihre ursprünglichen Räume und Messwerte.","Target and measured flow per terminal. Supply and extract stay separate. Adjustment visits keep their original rooms and readings."))
             }
         }
+        }
         if(state.busy)item("busy"){LinearProgressIndicator(Modifier.fillMaxWidth())}
         if(state.error)item("error") {Column {Text(t("Laden oder Speichern fehlgeschlagen. Eingaben und vorhandene Daten bleiben erhalten.","Loading or saving failed. Input and existing data are kept."),color=MaterialTheme.colorScheme.error);OutlinedButton(onClick={if(editor!=0)reload=true else state.reload()},enabled=!state.busy){Text(t("Gespeicherten Stand laden","Load saved progress"))}}}
         if(book==null)item("loading"){Text(t("Projektarchiv wird geladen oder ist gesperrt.","Project archive is loading or unavailable."))}
         if(book!=null&&project==null&&editor==0) {
-            item("new-project"){Button(onClick={begin(1)},enabled=!state.busy&&book.projects.size<20,modifier=Modifier.fillMaxWidth()){Text(t("Inbetriebnahmeprojekt anlegen","Create commissioning project"))}}
             items(book.projects,key={"project-${it.id}"}) {entry->VentProjectBoard(entry.name, entry.rooms.size, entry.terminals.size, english, !state.busy) { projectID=entry.id }}
+            item("landing-notes") { Text(t("Soll und Ist bleiben getrennt. Einstellbesuche behalten ihre ursprünglichen Räume und Messwerte.", "Targets and measurements stay separate. Adjustment visits keep their original rooms and readings."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         if(book!=null&&(editor==1||editor==2)) {
             item("name-form") {Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {

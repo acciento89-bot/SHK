@@ -87,6 +87,9 @@ fun KalteServiceScreen(onShare:(String)->Unit,onBack:()->Unit) {
     val visits=current?.visits?.filter{it.assetID==selectedAsset}?.sortedByDescending{Instant.parse(it.recordedAt)}.orEmpty()
     val fields=listOf(t("Verdampfung °C","Evaporation °C"),t("Sauggas °C","Suction gas °C"),t("Kondensation °C","Condensation °C"),t("Flüssigkeit °C","Liquid °C"),t("Saugdruck bar(g)","Suction pressure bar(g)"),t("Hochdruck bar(g)","Discharge pressure bar(g)"),t("Luftvolumenstrom m³/h","Air volume m³/h"),t("Luft Eintritt °C","Entering air °C"),t("Luft Austritt °C","Leaving air °C"))
     LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().semantics { testTagsAsResourceId = true },contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        if (!editing && asset == null) {
+            item("landing-workspace") { KalteLandingBench(current, busy, english, { english = !english }, { leave() }, { applianceID=UUID.randomUUID().toString();applianceName="";assetEditor=true }) }
+        } else {
         item("header") {
             Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick={leave()},enabled=!busy){Text(t("‹ Zurück","‹ Back"))}
@@ -94,6 +97,7 @@ fun KalteServiceScreen(onShare:(String)->Unit,onBack:()->Unit) {
                 TextButton(onClick={english=!english}){Text(if(english)"Deutsch" else "English")}
                 Text(t("Lokale Vorher-/Nachher-Messungen je Anlage. Keine automatische Diagnose. Sättigungstemperaturen selbst aus verifizierter Quelle übernehmen.","Local before/after readings per appliance. No automatic diagnosis. Supply saturation temperatures from a verified source."))
             }
+        }
         }
         if(busy)item("busy"){LinearProgressIndicator(Modifier.fillMaxWidth())}
         if(error!=null)item("error") {
@@ -104,13 +108,11 @@ fun KalteServiceScreen(onShare:(String)->Unit,onBack:()->Unit) {
         }
         if(current==null)item("unavailable"){Text(t("Servicearchiv wird geladen oder ist gesperrt.","Service archive is loading or unavailable."))}
         if(current!=null && !editing && asset==null) {
-            item("service-bench-count") { WorkflowCount(t("Anlagenregister / Besuchsarchiv", "Appliance register / visit archive"), "${current.assets.size} / ${current.visits.size}") }
-            item("add-appliance") {Button(onClick={applianceID=UUID.randomUUID().toString();applianceName="";assetEditor=true},enabled=!busy&&current.assets.size<40,modifier=Modifier.fillMaxWidth()){Text(t("Anlage anlegen","Add appliance"))}}
             items(current.assets,key={"asset-${it.id}"}) {entry->
                 DocketEntry("K", entry.name, current.visits.count{it.assetID==entry.id}.toString()+t(" gespeicherte Besuche · Vorher / Nachher", " saved visits · Before / After"), enabled = !busy) { selectedAsset=entry.id;selectedVisit=null }
             }
-            if(current.assets.isEmpty())item("empty"){Text(t("Noch keine Anlagen gespeichert.","No appliances saved yet."))}
         }
+        if(current!=null && !editing && asset==null) item("landing-notes") { Text(t("Keine automatische Diagnose. Sättigungstemperaturen aus verifizierter Quelle übernehmen. Besuche speichern Vorher-/Nachher-Werte je Anlage.", "No automatic diagnosis. Supply saturation temperatures from a verified source. Visits store before/after readings per appliance."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if(current!=null && assetEditor) {
             item("appliance-form") {
                 Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {

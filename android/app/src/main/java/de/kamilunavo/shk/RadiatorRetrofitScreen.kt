@@ -48,17 +48,21 @@ fun RadiatorRetrofitScreen(onShare:(String)->Unit,onBack:()->Unit) {
         }
     }.getOrNull()else null
     LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        if (project == null && editor == 0) {
+            item("landing-workspace") { RadiatorLandingPassport(book, state.busy, english, { english = !english }, { leave() }, { begin(1) }) }
+        } else {
         item("header"){Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
             OutlinedButton(onClick={leave()},enabled=!state.busy){Text(t("‹ Zurück","‹ Back"))};WorkflowHeading(t("RAUMPASS / MODERNISIERUNG", "ROOM PASSPORT / RETROFIT"), "HeizkörperCalc", t("Raumlast · Bestand · Vorschlag", "Room requirement · existing · proposed"))
             TextButton(onClick={english=!english}){Text(if(english)"Deutsch"else "English")}
             Text(t("Räume, Bestand und geplante Heizkörper mit eigenen Herstellerdaten vergleichen. Heizlast selbst vorgeben. Überschüsse eines Raums gleichen Fehlleistung anderer Räume nicht aus.","Compare rooms, existing and proposed radiators using your manufacturer data. Enter room heat requirements. Surplus in one room does not cancel another room's shortfall."))
         }}
+        }
         if(state.busy)item("busy"){LinearProgressIndicator(Modifier.fillMaxWidth())}
         if(state.error)item("error"){Column{Text(t("Laden/Speichern fehlgeschlagen. Eingaben bleiben erhalten.","Load/save failed. Input is retained."),color=MaterialTheme.colorScheme.error);OutlinedButton(onClick={if(editor!=0)reload=true else state.reload()},enabled=!state.busy){Text(t("Gespeicherten Stand laden","Reload saved progress"))}}}
         if(book==null)item("unavailable"){Text(t("Archiv lädt oder ist gesperrt.","Archive loading or unavailable."))}
         if(book!=null&&editor==0&&project==null){
-            item("new"){Button(onClick={begin(1)},enabled=!state.busy&&book.projects.size<20,modifier=Modifier.fillMaxWidth()){Text(t("Modernisierung anlegen","Create retrofit project"))}}
             items(book.projects,key={"project-${it.id}"}){entry->RoomPassportCover(entry.name, entry.rooms.size, entry.scenarios.size, english, !state.busy) { projectID=entry.id }}
+            item("landing-notes") { Text(t("Eigene Heizlast und Herstellerdaten verwenden. Überschüsse eines Raums gleichen Fehlleistung anderer Räume nicht aus.", "Use your heat requirement and manufacturer data. A room's excess capacity does not offset another room's shortfall."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         if(book!=null&&editor!=0)item("editor"){Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text(when(editor){1->t("Neues Projekt","New project");2->t("Raum und eigene Heizlast","Room and heat requirement");3->t("Temperaturalternative","Temperature alternative");else->if(proposed)t("Geplanter Heizkörper","Proposed radiator")else t("Vorhandener Heizkörper","Existing radiator")},style=MaterialTheme.typography.titleLarge)

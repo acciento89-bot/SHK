@@ -33,16 +33,30 @@ fun PipeCircuitScreen(onShare:(String)->Unit,onBack:()->Unit) {
         3->PipeCircuitRules.putSegment(book,project!!.id,proposal,path!!.id,PipeSegment(editID,name.trim(),shkNumber(a)?:error("length"),shkNumber(b)?:error("diameter"),shkNumber(c)?:error("roughness"),shkNumber(d)?:error("zeta")))
         else->error("editor")
     }}.getOrNull()else null
-    LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    val landing = project == null && editor == 0
+    Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = { if (landing) PipeLandingDock(book != null && !state.busy && book.projects.size < 20, english) { begin(1) } },
+    ) { workspacePadding ->
+    val safeInsets = if (landing) WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal) else WindowInsets.safeDrawing
+    LazyColumn(Modifier.fillMaxSize().padding(workspacePadding).windowInsetsPadding(safeInsets).imePadding(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        if (landing) {
+            item("landing-workspace") { PipeLandingWorksheet(book, english, state.busy, { english = !english }, { leave() }) }
+        } else {
         item("header"){Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
             OutlinedButton(onClick={leave()},enabled=!state.busy){Text(t("‹ Zurück","‹ Back"))};WorkflowHeading(t("ROUTENBLATT / ROHRKREIS", "ROUTE SHEET / PIPE CIRCUIT"), "RohrCalc", t("Parallele Pfade · Segmente in Reihe", "Parallel paths · segments in series"))
             TextButton(onClick={english=!english}){Text(if(english)"Deutsch"else "English")}
             Text(t("Bestand und Vorschlag aus parallelen Pfaden mit Segmenten in Reihe aufbauen. Volumenstrom je Pfad selbst vorgeben. Wasser nahe20 °C; keine Netzberechnung oder Pumpenauswahl.","Build baseline and proposal from parallel paths with segments in series. Enter flow for each path. Water near20 °C; no network solution or pump selection."))
         }}
+        }
         if(state.busy)item("busy"){LinearProgressIndicator(Modifier.fillMaxWidth())}
         if(state.error)item("error"){Column{Text(t("Laden/Speichern fehlgeschlagen. Eingaben bleiben erhalten.","Load/save failed. Input is retained."),color=MaterialTheme.colorScheme.error);OutlinedButton(onClick={if(editor!=0)reload=true else state.reload()},enabled=!state.busy){Text(t("Gespeicherten Stand laden","Reload saved progress"))}}}
         if(book==null)item("unavailable"){Text(t("Archiv lädt oder ist gesperrt.","Archive loading or unavailable."))}
-        if(book!=null&&editor==0&&project==null){item("new"){Button(onClick={begin(1)},enabled=!state.busy&&book.projects.size<20,modifier=Modifier.fillMaxWidth()){Text(t("Rohrkreisprojekt anlegen","Create circuit project"))}};items(book.projects,key={"project-${it.id}"}){entry->PipeRouteCover(entry.name, entry.baseline.size, entry.proposal.size, english) { projectID=entry.id;pathID=null }}}
+        if(book!=null&&editor==0&&project==null) {
+            items(book.projects,key={"project-${it.id}"}) { entry -> PipeRouteCover(entry.name, entry.baseline.size, entry.proposal.size, english) { projectID=entry.id;pathID=null } }
+            item("landing-notes") { Text(t("Volumenstrom je Pfad selbst vorgeben. Wasser nahe 20 °C; keine Netzberechnung oder Pumpenauswahl.", "Declare flow for each path. Water near 20 °C; no network solution or pump selection."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
         if(book!=null&&editor!=0)item("editor"){Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text(when(editor){1->t("Neues Projekt","New project");2->t("Parallelpfad und Volumenstrom","Parallel path and flow");else->t("Rohrsegment in Reihe","Pipe segment in series")},style=MaterialTheme.typography.titleLarge)
             ShkDraftField(t("Bezeichnung","Name"),name,!state.busy,{name=it},testID="pipe-field-name")
@@ -76,6 +90,7 @@ fun PipeCircuitScreen(onShare:(String)->Unit,onBack:()->Unit) {
                 OutlinedButton(onClick={begin(3);editID=piece.id;name=piece.name;a=piece.lengthM.toString();b=piece.insideMM.toString();c=piece.roughnessMM.toString();d=piece.zeta.toString()},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text(t("Segment bearbeiten","Edit segment"))}
             }}}
         }
+    }
     }
     if(discard)AlertDialog(onDismissRequest={discard=false},title={Text(t("Eingaben verwerfen?","Discard input?"))},confirmButton={TextButton(onClick={discard=false;editor=0}){Text(t("Verwerfen","Discard"))}},dismissButton={TextButton(onClick={discard=false}){Text(t("Weiter bearbeiten","Keep editing"))}})
     if(reload)AlertDialog(onDismissRequest={reload=false},title={Text(t("Eingaben verwerfen und neu laden?","Discard input and reload?"))},confirmButton={TextButton(onClick={reload=false;state.reload{editor=0}}){Text(t("Laden","Reload"))}},dismissButton={TextButton(onClick={reload=false}){Text(t("Abbrechen","Cancel"))}})

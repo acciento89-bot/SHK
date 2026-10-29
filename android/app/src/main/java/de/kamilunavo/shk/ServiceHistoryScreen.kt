@@ -41,19 +41,23 @@ fun ServiceHistoryScreen(onShare:(String)->Unit,onBack:()->Unit) {
         else->error("editor")
     }}.getOrNull()else null
     LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        if (installation == null && editor == 0) {
+            item("landing-workspace") { CheckLandingDocket(book, state.busy, english, { english = !english }, { leave() }, { begin(1) }, { begin(2) }) }
+        } else {
         item("header"){Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
             OutlinedButton(onClick={leave()},enabled=!state.busy){Text(t("‹ Zurück","‹ Back"))};WorkflowHeading(t("PRÜFAKTE / SERVICEAGENDA", "INSPECTION DOCKET / SERVICE AGENDA"), "AnlagenCheck", t("Anlagen · Checklisten · Besuchsfolge", "Installations · checklists · visit docket"));TextButton(onClick={english=!english}){Text(if(english)"Deutsch"else "English")}
             Text(t("Wiederkehrende Besuche mit versionierten eigenen Checklisten, Messwerten und lokalen Folgeterminen dokumentieren. Keine Sicherheitsfreigabe und keine Systembenachrichtigung.","Document repeat visits with versioned user checklists, measurements and local next-service dates. No safety approval or system notification."))
         }}
+        }
         if(state.busy)item("busy"){LinearProgressIndicator(Modifier.fillMaxWidth())}
         if(state.error)item("error"){Column{Text(t("Laden/Speichern fehlgeschlagen. Eingaben bleiben erhalten.","Load/save failed. Input is retained."),color=MaterialTheme.colorScheme.error);OutlinedButton(onClick={if(editor!=0)reload=true else state.reload()},enabled=!state.busy){Text(t("Gespeicherten Stand laden","Reload saved progress"))}}}
         if(book==null)item("unavailable"){Text(t("Archiv lädt oder ist gesperrt.","Archive loading or unavailable."))}
         if(book!=null&&editor==0&&installation==null){
-            item("actions"){Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={begin(1)},enabled=!state.busy&&book.installations.size<40,modifier=Modifier.fillMaxWidth()){Text(t("Anlage anlegen","Add installation"))};Button(onClick={begin(2)},enabled=!state.busy&&book.templates.size<30,modifier=Modifier.fillMaxWidth()){Text(t("Eigene Checkliste anlegen","Create own checklist"))}}}
-            item("agenda"){Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Text(t("Lokale nächste Services","Local next services"),style=MaterialTheme.typography.titleLarge);val due=ServiceHistoryRules.nextServices(book);if(due.isEmpty())Text(t("Keine Folgetermine gespeichert.","No next-service dates saved."));due.forEach{ServiceAgendaLine(it.date, it.name)}}}
             items(book.installations,key={"installation-${it.id}"}){entry->DocketEntry("A" + (book.installations.indexOf(entry) + 1).toString().padStart(2, '0'), entry.name, book.visits.count{it.installationID==entry.id}.toString()+t(" protokollierte Besuche", " recorded visits")) { installationID=entry.id }}
+            item("checklist-register-heading") { Text(t("CHECKLISTENVORLAGEN", "CHECKLIST TEMPLATES"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
             items(book.templates,key={"template-${it.id}"}){entry->OutlinedButton(onClick={begin(2);editID=entry.id;name=entry.name;checklistText=entry.items.joinToString("\n"){it.label};checklistIDs=ArrayList(entry.items.map{it.id})},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text(entry.name+" · v${entry.version} · "+t("Neue Version bearbeiten","Edit new version"))}}
         }
+        if(book!=null&&editor==0&&installation==null) item("landing-notes") { Text(t("Eigene Checklisten werden versioniert; Besuche bleiben unverändert. Keine Sicherheitsfreigabe und keine Systembenachrichtigung.", "Own checklists are versioned; visits remain unchanged. No safety approval or system notification."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if(book!=null&&editor in 1..2)item("name-form"){Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text(if(editor==1)t("Anlage","Installation")else t("Eigene Checkliste · eine Prüffrage pro Zeile","Own checklist · one item per line"),style=MaterialTheme.typography.titleLarge)
             ShkDraftField(t("Bezeichnung","Name"),name,!state.busy,{name=it},testID="service-field-name")
