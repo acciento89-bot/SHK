@@ -19,12 +19,26 @@ object VentCommissioningCodec {
     const val maximumBytes=4*1024*1024
     private fun exact(value:JSONObject,vararg fields:String) {require(value.keys().asSequence().toSet()==fields.toSet()){"Unexpected commissioning fields"}}
     private fun rooms(values:List<VentRoom>)=JSONArray().also{array->values.forEach{array.put(JSONObject().put("id",it.id).put("name",it.name))}}
-    private fun terminals(values:List<VentTerminal>)=JSONArray().also{array->values.forEach{array.put(JSONObject().put("id",it.id).put("roomID",it.roomID).put("name",it.name).put("side",it.side.name).put("targetM3H",wire(it.targetM3H)).put("measuredM3H",wire(it.measuredM3H)))}}
+    private fun terminals(values:List<VentTerminal>)=JSONArray().also{array->values.forEach{array.put(JSONObject().put("id",it.id).put("roomID",it.roomID).put("name",it.name).put("side",it.side.name).put("targetM3H",wire(it.targetM3H)).put("measuredM3H",it.measuredM3H?.let(::wire)?:JSONObject.NULL))}}
     private fun rooms(array:JSONArray):List<VentRoom> {
         require(array.length()<=40);return (0 until array.length()).map{val value=array.getJSONObject(it);exact(value,"id","name");VentRoom(value.getString("id"),value.getString("name"))}
     }
     private fun terminals(array:JSONArray):List<VentTerminal> {
-        require(array.length()<=80);return (0 until array.length()).map{val value=array.getJSONObject(it);exact(value,"id","roomID","name","side","targetM3H","measuredM3H");VentTerminal(value.getString("id"),value.getString("roomID"),value.getString("name"),VentSide.valueOf(value.getString("side")),value.getDouble("targetM3H"),value.getDouble("measuredM3H"))}
+        require(array.length()<=80)
+        return (0 until array.length()).map {
+            val value=array.getJSONObject(it)
+            val fields=arrayOf("id","roomID","name","side","targetM3H")
+            if(value.has("measuredM3H"))exact(value,*fields,"measuredM3H")else exact(value,*fields)
+            val measured=if(!value.has("measuredM3H")||value.isNull("measuredM3H"))null else {
+                require(value.get("measuredM3H") is Number){"Invalid measured air flow"}
+                value.getDouble("measuredM3H")
+            }
+            VentTerminal(value.getString("id"),value.getString("roomID"),value.getString("name"),VentSide.valueOf(value.getString("side")),value.getDouble("targetM3H"),measured)
+        }
+    }
+    // Preserve optional omissions only for canonical input verification; new writes use explicit null.
+    private fun preserveOmittedMeasurements(source:JSONArray,canonical:JSONArray) {
+        for(index in 0 until source.length())if(!source.getJSONObject(index).has("measuredM3H"))canonical.getJSONObject(index).remove("measuredM3H")
     }
     fun encode(book:VentCommissioningBook):String {
         VentCommissioningRules.validate(book)
@@ -38,15 +52,24 @@ object VentCommissioningCodec {
         require(text.isNotEmpty()&&text.toByteArray(Charsets.UTF_8).size<=maximumBytes){"Invalid commissioning archive size"}
         val tokenizer=JSONTokener(text);val root=tokenizer.nextValue() as? JSONObject?:error("Expected commissioning object")
         require(tokenizer.nextClean()=='\u0000'){"Trailing commissioning bytes"};exact(root,"schema","revision","projects")
-        require(root.getInt("schema")==1){"Unsupported commissioning schema"};val array=root.getJSONArray("projects");require(array.length()<=20)
+        val sourceSchema=root.getInt("schema");require(sourceSchema in 1..2){"Unsupported commissioning schema"};val array=root.getJSONArray("projects");require(array.length()<=20)
         val projects=(0 until array.length()).map {index->
             val project=array.getJSONObject(index);exact(project,"id","name","rooms","terminals","visits")
             val rows=project.getJSONArray("visits");require(rows.length()<=40)
             val visits=(0 until rows.length()).map {i->val visit=rows.getJSONObject(i);exact(visit,"id","recordedAt","note","rooms","terminals");VentVisit(visit.getString("id"),visit.getString("recordedAt"),rooms(visit.getJSONArray("rooms")),terminals(visit.getJSONArray("terminals")),visit.getString("note"))}
             VentProject(project.getString("id"),project.getString("name"),rooms(project.getJSONArray("rooms")),terminals(project.getJSONArray("terminals")),visits)
         }
-        val book=VentCommissioningBook(root.getInt("schema"),root.getInt("revision"),projects);VentCommissioningRules.validate(book)
-        require(encode(book)==text){"Noncanonical or damaged commissioning archive"};return book
+        // Schema1 numeric values, including zero, are kept exactly; migration does not write the file.
+        val book=VentCommissioningBook(2,root.getInt("revision"),projects);VentCommissioningRules.validate(book)
+        val canonical=JSONObject(encode(book)).put("schema",sourceSchema)
+        val canonicalProjects=canonical.getJSONArray("projects")
+        for(index in 0 until array.length()) {
+            val source=array.getJSONObject(index);val target=canonicalProjects.getJSONObject(index)
+            preserveOmittedMeasurements(source.getJSONArray("terminals"),target.getJSONArray("terminals"))
+            val sourceVisits=source.getJSONArray("visits");val targetVisits=target.getJSONArray("visits")
+            for(visit in 0 until sourceVisits.length())preserveOmittedMeasurements(sourceVisits.getJSONObject(visit).getJSONArray("terminals"),targetVisits.getJSONObject(visit).getJSONArray("terminals"))
+        }
+        require(canonical.toString()==text){"Noncanonical or damaged commissioning archive"};return book
     }
 }
 

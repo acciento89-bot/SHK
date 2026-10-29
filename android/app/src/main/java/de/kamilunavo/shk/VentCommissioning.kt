@@ -6,27 +6,30 @@ import java.util.UUID
 
 enum class VentSide { SUPPLY,EXTRACT }
 data class VentRoom(val id:String,val name:String)
-data class VentTerminal(val id:String,val roomID:String,val name:String,val side:VentSide,val targetM3H:Double,val measuredM3H:Double)
+data class VentTerminal(val id:String,val roomID:String,val name:String,val side:VentSide,val targetM3H:Double,val measuredM3H:Double?)
 data class VentVisit(val id:String,val recordedAt:String,val rooms:List<VentRoom>,val terminals:List<VentTerminal>,val note:String)
 data class VentProject(val id:String,val name:String,val rooms:List<VentRoom> = emptyList(),val terminals:List<VentTerminal> = emptyList(),val visits:List<VentVisit> = emptyList())
-data class VentCommissioningBook(val schema:Int=1,val revision:Int=0,val projects:List<VentProject> = emptyList())
-data class VentTotals(val targetM3H:Double,val measuredM3H:Double,val deviationM3H:Double,val deviationPercent:Double?,val measuredLitresPerSecond:Double,val measuredCFM:Double)
+data class VentCommissioningBook(val schema:Int=2,val revision:Int=0,val projects:List<VentProject> = emptyList())
+data class VentTotals(val targetM3H:Double,val measuredM3H:Double?,val deviationM3H:Double?,val deviationPercent:Double?,val measuredLitresPerSecond:Double?,val measuredCFM:Double?,val unmeasuredCount:Int,val terminalCount:Int)
 
 object VentCommissioningRules {
     private fun id(value:String) {require(runCatching {UUID.fromString(value).toString()==value}.getOrDefault(false)){"Invalid commissioning identity"}}
     private fun name(value:String) {require(value.isNotBlank()&&value==value.trim()&&value.length<=120){"Invalid commissioning name"}}
     private fun terminal(value:VentTerminal) {
         id(value.id);id(value.roomID);name(value.name)
-        require(value.targetM3H.isFinite()&&value.measuredM3H.isFinite()&&value.targetM3H in 0.0..100000.0&&value.measuredM3H in 0.0..100000.0){"Invalid air volume flow"}
+        require(value.targetM3H.isFinite()&&value.targetM3H in 0.0..100000.0&&(value.measuredM3H?.let{it.isFinite()&&it in 0.0..100000.0}?:true)){"Invalid air volume flow"}
     }
     fun totals(terminals:List<VentTerminal>,side:VentSide):VentTotals {
         terminals.forEach(::terminal);val matching=terminals.filter{it.side==side}
-        val target=matching.sumOf{it.targetM3H};val measured=matching.sumOf{it.measuredM3H};val delta=measured-target
-        val percent=if(target==0.0)null else (delta/target*100).takeIf(Double::isFinite)
-        return VentTotals(target,measured,delta,percent,measured/3.6,measured*.588577779)
+        val target=matching.sumOf{it.targetM3H};val missing=matching.count{it.measuredM3H==null}
+        // A partial set is not a measured total. Recorded zero is still a real reading.
+        val measured=if(matching.isNotEmpty()&&missing==0)matching.sumOf{it.measuredM3H!!}else null
+        val delta=measured?.minus(target)
+        val percent=if(target==0.0)null else delta?.let{(it/target*100).takeIf(Double::isFinite)}
+        return VentTotals(target,measured,delta,percent,measured?.div(3.6),measured?.times(.588577779),missing,matching.size)
     }
     internal fun validate(book:VentCommissioningBook) {
-        require(book.schema==1&&book.revision>=0&&book.projects.size<=20){"Unsupported commissioning archive"}
+        require(book.schema==2&&book.revision>=0&&book.projects.size<=20){"Unsupported commissioning archive"}
         val claims=HashMap<String,Pair<String,String>>()
         fun claim(value:String,kind:String,owner:String,repeated:Boolean=false) {id(value);val old=claims[value];require(old==null||repeated&&old==Pair(kind,owner)){"Duplicate or foreign commissioning identity"};claims[value]=Pair(kind,owner)}
         fun contents(projectID:String,rooms:List<VentRoom>,terminals:List<VentTerminal>) {
@@ -62,15 +65,16 @@ object VentCommissioningRules {
     fun report(book:VentCommissioningBook,projectID:String,english:Boolean):String {
         validate(book);val project=book.projects.single{it.id==projectID};val locale=if(english)Locale.US else Locale.GERMANY
         fun t(de:String,en:String)=if(english)en else de
-        fun number(value:Double)=String.format(locale,"%.2f",value)
+        fun number(value:Double?)=value?.let{String.format(locale,"%.2f",it)}?:t("Nicht gemessen","Unmeasured")
         fun side(value:VentSide)=if(value==VentSide.SUPPLY)t("Zuluft","Supply") else t("Abluft","Extract")
-        fun percent(value:VentTotals)=value.deviationPercent?.let{number(it)+"%"}?:if(value.targetM3H==0.0)t("ohne Soll / Prozent nicht berechenbar","no target / percentage unavailable")else t("Prozent außerhalb des Zahlenbereichs","Percentage outside numeric range")
+        fun percent(value:VentTotals)=if(value.terminalCount==0)t("Keine Messstellen erfasst","No terminals recorded")else if(value.measuredM3H==null)t("Unvollständig","Incomplete")else value.deviationPercent?.let{number(it)+"%"}?:if(value.targetM3H==0.0)t("ohne Soll / Prozent nicht berechenbar","no target / percentage unavailable")else t("Prozent außerhalb des Zahlenbereichs","Percentage outside numeric range")
         return buildString {
             appendLine("LüftungsCalc · "+t("Inbetriebnahme","Commissioning"));appendLine(project.name)
             fun summary(label:String,terminals:List<VentTerminal>) {
                 appendLine(label)
                 for(direction in VentSide.entries) {
                     val values=totals(terminals,direction)
+                    if(values.unmeasuredCount>0)appendLine(t("Messpunkte offen: ","Unmeasured terminals: ")+values.unmeasuredCount)
                     appendLine(side(direction)+" · "+t("Soll / Ist / Abweichung","Target / Measured / Deviation")+": ${number(values.targetM3H)} / ${number(values.measuredM3H)} / ${number(values.deviationM3H)} m³/h · ${percent(values)}")
                     appendLine(t("Ist: ","Measured: ")+"${number(values.measuredLitresPerSecond)} l/s · ${number(values.measuredCFM)} CFM")
                 }

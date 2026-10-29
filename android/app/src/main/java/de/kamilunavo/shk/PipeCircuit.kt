@@ -18,12 +18,14 @@ object PipeCircuitRules {
     private fun checkSegment(value:PipeSegment){id(value.id);name(value.name);require(value.lengthM.isFinite()&&value.lengthM in 0.0..100000.0&&value.insideMM.isFinite()&&value.insideMM in .1..10000.0&&value.roughnessMM.isFinite()&&value.roughnessMM in 0.0..100.0&&value.zeta.isFinite()&&value.zeta in 0.0..10000.0){"Invalid pipe geometry"}}
     fun segment(flowLPH:Double,value:PipeSegment):PipeSegmentValues {
         checkSegment(value);require(flowLPH.isFinite()&&flowLPH in 0.0..1000000.0){"Invalid declared path flow"}
-        if(flowLPH<=0)return PipeSegmentValues(0.0,0.0,0.0,0.0,0.0,0.0)
+        val diameterM=value.insideMM/1000
+        val volumeLitres=PI*diameterM*diameterM/4*value.lengthM*1000
+        if(flowLPH==0.0)return PipeSegmentValues(0.0,0.0,0.0,0.0,0.0,volumeLitres)
         // Exact existing RohrCalc water-near20C expressions, no network solution.
         val d=value.insideMM/1000;val area=PI*d*d/4;val q=flowLPH/1000/3600;val velocity=q/area;val re=velocity*d/1.004e-6
         val friction=if(re in 0.0..2299.999)64/re else 1/(-1.8*log10((max(0.0,value.roughnessMM/1000)/d/3.7).pow(1.11)+6.9/re)).pow(2)
         val dp=friction*(998*velocity*velocity/2)/d;val local=max(0.0,value.zeta)*(998*velocity*velocity/2)/1000;val loss=dp*max(0.0,value.lengthM)/1000+local
-        return PipeSegmentValues(velocity,re,dp,loss,loss*1000/(998*9.80665),area*max(0.0,value.lengthM)*1000).also {require(listOf(it.velocityMS,it.reynolds,it.dpPerM,it.lossKPa,it.headM,it.volumeLitres).all(Double::isFinite)){"Pipe result outside numeric range"}}
+        return PipeSegmentValues(velocity,re,dp,loss,loss*1000/(998*9.80665),volumeLitres).also {require(listOf(it.velocityMS,it.reynolds,it.dpPerM,it.lossKPa,it.headM,it.volumeLitres).all(Double::isFinite)){"Pipe result outside numeric range"}}
     }
     internal fun validate(book:PipeCircuitBook) {
         require(book.schema==1&&book.revision>=0&&book.projects.size<=20){"Unsupported circuit archive"};val ids=HashSet<String>()

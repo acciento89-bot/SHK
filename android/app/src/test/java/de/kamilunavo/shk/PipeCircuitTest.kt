@@ -18,6 +18,25 @@ class PipeCircuitTest {
         value=PipeCircuitRules.putPath(value,id(1),false,PipePath(id(2),"StrangA",1000.0,listOf(segment())))
         return PipeCircuitRules.putPath(value,id(1),false,PipePath(id(4),"StrangB",300.0,listOf(segment(5).copy(name="Großer Parallelstrang",insideMM=32.0,lengthM=5.0))))
     }
+    @Test fun idlePipeRetainsGeometricWaterVolumeWithoutHydraulicLoss() {
+        val value=PipeCircuitRules.segment(0.0,segment())
+        assertEquals(3.141592653589793,value.volumeLitres,1e-12)
+        assertEquals(0.0,value.velocityMS,0.0);assertEquals(0.0,value.reynolds,0.0)
+        assertEquals(0.0,value.dpPerM,0.0);assertEquals(0.0,value.lossKPa,0.0);assertEquals(0.0,value.headM,0.0)
+    }
+    @Test fun idleCircuitInventoryDoesNotDependOnDeclaredPathFlow() {
+        val original=book();val project=original.projects.single()
+        val idle=project.copy(baseline=project.baseline.map{it.copy(flowLPH=0.0)})
+        val result=PipeCircuitRules.summary(idle,false)
+        assertEquals(7.162831250184729,result.volumeLitres,1e-12)
+        assertEquals(0.0,result.worstLossKPa,0.0);assertEquals(0.0,result.declaredFlowLPH,0.0)
+    }
+    @Test fun idleFlowStillRejectsInvalidPipeDimensions() {
+        rejects {PipeCircuitRules.segment(0.0,segment().copy(insideMM=0.0))}
+        rejects {PipeCircuitRules.segment(0.0,segment().copy(lengthM=-1.0))}
+        rejects {PipeCircuitRules.segment(0.0,segment().copy(roughnessMM=Double.NaN))}
+        rejects {PipeCircuitRules.segment(Double.NaN,segment())}
+    }
     @Test fun laminarSegmentMatchesIndependentPoiseuilleIdentityAndVolume() {
         val pipe=segment().copy(zeta=0.0)
         val value=PipeCircuitRules.segment(10.0,pipe)

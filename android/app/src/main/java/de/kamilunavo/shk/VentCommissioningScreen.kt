@@ -29,7 +29,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
     val state=rememberShkWorkflowStore(file,{file.load()},{book,revision->file.save(book,revision)})
     var english by rememberSaveable{mutableStateOf(!Locale.getDefault().language.startsWith("de"))}
     fun t(de:String,en:String)=if(english)en else de
-    fun number(value:Double)=String.format(if(english)Locale.US else Locale.GERMANY,"%.2f",value)
+    fun number(value:Double?)=value?.let{String.format(if(english)Locale.US else Locale.GERMANY,"%.2f",it)}?:t("Nicht gemessen","Unmeasured")
     var projectID by rememberSaveable{mutableStateOf<String?>(null)}
     var editor by rememberSaveable{mutableStateOf(0)}
     var editID by rememberSaveable{mutableStateOf("")}
@@ -50,7 +50,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
     BackHandler{leave()}
     fun begin(kind:Int){editor=kind;editID=UUID.randomUUID().toString();name="";note="";visitTime="";target="";measured="";roomID=project?.rooms?.firstOrNull()?.id.orEmpty();side="SUPPLY"}
     fun commit(next:VentCommissioningBook,done:()->Unit={}) {if(book!=null)state.commit(next,book.revision){editor=0;done()}}
-    val terminal=if(editor==3&&project!=null)runCatching {VentTerminal(editID,roomID,name.trim(),VentSide.valueOf(side),shkNumber(target)?:error("target"),shkNumber(measured)?:error("measured"))}.getOrNull()else null
+    val terminal=if(editor==3&&project!=null)runCatching {VentTerminal(editID,roomID,name.trim(),VentSide.valueOf(side),shkNumber(target)?:error("target"),if(measured.isBlank())null else shkNumber(measured)?:error("measured"))}.getOrNull()else null
     val terminalCandidate=if(terminal!=null&&book!=null)runCatching{VentCommissioningRules.putTerminal(book,project!!.id,terminal)}.getOrNull()else null
     LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().semantics { testTagsAsResourceId = true },contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item("header") {
@@ -83,7 +83,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
                 for(direction in VentSide.entries) {
                     val total=VentCommissioningRules.totals(project.terminals,direction)
                     Text((if(direction==VentSide.SUPPLY)t("Zuluft","Supply")else t("Abluft","Extract"))+" · "+t("Soll / Ist / Abweichung","Target / Measured / Deviation")+": ${number(total.targetM3H)} / ${number(total.measuredM3H)} / ${number(total.deviationM3H)} m³/h")
-                    Text(total.deviationPercent?.let{number(it)+"%"}?:t("Prozentabweichung nicht verfügbar","Percentage deviation unavailable"))
+                    Text(if(total.terminalCount==0)t("Keine Messstellen erfasst","No terminals recorded")else if(total.measuredM3H==null)t("Unvollständig · ${total.unmeasuredCount} Messpunkte offen","Incomplete · ${total.unmeasuredCount} unmeasured terminals")else total.deviationPercent?.let{number(it)+"%"}?:t("Prozentabweichung nicht verfügbar","Percentage deviation unavailable"))
                 }
                 OutlinedButton(onClick={onShare(VentCommissioningRules.report(book,project.id,english))},modifier=Modifier.fillMaxWidth()){Text(t("Inbetriebnahmebericht teilen","Share commissioning report"))}
             }}
@@ -101,7 +101,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
             items(project.terminals,key={"terminal-${it.id}"}) {entry->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text(entry.name+" · "+project.rooms.single{it.id==entry.roomID}.name)
                 Text((if(entry.side==VentSide.SUPPLY)t("Zuluft","Supply")else t("Abluft","Extract"))+" · "+t("Soll / Ist","Target / Measured")+": ${number(entry.targetM3H)} / ${number(entry.measuredM3H)} m³/h")
-                OutlinedButton(onClick={editor=3;editID=entry.id;name=entry.name;roomID=entry.roomID;side=entry.side.name;target=entry.targetM3H.toString();measured=entry.measuredM3H.toString()},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text(t("Einstellung bearbeiten","Edit adjustment"))}
+                OutlinedButton(onClick={editor=3;editID=entry.id;name=entry.name;roomID=entry.roomID;side=entry.side.name;target=entry.targetM3H.toString();measured=entry.measuredM3H?.toString().orEmpty()},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text(t("Einstellung bearbeiten","Edit adjustment"))}
                 OutlinedButton(onClick={deleteID=entry.id;deleteRoom=false},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text(t("Ventil aus aktuellem Stand entfernen","Remove current terminal"))}
             }}}
             items(project.visits.sortedByDescending{Instant.parse(it.recordedAt)},key={"visit-${it.id}"}) {visit->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -121,7 +121,8 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
                 for(direction in VentSide.entries)OutlinedButton(onClick={side=direction.name},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text((if(side==direction.name)"✓ "else "")+(if(direction==VentSide.SUPPLY)t("Zuluft","Supply")else t("Abluft","Extract")))}
                 OutlinedTextField(target,{target=it},label={Text(t("Soll m³/h","Target m³/h"))},enabled=!state.busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth().testTag("vent-field-target"))
                 OutlinedTextField(measured,{measured=it},label={Text(t("Ist m³/h","Measured m³/h"))},enabled=!state.busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth().testTag("vent-field-measured"))
-                if(terminalCandidate==null)Text(t("Name, Raum und beide Luftmengen 0…100000 m³/h vollständig eingeben. Bei Soll0 ist die Prozentabweichung nicht definiert.","Enter name, room and both flows 0…100000 m³/h. Percentage deviation is undefined for target0."))
+                Text(t("Ist leer lassen, solange noch nicht gemessen wurde. 0 nur für einen tatsächlich gemessenen Nullwert eingeben.","Leave measured flow blank until measured. Enter 0 only for an actual zero reading."))
+                if(terminalCandidate==null)Text(t("Name, Raum und Soll 0…100000 m³/h eingeben; Ist optional im gleichen Bereich. Bei Soll0 ist die Prozentabweichung nicht definiert.","Enter name, room and target 0…100000 m³/h; measured flow is optional in the same range. Percentage deviation is undefined for target0."))
                 Button(onClick={terminalCandidate?.let{commit(it)}},enabled=!state.busy&&terminalCandidate!=null,modifier=Modifier.fillMaxWidth()){Text(t("Einstellung speichern","Save adjustment"))}
             }}
         }
