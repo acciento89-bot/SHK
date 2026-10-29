@@ -56,7 +56,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
         item("header") {
             Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick={leave()},enabled=!state.busy){Text(t("‹ Zurück","‹ Back"))}
-                Text(t("LüftungsCalc · Inbetriebnahme","LüftungsCalc · Commissioning"),style=MaterialTheme.typography.headlineMedium)
+                WorkflowHeading(t("INBETRIEBNAHME / RAUMREGISTER", "COMMISSIONING / ROOM REGISTER"), "LüftungsCalc", t("Räume  →  Ventile  →  Einstellbesuche", "Rooms  →  terminals  →  adjustment visits"))
                 TextButton(onClick={english=!english}){Text(if(english)"Deutsch" else "English")}
                 Text(t("Soll- und Ist-Luftmengen je Ventil. Zuluft und Abluft bleiben getrennt. Einstellbesuche behalten ihre ursprünglichen Räume und Messwerte.","Target and measured flow per terminal. Supply and extract stay separate. Adjustment visits keep their original rooms and readings."))
             }
@@ -66,7 +66,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
         if(book==null)item("loading"){Text(t("Projektarchiv wird geladen oder ist gesperrt.","Project archive is loading or unavailable."))}
         if(book!=null&&project==null&&editor==0) {
             item("new-project"){Button(onClick={begin(1)},enabled=!state.busy&&book.projects.size<20,modifier=Modifier.fillMaxWidth()){Text(t("Inbetriebnahmeprojekt anlegen","Create commissioning project"))}}
-            items(book.projects,key={"project-${it.id}"}) {entry->OutlinedButton(onClick={projectID=entry.id},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text(entry.name+" · "+entry.terminals.size+t(" Ventile"," terminals"))}}
+            items(book.projects,key={"project-${it.id}"}) {entry->VentProjectBoard(entry.name, entry.rooms.size, entry.terminals.size, english, !state.busy) { projectID=entry.id }}
         }
         if(book!=null&&(editor==1||editor==2)) {
             item("name-form") {Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -82,7 +82,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
             item("totals") {Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 for(direction in VentSide.entries) {
                     val total=VentCommissioningRules.totals(project.terminals,direction)
-                    Text((if(direction==VentSide.SUPPLY)t("Zuluft","Supply")else t("Abluft","Extract"))+" · "+t("Soll / Ist / Abweichung","Target / Measured / Deviation")+": ${number(total.targetM3H)} / ${number(total.measuredM3H)} / ${number(total.deviationM3H)} m³/h")
+                    WorkflowCount((if(direction==VentSide.SUPPLY)t("ZULUFT", "SUPPLY")else t("ABLUFT", "EXTRACT"))+" · "+t("Soll / Ist / Δ", "Target / Measured / Δ"), "${number(total.targetM3H)} / ${number(total.measuredM3H)} / ${number(total.deviationM3H)} m³/h")
                     Text(if(total.terminalCount==0)t("Keine Messstellen erfasst","No terminals recorded")else if(total.measuredM3H==null)t("Unvollständig · ${total.unmeasuredCount} Messpunkte offen","Incomplete · ${total.unmeasuredCount} unmeasured terminals")else total.deviationPercent?.let{number(it)+"%"}?:t("Prozentabweichung nicht verfügbar","Percentage deviation unavailable"))
                 }
                 OutlinedButton(onClick={onShare(VentCommissioningRules.report(book,project.id,english))},modifier=Modifier.fillMaxWidth()){Text(t("Inbetriebnahmebericht teilen","Share commissioning report"))}
@@ -93,7 +93,7 @@ fun VentCommissioningScreen(onShare:(String)->Unit,onBack:()->Unit) {
                 Button(onClick={begin(4)},enabled=!state.busy&&project.terminals.isNotEmpty()&&project.visits.size<40,modifier=Modifier.fillMaxWidth()){Text(t("Einstellbesuch als Momentaufnahme speichern","Save adjustment visit snapshot"))}
             }}
             items(project.rooms,key={"room-${it.id}"}) {room->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text(room.name,style=MaterialTheme.typography.titleMedium)
+                Text(t("RAUM ", "ROOM ") + (project.rooms.indexOf(room) + 1).toString().padStart(2, '0') + "  /  " + room.name,style=MaterialTheme.typography.titleLarge)
                 for(direction in VentSide.entries) {val total=VentCommissioningRules.totals(project.terminals.filter{it.roomID==room.id},direction);Text((if(direction==VentSide.SUPPLY)t("Zuluft","Supply")else t("Abluft","Extract"))+": ${number(total.targetM3H)} / ${number(total.measuredM3H)} m³/h")}
                 OutlinedButton(onClick={editor=2;editID=room.id;name=room.name},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text(t("Raum umbenennen","Rename room"))}
                 OutlinedButton(onClick={deleteID=room.id;deleteRoom=true},enabled=!state.busy&&project.terminals.none{it.roomID==room.id},modifier=Modifier.fillMaxWidth()){Text(t("Leeren Raum entfernen","Remove empty room"))}

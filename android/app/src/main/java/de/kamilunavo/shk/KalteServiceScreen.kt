@@ -90,7 +90,7 @@ fun KalteServiceScreen(onShare:(String)->Unit,onBack:()->Unit) {
         item("header") {
             Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick={leave()},enabled=!busy){Text(t("‹ Zurück","‹ Back"))}
-                Text(t("KälteCalc · Servicebesuche","KälteCalc · Service visits"),style=MaterialTheme.typography.headlineMedium)
+                WorkflowHeading("K / S", t("KälteCalc · Servicebank","KälteCalc · Service bench"), t("ANLAGEN  →  VORHER / NACHHER", "APPLIANCES  →  BEFORE / AFTER"))
                 TextButton(onClick={english=!english}){Text(if(english)"Deutsch" else "English")}
                 Text(t("Lokale Vorher-/Nachher-Messungen je Anlage. Keine automatische Diagnose. Sättigungstemperaturen selbst aus verifizierter Quelle übernehmen.","Local before/after readings per appliance. No automatic diagnosis. Supply saturation temperatures from a verified source."))
             }
@@ -104,11 +104,10 @@ fun KalteServiceScreen(onShare:(String)->Unit,onBack:()->Unit) {
         }
         if(current==null)item("unavailable"){Text(t("Servicearchiv wird geladen oder ist gesperrt.","Service archive is loading or unavailable."))}
         if(current!=null && !editing && asset==null) {
+            item("service-bench-count") { WorkflowCount(t("Anlagenregister / Besuchsarchiv", "Appliance register / visit archive"), "${current.assets.size} / ${current.visits.size}") }
             item("add-appliance") {Button(onClick={applianceID=UUID.randomUUID().toString();applianceName="";assetEditor=true},enabled=!busy&&current.assets.size<40,modifier=Modifier.fillMaxWidth()){Text(t("Anlage anlegen","Add appliance"))}}
             items(current.assets,key={"asset-${it.id}"}) {entry->
-                OutlinedButton(onClick={selectedAsset=entry.id;selectedVisit=null},enabled=!busy,modifier=Modifier.fillMaxWidth()) {
-                    Text(entry.name+" · "+current.visits.count{it.assetID==entry.id}+t(" Besuche"," visits"))
-                }
+                DocketEntry("K", entry.name, current.visits.count{it.assetID==entry.id}.toString()+t(" gespeicherte Besuche · Vorher / Nachher", " saved visits · Before / After"), enabled = !busy) { selectedAsset=entry.id;selectedVisit=null }
             }
             if(current.assets.isEmpty())item("empty"){Text(t("Noch keine Anlagen gespeichert.","No appliances saved yet."))}
         }

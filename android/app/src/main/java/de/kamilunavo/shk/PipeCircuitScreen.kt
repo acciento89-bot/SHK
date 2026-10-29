@@ -35,14 +35,14 @@ fun PipeCircuitScreen(onShare:(String)->Unit,onBack:()->Unit) {
     }}.getOrNull()else null
     LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item("header"){Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-            OutlinedButton(onClick={leave()},enabled=!state.busy){Text(t("‹ Zurück","‹ Back"))};Text(t("RohrCalc · Rohrkreisvergleich","RohrCalc · Circuit comparison"),style=MaterialTheme.typography.headlineMedium)
+            OutlinedButton(onClick={leave()},enabled=!state.busy){Text(t("‹ Zurück","‹ Back"))};WorkflowHeading(t("ROUTENBLATT / ROHRKREIS", "ROUTE SHEET / PIPE CIRCUIT"), "RohrCalc", t("Parallele Pfade · Segmente in Reihe", "Parallel paths · segments in series"))
             TextButton(onClick={english=!english}){Text(if(english)"Deutsch"else "English")}
             Text(t("Bestand und Vorschlag aus parallelen Pfaden mit Segmenten in Reihe aufbauen. Volumenstrom je Pfad selbst vorgeben. Wasser nahe20 °C; keine Netzberechnung oder Pumpenauswahl.","Build baseline and proposal from parallel paths with segments in series. Enter flow for each path. Water near20 °C; no network solution or pump selection."))
         }}
         if(state.busy)item("busy"){LinearProgressIndicator(Modifier.fillMaxWidth())}
         if(state.error)item("error"){Column{Text(t("Laden/Speichern fehlgeschlagen. Eingaben bleiben erhalten.","Load/save failed. Input is retained."),color=MaterialTheme.colorScheme.error);OutlinedButton(onClick={if(editor!=0)reload=true else state.reload()},enabled=!state.busy){Text(t("Gespeicherten Stand laden","Reload saved progress"))}}}
         if(book==null)item("unavailable"){Text(t("Archiv lädt oder ist gesperrt.","Archive loading or unavailable."))}
-        if(book!=null&&editor==0&&project==null){item("new"){Button(onClick={begin(1)},enabled=!state.busy&&book.projects.size<20,modifier=Modifier.fillMaxWidth()){Text(t("Rohrkreisprojekt anlegen","Create circuit project"))}};items(book.projects,key={"project-${it.id}"}){entry->OutlinedButton(onClick={projectID=entry.id;pathID=null},modifier=Modifier.fillMaxWidth()){Text(entry.name)}}}
+        if(book!=null&&editor==0&&project==null){item("new"){Button(onClick={begin(1)},enabled=!state.busy&&book.projects.size<20,modifier=Modifier.fillMaxWidth()){Text(t("Rohrkreisprojekt anlegen","Create circuit project"))}};items(book.projects,key={"project-${it.id}"}){entry->PipeRouteCover(entry.name, entry.baseline.size, entry.proposal.size, english) { projectID=entry.id;pathID=null }}}
         if(book!=null&&editor!=0)item("editor"){Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text(when(editor){1->t("Neues Projekt","New project");2->t("Parallelpfad und Volumenstrom","Parallel path and flow");else->t("Rohrsegment in Reihe","Pipe segment in series")},style=MaterialTheme.typography.titleLarge)
             ShkDraftField(t("Bezeichnung","Name"),name,!state.busy,{name=it},testID="pipe-field-name")
@@ -61,7 +61,7 @@ fun PipeCircuitScreen(onShare:(String)->Unit,onBack:()->Unit) {
                 Button(onClick={begin(2)},enabled=!state.busy&&(paths?.size?:0)<10,modifier=Modifier.fillMaxWidth()){Text(t("Parallelpfad hinzufügen","Add parallel path"))}
                 OutlinedButton(onClick={onShare(PipeCircuitRules.report(book,project.id,english))},modifier=Modifier.fillMaxWidth()){Text(t("Rohrkreisbericht teilen","Share circuit report"))}
             }}
-            items(paths.orEmpty(),key={"path-${it.id}"}){entry->val result=PipeCircuitRules.summary(project,proposal).paths.single{it.pathID==entry.id};OutlinedButton(onClick={pathID=entry.id},modifier=Modifier.fillMaxWidth()){Text("${entry.name} · ${number(entry.flowLPH)} l/h · ${number(result.lossKPa)} kPa · ${entry.segments.size} "+t("Segmente","segments"))}}
+            items(paths.orEmpty(),key={"path-${it.id}"}){entry->val result=PipeCircuitRules.summary(project,proposal).paths.single{it.pathID==entry.id};DocketEntry("P" + (paths.orEmpty().indexOf(entry) + 1).toString().padStart(2, '0'), entry.name, "${number(entry.flowLPH)} l/h · ${number(result.lossKPa)} kPa · ${entry.segments.size} "+t("Segmente", "segments")) { pathID=entry.id }}
         }
         if(book!=null&&project!=null&&path!=null&&editor==0){
             item("path"){Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
@@ -71,8 +71,8 @@ fun PipeCircuitScreen(onShare:(String)->Unit,onBack:()->Unit) {
                 if(path.segments.isEmpty())Text(t("Noch keine Segmente; keine vollständige Auslegung.","No segments yet; not a complete design."))
             }}
             items(path.segments,key={"segment-${it.id}"}){piece->val result=PipeCircuitRules.segment(path.flowLPH,piece);Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                Text(piece.name,style=MaterialTheme.typography.titleMedium);Text("${number(piece.lengthM)} m · Øi ${number(piece.insideMM)} mm · ζ ${number(piece.zeta)}")
-                Text("${number(result.lossKPa)} kPa · ${number(result.velocityMS)} m/s · Re ${number(result.reynolds)}")
+                Text("${(path.segments.indexOf(piece) + 1).toString().padStart(2, '0')}  ──  ${piece.name}",style=MaterialTheme.typography.titleLarge);HorizontalDivider();Text("${number(piece.lengthM)} m · Øi ${number(piece.insideMM)} mm · ζ ${number(piece.zeta)}")
+                WorkflowCount(t("Δp / v / Reynolds", "Δp / v / Reynolds"), "${number(result.lossKPa)} kPa · ${number(result.velocityMS)} m/s · Re ${number(result.reynolds)}")
                 OutlinedButton(onClick={begin(3);editID=piece.id;name=piece.name;a=piece.lengthM.toString();b=piece.insideMM.toString();c=piece.roughnessMM.toString();d=piece.zeta.toString()},enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text(t("Segment bearbeiten","Edit segment"))}
             }}}
         }

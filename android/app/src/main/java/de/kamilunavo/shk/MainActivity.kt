@@ -4,6 +4,8 @@ import android.content.Intent
 import android.content.ClipData
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.content.FileProvider
@@ -18,6 +20,10 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val lightProduct = BuildConfig.APP_KIND in setOf("lueftungscalc", "heizkoerpercalc", "anlagencheck")
+        val bars = if (lightProduct) SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+            else SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
         setContent {
             SHKApp(BuildConfig.APP_KIND, onShare = { text ->
                 startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
